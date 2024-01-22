@@ -8,13 +8,13 @@
 ~~~
 conan profile detect --force
 ~~~
-* Install dependencies and create build directory with conan
+* Install dependencies and create build directory with conan, with ${BUILD_TYPE} replaced by Debug or Release
 ~~~
-conan install . --output-folder=build --build=missing
+conan install . --output-folder=build --build=missing -s build_type=${BUILD_TYPE}
 ~~~
-* build the project with cmake
+* build the project with cmake, with ${BUILD_TYPE} replaced by Debug or Release
 ~~~
 cd ./build
-cmake .. -G 'Visual Studio 17 2022' -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake
-cmake --build . --config Release
+cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake
+cmake --build . --config ${BUILD_TYPE}
 ~~~
