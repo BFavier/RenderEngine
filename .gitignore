@@ -1,6 +1,6 @@
-/build
-/.vscode
-/CMakeUserPresets.json
+build
+.vscode
+CMakeUserPresets.json
 *.dll
 *.a
 *.exe

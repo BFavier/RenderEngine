@@ -3,9 +3,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project(RenderEngine)
 
-find_package(glfw3 CONFIG REQUIRED)
-find_package(VulkanLoader CONFIG REQUIRED)
-find_package(vulkan-validationlayers CONFIG REQUIRED)
+# find_package(glfw3 REQUIRED)
+# find_package(VulkanLoader REQUIRED)
 
 # add_library(${PROJECT_NAME} SHARED
 add_executable(${PROJECT_NAME}
@@ -24,7 +23,9 @@ add_executable(${PROJECT_NAME}
     src/RenderEngine/Engine.cpp
     src/main.cpp)
 target_include_directories(${PROJECT_NAME} PRIVATE include/)
-target_link_libraries(${PROJECT_NAME} glfw Vulkan::Loader vulkan-validationlayers::vulkan-validationlayers)
+target_link_libraries(${PROJECT_NAME}
+    "C:/glfw-3.3.9.bin.WIN64/lib-vc2022/glfw3.lib"
+    "C:/VulkanSDK/1.3.275.0/Lib/vulkan-1.lib")
 
 # add_executable(test src/main.cpp)
 # target_link_libraries(test ${PROJECT_NAME})
