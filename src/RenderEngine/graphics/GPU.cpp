@@ -41,7 +41,7 @@ GPU::GPU(VkPhysicalDevice device, const Handles& events, const std::vector<std::
     // Check if swap chain extension is supported
     bool swap_chain_supported = (_enabled_extensions.find(VK_KHR_SWAPCHAIN_EXTENSION_NAME) != _enabled_extensions.end());
     // Select the best matching queue families for each application
-    std::map<uint32_t, uint32_t> selected_families_count;
+    std::map<uint32_t, uint32_t> selected_families_count; // number of purpose each queue is selected for
     _graphics_family = _select_queue_family(queue_families, VK_QUEUE_GRAPHICS_BIT, selected_families_count);
     _transfer_family = _select_queue_family(queue_families, VK_QUEUE_TRANSFER_BIT, selected_families_count);
     _compute_family = _select_queue_family(queue_families, VK_QUEUE_COMPUTE_BIT, selected_families_count);
@@ -52,15 +52,16 @@ GPU::GPU(VkPhysicalDevice device, const Handles& events, const std::vector<std::
         present_family = _select_present_queue_family(queue_families, events, selected_families_count, _graphics_family, graphics_queue_is_present_queue);
     }
     // Create logical device
-    float priority = 1.;
+    std::vector<std::vector<float>> priorities;
     std::vector<VkDeviceQueueCreateInfo> selected_families;
     for (std::pair<const uint32_t, uint32_t>& queue_family_count : selected_families_count)
     {
+        priorities.push_back(std::vector(queue_family_count.second, 1.0f));
         VkDeviceQueueCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         info.queueFamilyIndex = queue_family_count.first;
         info.queueCount = queue_family_count.second;
-        info.pQueuePriorities = &priority;
+        info.pQueuePriorities = priorities.back().data();
         selected_families.push_back(info);
     }
     VkDeviceCreateInfo device_info = {};
@@ -96,6 +97,7 @@ GPU::GPU(const GPU& other)
 
 GPU::~GPU()
 {
+    vkDeviceWaitIdle(_logical_device);
     vkDestroyDevice(_logical_device, nullptr);
 }
 
