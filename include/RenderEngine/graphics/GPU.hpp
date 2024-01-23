@@ -40,14 +40,10 @@ namespace RenderEngine
         VkPhysicalDeviceProperties _device_properties;
         VkPhysicalDeviceFeatures _device_features;
         VkPhysicalDeviceMemoryProperties _device_memory;
-        std::optional<uint32_t> _graphics_family;
-        std::optional<uint32_t> _transfer_family;
-        std::optional<uint32_t> _compute_family;
-        std::optional<uint32_t> _present_family;
-        std::optional<VkQueue> _graphics_queue;
-        std::optional<VkQueue> _transfer_queue;
-        std::optional<VkQueue> _compute_queue;
-        std::optional<VkQueue> _present_queue;
+        std::optional<std::pair<uint32_t, VkQueue>> _graphics_family_queue;
+        std::optional<std::pair<uint32_t, VkQueue>> _transfer_family_queue;
+        std::optional<std::pair<uint32_t, VkQueue>> _compute_family_queue;
+        std::optional<std::pair<uint32_t, VkQueue>> _present_family_queue;
         std::set<std::string> _enabled_extensions;
         VkDevice _logical_device;
     protected:
@@ -60,7 +56,7 @@ namespace RenderEngine
                                                              const Handles& events, std::map<uint32_t, uint32_t>& selected_families_count,
                                                              const std::optional<uint32_t>& graphics_family, bool& graphics_queue_is_present_queue) const;
         // query the queue handle of a previously created queue
-        void _query_queue_handle(std::optional<VkQueue>& queue,
+        void _query_queue_handle(std::optional<std::pair<uint32_t, VkQueue>>& queue,
                                  const std::optional<uint32_t>& queue_family,
                                  std::map<uint32_t, uint32_t>& selected_families_count) const;
     };

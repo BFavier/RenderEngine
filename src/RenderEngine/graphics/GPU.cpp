@@ -1,6 +1,7 @@
 #include <RenderEngine/graphics/GPU.hpp>
 #include <RenderEngine/utilities/Macro.hpp>
 #include <set>
+#include <utility>
 #include <RenderEngine/user_interface/Handles.hpp>
 
 using namespace RenderEngine;
@@ -42,14 +43,14 @@ GPU::GPU(VkPhysicalDevice device, const Handles& events, const std::vector<std::
     bool swap_chain_supported = (_enabled_extensions.find(VK_KHR_SWAPCHAIN_EXTENSION_NAME) != _enabled_extensions.end());
     // Select the best matching queue families for each application
     std::map<uint32_t, uint32_t> selected_families_count; // number of purpose each queue is selected for
-    _graphics_family = _select_queue_family(queue_families, VK_QUEUE_GRAPHICS_BIT, selected_families_count);
-    _transfer_family = _select_queue_family(queue_families, VK_QUEUE_TRANSFER_BIT, selected_families_count);
-    _compute_family = _select_queue_family(queue_families, VK_QUEUE_COMPUTE_BIT, selected_families_count);
+    std::optional<uint32_t> graphics_family = _select_queue_family(queue_families, VK_QUEUE_GRAPHICS_BIT, selected_families_count);
+    std::optional<uint32_t> transfer_family = _select_queue_family(queue_families, VK_QUEUE_TRANSFER_BIT, selected_families_count);
+    std::optional<uint32_t> compute_family = _select_queue_family(queue_families, VK_QUEUE_COMPUTE_BIT, selected_families_count);
     bool graphics_queue_is_present_queue = false;
     std::optional<uint32_t> present_family;
     if (swap_chain_supported)
     {
-        present_family = _select_present_queue_family(queue_families, events, selected_families_count, _graphics_family, graphics_queue_is_present_queue);
+        present_family = _select_present_queue_family(queue_families, events, selected_families_count, graphics_family, graphics_queue_is_present_queue);
     }
     // Create logical device
     std::vector<std::vector<float>> priorities;
@@ -77,16 +78,16 @@ GPU::GPU(VkPhysicalDevice device, const Handles& events, const std::vector<std::
         THROW_ERROR("failed to create logical device")
     }
     // retrieve the queue handles
-    _query_queue_handle(_graphics_queue, _graphics_family, selected_families_count);
-    _query_queue_handle(_transfer_queue, _transfer_family, selected_families_count);
-    _query_queue_handle(_compute_queue, _compute_family, selected_families_count);
+    _query_queue_handle(_graphics_family_queue, graphics_family, selected_families_count);
+    _query_queue_handle(_transfer_family_queue, transfer_family, selected_families_count);
+    _query_queue_handle(_compute_family_queue, compute_family, selected_families_count);
     if (graphics_queue_is_present_queue)
     {
-        _present_queue = _graphics_queue;
+        _present_family_queue = _graphics_family_queue;
     }
     else
     {
-        _query_queue_handle(_present_queue, present_family, selected_families_count);
+        _query_queue_handle(_present_family_queue, present_family, selected_families_count);
     }
 }
 
@@ -237,10 +238,10 @@ void GPU::operator=(const GPU& other)
     _device_properties = other._device_properties;
     _device_features = other._device_features;
     _device_memory = other._device_memory;
-    _graphics_queue = other._graphics_queue;
-    _compute_queue = other._compute_queue;
-    _transfer_queue = other._transfer_queue;
-    _present_queue = other._present_queue;
+    _graphics_family_queue = other._graphics_family_queue;
+    _compute_family_queue = other._compute_family_queue;
+    _transfer_family_queue = other._transfer_family_queue;
+    _present_family_queue = other._present_family_queue;
     _enabled_extensions = other._enabled_extensions;
     _logical_device = other._logical_device;
 }
@@ -342,7 +343,7 @@ std::optional<uint32_t> GPU::_select_present_queue_family(std::vector<VkQueueFam
     return queue_family;
 }
 
-void GPU::_query_queue_handle(std::optional<VkQueue>& queue,
+void GPU::_query_queue_handle(std::optional<std::pair<uint32_t, VkQueue>>& queue,
                               const std::optional<uint32_t>& queue_family,
                               std::map<uint32_t, uint32_t>& selected_families_count) const
 {
@@ -351,7 +352,7 @@ void GPU::_query_queue_handle(std::optional<VkQueue>& queue,
         uint32_t family = queue_family.value();
         VkQueue queried_queue;
         vkGetDeviceQueue(_logical_device, family, selected_families_count[family]-1, &queried_queue);
-        queue = queried_queue;
+        queue = std::make_pair(family, queried_queue);
         selected_families_count[family] -= 1;
     }
 }
