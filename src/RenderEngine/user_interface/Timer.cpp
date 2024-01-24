@@ -3,7 +3,7 @@ using namespace RenderEngine;
 
 Timer::Timer()
 {
-    restart();
+    reset();
 }
 
 Timer::~Timer()
@@ -16,7 +16,7 @@ double Timer::t() const
     return duration.count();
 }
 
-double Timer::peak_dt()
+double Timer::peak_at_dt()
 {
     std::chrono::time_point<std::chrono::steady_clock> now;
     now = std::chrono::steady_clock::now();
@@ -38,7 +38,7 @@ void Timer::reset_dt()
     _last = std::chrono::steady_clock::now();;
 }
 
-void Timer::restart()
+void Timer::reset()
 {
     _start = std::chrono::steady_clock::now();
     _last = _start;
