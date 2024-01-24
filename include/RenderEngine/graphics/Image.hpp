@@ -38,5 +38,6 @@ namespace RenderEngine
     protected:
         void allocate_vk_image(const std::optional<VkImage>& image = std::optional<VkImage>());
         void allocate_vk_image_view();
+        void upload_data(unsigned char* data);
     };
 }

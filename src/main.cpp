@@ -10,7 +10,8 @@ int main()
     GPU gpu = GPU::get_best_device();
     WindowSettings settings;
     settings.transparent = true;
-    Window window(gpu, settings);
+    Window* pointer = new Window(gpu, settings);
+    Window& window = *pointer;
     Mouse& mouse = window.mouse;
     Keyboard& keyboard = window.keyboard;
     Timer timer;
@@ -40,5 +41,7 @@ int main()
         }
         window.update();
     }
+    delete pointer;
+    std::cout << "deleting GPU" << std::endl;
     return EXIT_SUCCESS;
 }

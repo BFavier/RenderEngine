@@ -17,7 +17,11 @@ namespace RenderEngine
     // A GPU is a piece of hardware to perform rendering calculations onto.
     // There can be several GPUs on a single computer.
 
-    enum Type {INTEGRATED_GPU, DISCRETE_GPU, VIRTUAL_GPU, CPU, UNKNOWN};
+    enum Type {DISCRETE_GPU=VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU,
+               INTEGRATED_GPU=VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU,
+               VIRTUAL_GPU=VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU,
+               CPU=VK_PHYSICAL_DEVICE_TYPE_CPU,
+               UNKNOWN=VK_PHYSICAL_DEVICE_TYPE_OTHER};
 
     public:
         GPU() = delete;
@@ -29,7 +33,7 @@ namespace RenderEngine
         // Device constructor name
         std::string constructor_name() const;
         // Device total local memory in bytes
-        unsigned int memory() const;
+        uint64_t memory() const;
         // Returns the type of the device
         Type type() const;
     public:

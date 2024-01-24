@@ -129,38 +129,36 @@ std::string GPU::constructor_name() const
     }
 }
 
-unsigned int GPU::memory() const
+uint64_t GPU::memory() const
 {
     uint32_t n_heaps = _device_memory.memoryHeapCount;
-    unsigned int memory = 0;
+    uint64_t device_memory = 0;
+    uint64_t other_memory = 0;
     for (uint32_t i=0; i<n_heaps; i++)
     {
         VkMemoryHeap heap = _device_memory.memoryHeaps[i];
-        if (heap.flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
+        if ((heap.flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT))
         {
-            memory += static_cast<unsigned int>(heap.size);
+            device_memory += heap.size;
+        }
+        else
+        {
+            other_memory += heap.size;
         }
     }
-    return memory;
+    if ((type() != GPU::Type::DISCRETE_GPU) && (device_memory <= 540000000ull) && (other_memory > device_memory))  // Non-discrete GPU and less than 512 MB of device-local memory
+    {
+        return other_memory;
+    }
+    else
+    {
+        return device_memory;
+    }
 }
 
 GPU::Type GPU::type() const
 {
-    switch (_device_properties.deviceType)
-    {
-        case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-            return INTEGRATED_GPU;
-        case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-            return DISCRETE_GPU;
-        case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-            return VIRTUAL_GPU;
-        case VK_PHYSICAL_DEVICE_TYPE_CPU:
-            return CPU;
-        case VK_PHYSICAL_DEVICE_TYPE_OTHER:
-            return UNKNOWN;
-        default:
-            return UNKNOWN;
-    }
+    return static_cast<GPU::Type>(_device_properties.deviceType);
 }
 
 std::vector<GPU> GPU::get_devices()

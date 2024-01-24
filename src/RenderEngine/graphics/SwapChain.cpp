@@ -113,7 +113,7 @@ SwapChain::SwapChain(const GPU& _gpu, const Window& window) : gpu(&_gpu)
     }
     // Getting the vkImages
     vkGetSwapchainImagesKHR(*gpu->_logical_device, *_swap_chain, &image_count, nullptr); // just in case our requested image count was not respected, query it again
-    std::vector<VkImage> vk_images(image_count);
+    std::vector<VkImage> vk_images(image_count, VK_NULL_HANDLE);
     vkGetSwapchainImagesKHR(*gpu->_logical_device, *_swap_chain, &image_count, vk_images.data());
     images.reset(new std::vector<Image>);
     for (int i=0; i<image_count; i++)
@@ -135,6 +135,7 @@ void SwapChain::operator=(const SwapChain& other)
 
 void SwapChain::_deallocate_swap_chain(VkSwapchainKHR* swap_chain, const GPU& gpu)
 {
+    std::cout << "Calling swap chain deallocator" << std::endl;
     vkDestroySwapchainKHR(*gpu._logical_device, *swap_chain, nullptr);
     delete swap_chain;
 }
