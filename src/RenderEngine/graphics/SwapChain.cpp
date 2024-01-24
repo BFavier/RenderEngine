@@ -61,20 +61,20 @@ SwapChain::SwapChain(const GPU& _gpu, const Window& window) : gpu(_gpu)
     swap_chain_infos.presentMode = presentMode;
     swap_chain_infos.clipped = VK_TRUE;
     swap_chain_infos.oldSwapchain = VK_NULL_HANDLE;
-    if (vkCreateSwapchainKHR(gpu._logical_device, &swap_chain_infos, nullptr, &_swap_chain) != VK_SUCCESS)
+    if (vkCreateSwapchainKHR(*gpu._logical_device, &swap_chain_infos, nullptr, &_swap_chain) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create the swap chain")
     }
     // Getting the vkImages
-    vkGetSwapchainImagesKHR(gpu._logical_device, _swap_chain, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(*gpu._logical_device, _swap_chain, &imageCount, nullptr);
     _vk_images.resize(imageCount);
-    vkGetSwapchainImagesKHR(gpu._logical_device, _swap_chain, &imageCount, _vk_images.data());
+    vkGetSwapchainImagesKHR(*gpu._logical_device, _swap_chain, &imageCount, _vk_images.data());
     _image_format = surfaceFormat.format;
 }
 
 SwapChain::~SwapChain()
 {
-    vkDestroySwapchainKHR(gpu._logical_device, _swap_chain, nullptr);
+    vkDestroySwapchainKHR(*gpu._logical_device, _swap_chain, nullptr);
 }
 
 VkSurfaceFormatKHR SwapChain::_choose_swap_surface_format(const std::vector<VkSurfaceFormatKHR>& available_formats)

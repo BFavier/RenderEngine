@@ -10,8 +10,8 @@ ImageView::ImageView(const Image& _image, unsigned int x, unsigned int y, unsign
 
 ImageView::~ImageView()
 {
-    vkDestroyImageView(image.gpu._logical_device, _vk_image_view, nullptr);
-    vkDestroyPipelineLayout(image.gpu._logical_device, _vk_graphic_pipeline, nullptr);
+    vkDestroyImageView(*image.gpu._logical_device, _vk_image_view, nullptr);
+    vkDestroyPipelineLayout(*image.gpu._logical_device, _vk_graphic_pipeline, nullptr);
 }
 
 void ImageView::_set_vk_image_view()
@@ -30,7 +30,7 @@ void ImageView::_set_vk_image_view()
     createInfo.subresourceRange.levelCount = 1;
     createInfo.subresourceRange.baseArrayLayer = 0;
     createInfo.subresourceRange.layerCount = 1;
-    if (vkCreateImageView(image.gpu._logical_device, &createInfo, nullptr, &_vk_image_view) != VK_SUCCESS)
+    if (vkCreateImageView(*image.gpu._logical_device, &createInfo, nullptr, &_vk_image_view) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create image view")
     }
@@ -44,7 +44,7 @@ void ImageView::_set_graphic_pipeline()
     pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
     pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
     pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
-    if (vkCreatePipelineLayout(image.gpu._logical_device, &pipelineLayoutInfo, nullptr, &_vk_graphic_pipeline) != VK_SUCCESS)
+    if (vkCreatePipelineLayout(*image.gpu._logical_device, &pipelineLayoutInfo, nullptr, &_vk_graphic_pipeline) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create pipeline layout!")
     }

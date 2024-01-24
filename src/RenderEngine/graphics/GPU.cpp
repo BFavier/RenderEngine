@@ -72,7 +72,9 @@ GPU::GPU(VkPhysicalDevice device, const Handles& events, const std::vector<std::
     device_info.pEnabledFeatures = &_device_features;
     device_info.ppEnabledExtensionNames = enabled_extensions.data();
     device_info.enabledExtensionCount = enabled_extensions.size();
-    VkResult result = vkCreateDevice(_physical_device, &device_info, nullptr, &_logical_device);
+    VkDevice* logical_device = new VkDevice();
+    VkResult result = vkCreateDevice(_physical_device, &device_info, nullptr, logical_device);
+    _logical_device = std::shared_ptr<VkDevice>(logical_device, _deallocate_device);
     if (result != VK_SUCCESS)
     {
         THROW_ERROR("failed to create logical device")
@@ -98,8 +100,6 @@ GPU::GPU(const GPU& other)
 
 GPU::~GPU()
 {
-    vkDeviceWaitIdle(_logical_device);
-    vkDestroyDevice(_logical_device, nullptr);
 }
 
 std::string GPU::device_name() const
@@ -232,6 +232,13 @@ GPU GPU::get_best_device()
     return subset[i_max];
 }
 
+void GPU::_deallocate_device(const VkDevice* device)
+{
+    vkDeviceWaitIdle(*device);
+    vkDestroyDevice(*device, nullptr);
+    delete device;
+}
+
 void GPU::operator=(const GPU& other)
 {
     _physical_device = other._physical_device;
@@ -351,7 +358,7 @@ void GPU::_query_queue_handle(std::optional<std::pair<uint32_t, VkQueue>>& queue
     {
         uint32_t family = queue_family.value();
         VkQueue queried_queue;
-        vkGetDeviceQueue(_logical_device, family, selected_families_count[family]-1, &queried_queue);
+        vkGetDeviceQueue(*_logical_device, family, selected_families_count[family]-1, &queried_queue);
         queue = std::make_pair(family, queried_queue);
         selected_families_count[family] -= 1;
     }

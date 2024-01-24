@@ -33,6 +33,7 @@ namespace RenderEngine
     public:
         static std::vector<GPU> get_devices();
         static GPU get_best_device();
+        static void _deallocate_device(const VkDevice* device);
     public:
         void operator=(const GPU& other);
     public:
@@ -45,7 +46,7 @@ namespace RenderEngine
         std::optional<std::pair<uint32_t, VkQueue>> _compute_family_queue;
         std::optional<std::pair<uint32_t, VkQueue>> _present_family_queue;
         std::set<std::string> _enabled_extensions;
-        VkDevice _logical_device;
+        std::shared_ptr<VkDevice> _logical_device;
     protected:
         // add a queue family of given type to the selected families
         std::optional<uint32_t> _select_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,
