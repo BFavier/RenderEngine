@@ -14,7 +14,7 @@ add_executable(${PROJECT_NAME}
     src/RenderEngine/graphics/Pipeline.cpp
     src/RenderEngine/graphics/Shader.cpp
     src/RenderEngine/graphics/SwapChain.cpp
-    src/RenderEngine/user_interface/Handles.cpp
+    src/RenderEngine/user_interface/WindowState.cpp
     src/RenderEngine/user_interface/Keyboard.cpp
     src/RenderEngine/user_interface/Mouse.cpp
     src/RenderEngine/user_interface/Timer.cpp

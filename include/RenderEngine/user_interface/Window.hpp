@@ -2,7 +2,7 @@
 #include <string>
 #include <RenderEngine/utilities/External.hpp>
 #include "WindowSettings.hpp"
-#include "Handles.hpp"
+#include "WindowState.hpp"
 #include "Keyboard.hpp"
 #include "Mouse.hpp"
 #include <RenderEngine/graphics/SwapChain.hpp>
@@ -68,10 +68,10 @@ namespace RenderEngine
         ///< Enables or disable vertical syncing
         void vsync(bool enabled);
     public:
-        const std::shared_ptr<Handles>& _get_state() const;
+        const std::shared_ptr<WindowState>& _get_state() const;
         const VkSurfaceKHR& _get_vk_surface() const;
     protected:
-        std::shared_ptr<Handles> _state; // This must be above keyboard and mouse in the class definition
+        std::shared_ptr<WindowState> _state; // This must be above keyboard and mouse in the class definition
     public:
         Keyboard keyboard;
         Mouse mouse;

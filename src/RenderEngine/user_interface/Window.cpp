@@ -5,7 +5,7 @@
 #include <RenderEngine/graphics/GPU.hpp>
 using namespace RenderEngine;
 
-Window::Window(const GPU& _gpu) : _state(new Handles()), keyboard(*this), mouse(*this), gpu(_gpu), swap_chain(_gpu, *this)
+Window::Window(const GPU& _gpu) : _state(new WindowState()), keyboard(*this), mouse(*this), gpu(_gpu), swap_chain(_gpu, *this)
 {
 }
 
@@ -13,11 +13,11 @@ Window::Window(const Window& other) : _state(other._state), keyboard(other.keybo
 {
 }
 
-Window::Window(const GPU& _gpu, const std::string& title, unsigned int width, unsigned int height) : _state(new Handles(title, width, height)), keyboard(*this), mouse(*this), gpu(_gpu), swap_chain(_gpu, *this)
+Window::Window(const GPU& _gpu, const std::string& title, unsigned int width, unsigned int height) : _state(new WindowState(title, width, height)), keyboard(*this), mouse(*this), gpu(_gpu), swap_chain(_gpu, *this)
 {
 }
 
-Window::Window(const GPU& _gpu, const WindowSettings& settings) : _state(new Handles(settings)), keyboard(*this), mouse(*this), gpu(_gpu), swap_chain(_gpu, *this)
+Window::Window(const GPU& _gpu, const WindowSettings& settings) : _state(new WindowState(settings)), keyboard(*this), mouse(*this), gpu(_gpu), swap_chain(_gpu, *this)
 {
 }
 
@@ -194,7 +194,7 @@ void Window::vsync(bool enabled)
     }
 }
 
-const std::shared_ptr<Handles>& Window::_get_state() const
+const std::shared_ptr<WindowState>& Window::_get_state() const
 {
     return _state;
 }

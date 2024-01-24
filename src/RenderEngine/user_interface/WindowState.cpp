@@ -1,15 +1,15 @@
-#include <RenderEngine/user_interface/Handles.hpp>
+#include <RenderEngine/user_interface/WindowState.hpp>
 #include <RenderEngine/Engine.hpp>
 
 using namespace RenderEngine;
 
-Handles::Handles()
+WindowState::WindowState()
 {
     WindowSettings settings;
     _initialize(settings);
 }
 
-Handles::Handles(const std::string& title, unsigned int width, unsigned int height)
+WindowState::WindowState(const std::string& title, unsigned int width, unsigned int height)
 {
     WindowSettings settings;
     settings.title = title;
@@ -18,29 +18,29 @@ Handles::Handles(const std::string& title, unsigned int width, unsigned int heig
     _initialize(settings);
 }
 
-Handles::Handles(const WindowSettings& settings)
+WindowState::WindowState(const WindowSettings& settings)
 {
     _initialize(settings);
 }
 
-Handles::~Handles()
+WindowState::~WindowState()
 {
     glfwDestroyWindow(_glfw_window);
     vkDestroySurfaceKHR(Engine::get_vulkan_instance(), _vk_surface, nullptr);
 }
 
-void Handles::_window_resize_callback(GLFWwindow* window, int width, int height)
+void WindowState::_window_resize_callback(GLFWwindow* window, int width, int height)
 {
-    Handles* h = static_cast<Handles*>(glfwGetWindowUserPointer(window));
+    WindowState* h = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
     h->_window_width = width;
     h->_window_height = height;
     // glfwSetWindowSize(h->_glfw_window, width, height);
 }
 
-void Handles::_mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+void WindowState::_mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 {
     (void)mods;//Silence the annoying unused parameter warning
-    Handles* h = static_cast<Handles*>(glfwGetWindowUserPointer(window));
+    WindowState* h = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
     std::string name;
     if (button == GLFW_MOUSE_BUTTON_LEFT)
     {
@@ -71,26 +71,26 @@ void Handles::_mouse_button_callback(GLFWwindow* window, int button, int action,
     }
 }
 
-void Handles::_mouse_position_callback(GLFWwindow* window, double xpos, double ypos)
+void WindowState::_mouse_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
-    Handles* h = static_cast<Handles*>(glfwGetWindowUserPointer(window));
+    WindowState* h = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
     h->_mouse_dx = xpos - h->_mouse_x;
     h->_mouse_dy = ypos - h->_mouse_y;
     h->_mouse_x = xpos;
     h->_mouse_y = ypos;
 }
 
-void Handles::_mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+void WindowState::_mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    Handles* h = static_cast<Handles*>(glfwGetWindowUserPointer(window));
+    WindowState* h = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
     h->_mouse_wheel_x = xoffset;
     h->_mouse_wheel_y = yoffset;
 }
 
-void Handles::_keyboard_button_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+void WindowState::_keyboard_button_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     (void)mods;//Silence the annoying unused parameter warning
-    Handles* h = static_cast<Handles*>(glfwGetWindowUserPointer(window));
+    WindowState* h = static_cast<WindowState*>(glfwGetWindowUserPointer(window));
     std::string name = _get_key_name(key, scancode);
     Button& button = h->_keyboard_buttons[name];
     if (action == GLFW_PRESS)
@@ -105,7 +105,7 @@ void Handles::_keyboard_button_callback(GLFWwindow* window, int key, int scancod
     }
 }
 
-std::string Handles::_get_key_name(int key, int scancode)
+std::string WindowState::_get_key_name(int key, int scancode)
 {
     switch (key)
     {
@@ -209,7 +209,7 @@ std::string Handles::_get_key_name(int key, int scancode)
     return "UNKNOWN";
 }
 
-void Handles::_set_unchanged()
+void WindowState::_set_unchanged()
 {
     for (std::pair<const std::string, Button>& button : _keyboard_buttons)
     {
@@ -227,7 +227,7 @@ void Handles::_set_unchanged()
     _mouse_wheel_y = 0.;
 }
 
-void Handles::_initialize(const WindowSettings& settings)
+void WindowState::_initialize(const WindowSettings& settings)
 {
     Engine::initialize();
     //Create the GLFW window

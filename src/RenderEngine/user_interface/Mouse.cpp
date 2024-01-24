@@ -85,12 +85,12 @@ const Mouse& Mouse::operator=(const Mouse& other)
     return *this;
 }
 
-std::shared_ptr<Handles> Mouse::_get_state() const
+std::shared_ptr<WindowState> Mouse::_get_state() const
 {
     return _state;
 }
 
-void Mouse::_set_state(const std::shared_ptr<Handles>& state)
+void Mouse::_set_state(const std::shared_ptr<WindowState>& state)
 {
     _state = state;
 }

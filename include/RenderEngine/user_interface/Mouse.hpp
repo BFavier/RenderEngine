@@ -2,7 +2,7 @@
 #include <map>
 #include <memory>
 #include <GLFW/glfw3.h>
-#include "Handles.hpp"
+#include "WindowState.hpp"
 #include "Button.hpp"
 
 namespace RenderEngine
@@ -32,9 +32,9 @@ namespace RenderEngine
     public:
         const Mouse& operator=(const Mouse& other);
     public:
-        std::shared_ptr<Handles> _get_state() const;
-        void _set_state(const std::shared_ptr<Handles>& state);
+        std::shared_ptr<WindowState> _get_state() const;
+        void _set_state(const std::shared_ptr<WindowState>& state);
     private:
-        std::shared_ptr<Handles> _state = nullptr;
+        std::shared_ptr<WindowState> _state = nullptr;
     };
 }

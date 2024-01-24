@@ -8,14 +8,14 @@
 
 namespace RenderEngine
 {
-    // Handles is a class that stores internal state of the window and it's events
-    class Handles
+    // WindowState is a class that stores internal state of the window and it's events
+    class WindowState
     {
     public:
-        Handles();
-        Handles(const std::string& title, unsigned int width, unsigned int height);
-        Handles(const WindowSettings& settings);
-        ~Handles();
+        WindowState();
+        WindowState(const std::string& title, unsigned int width, unsigned int height);
+        WindowState(const WindowSettings& settings);
+        ~WindowState();
     public:
         unsigned int _window_width = 0;
         unsigned int _window_height = 0;

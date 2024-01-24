@@ -10,7 +10,7 @@
 namespace RenderEngine
 {
     class Window;
-    class Handles;
+    class WindowState;
 
     class GPU
     {
@@ -19,7 +19,7 @@ namespace RenderEngine
 
     public:
         GPU() = delete;
-        GPU(VkPhysicalDevice device, const Handles& events, const std::vector<std::string>& extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME});
+        GPU(VkPhysicalDevice device, const WindowState& events, const std::vector<std::string>& extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME});
         GPU(const GPU& other);
         ~GPU();
         // Device name
@@ -54,7 +54,7 @@ namespace RenderEngine
                                                      std::map<uint32_t, uint32_t>& selected_families_count) const;
         // select the present queue family specificaly
         std::optional<uint32_t> _select_present_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,
-                                                             const Handles& events, std::map<uint32_t, uint32_t>& selected_families_count,
+                                                             const WindowState& events, std::map<uint32_t, uint32_t>& selected_families_count,
                                                              const std::optional<uint32_t>& graphics_family, bool& graphics_queue_is_present_queue) const;
         // query the queue handle of a previously created queue
         void _query_queue_handle(std::optional<std::pair<uint32_t, VkQueue>>& queue,

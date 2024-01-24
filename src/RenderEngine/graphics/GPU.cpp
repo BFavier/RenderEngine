@@ -2,11 +2,11 @@
 #include <RenderEngine/utilities/Macro.hpp>
 #include <set>
 #include <utility>
-#include <RenderEngine/user_interface/Handles.hpp>
+#include <RenderEngine/user_interface/WindowState.hpp>
 
 using namespace RenderEngine;
 
-GPU::GPU(VkPhysicalDevice device, const Handles& events, const std::vector<std::string>& extensions)
+GPU::GPU(VkPhysicalDevice device, const WindowState& events, const std::vector<std::string>& extensions)
 {
     // Save physical device
     _physical_device = device;
@@ -79,7 +79,7 @@ GPU::GPU(VkPhysicalDevice device, const Handles& events, const std::vector<std::
     {
         THROW_ERROR("failed to create logical device")
     }
-    // retrieve the queue handles
+    // retrieve the queue WindowState
     _query_queue_handle(_graphics_family_queue, graphics_family, selected_families_count);
     _query_queue_handle(_transfer_family_queue, transfer_family, selected_families_count);
     _query_queue_handle(_compute_family_queue, compute_family, selected_families_count);
@@ -175,7 +175,7 @@ std::vector<GPU> GPU::get_devices()
     // Create the dummy window
     WindowSettings settings;
     settings.visible = false;
-    Handles events(settings);
+    WindowState events(settings);
     // Return the GPU objects
     std::vector<GPU> GPUs;
     for(VkPhysicalDevice& device : devices)
@@ -318,7 +318,7 @@ std::optional<uint32_t> GPU::_select_queue_family(std::vector<VkQueueFamilyPrope
 }
 
 std::optional<uint32_t> GPU::_select_present_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,
-                                                          const Handles& events, std::map<uint32_t, uint32_t>& selected_families_count,
+                                                          const WindowState& events, std::map<uint32_t, uint32_t>& selected_families_count,
                                                           const std::optional<uint32_t>& graphics_family, bool& graphics_queue_is_present_queue) const
 {
     std::optional<uint32_t> queue_family;
