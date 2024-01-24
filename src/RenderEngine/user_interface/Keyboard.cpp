@@ -33,16 +33,6 @@ const Button& Keyboard::key(const std::string& name) const
 
 const Keyboard& Keyboard::operator=(const Keyboard& other)
 {
-    _state = other._get_state();
+    _state = other._state;
     return *this;
-}
-
-const std::shared_ptr<WindowState>& Keyboard::_get_state() const
-{
-    return _state;
-}
-
-void Keyboard::_set_state(const std::shared_ptr<WindowState>& state)
-{
-    _state = state;
 }

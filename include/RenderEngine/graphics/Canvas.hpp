@@ -1,4 +1,5 @@
-
+#pragma once
+#include <RenderEngine/utilities/External.hpp>
 
 
 namespace RenderEngine

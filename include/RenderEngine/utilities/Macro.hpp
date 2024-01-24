@@ -18,7 +18,7 @@
 //Define error/warning macros
 #define THROW_ERROR(message) \
 {\
-	std::cerr << "[Error] " << SHORT_FILE << " at line " << __LINE__ << " :" << std::endl; \
+	std::cerr << "[RenderEngine Error] " << SHORT_FILE << " at line " << __LINE__ << " :" << std::endl; \
 	std::cerr << message << std::endl; \
 	std::cerr << std::endl; \
 	throw std::runtime_error(message);\
@@ -26,6 +26,6 @@
 
 #define WARN(message) \
 {\
-	std::cerr << "[Warning] " << __SHORT_FILE__ << " at line " << __LINE__ << " :" << std::endl;\
+	std::cerr << "[RenderEngine Warning] " << __SHORT_FILE__ << " at line " << __LINE__ << " :" << std::endl;\
 	std::cerr << "\t" << message << std::endl;\
 }

@@ -32,9 +32,6 @@ namespace RenderEngine
     public:
         const Mouse& operator=(const Mouse& other);
     public:
-        std::shared_ptr<WindowState> _get_state() const;
-        void _set_state(const std::shared_ptr<WindowState>& state);
-    private:
-        std::shared_ptr<WindowState> _state = nullptr;
+        std::shared_ptr<WindowState> _state;
     };
 }

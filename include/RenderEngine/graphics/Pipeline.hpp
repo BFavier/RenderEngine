@@ -1,4 +1,6 @@
 #pragma once
+#include <RenderEngine/utilities/External.hpp>
+#include <RenderEngine/graphics/GPU.hpp>
 
 namespace RenderEngine
 {
@@ -6,7 +8,9 @@ namespace RenderEngine
     {
     public:
         Pipeline() = delete;
-        
+        Pipeline(const GPU& gpu);
         ~Pipeline();
+    public:
+        VkPipelineLayout _vk_graphic_pipeline;
     };
 }

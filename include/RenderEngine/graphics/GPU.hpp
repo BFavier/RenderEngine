@@ -47,7 +47,7 @@ namespace RenderEngine
         std::optional<std::pair<uint32_t, VkQueue>> _transfer_family_queue;
         std::optional<std::pair<uint32_t, VkQueue>> _compute_family_queue;
         std::optional<std::pair<uint32_t, VkQueue>> _present_family_queue;
-        std::set<std::string> _enabled_extensions;
+        std::shared_ptr<std::set<std::string>> _enabled_extensions;
         std::shared_ptr<VkDevice> _logical_device;
     protected:
         // add a queue family of given type to the selected families

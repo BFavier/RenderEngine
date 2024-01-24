@@ -10,8 +10,6 @@ project(RenderEngine)
 add_executable(${PROJECT_NAME}
     src/RenderEngine/graphics/GPU.cpp
     src/RenderEngine/graphics/Image.cpp
-    src/RenderEngine/graphics/ImageView.cpp
-    src/RenderEngine/graphics/Pipeline.cpp
     src/RenderEngine/graphics/Shader.cpp
     src/RenderEngine/graphics/SwapChain.cpp
     src/RenderEngine/user_interface/WindowState.cpp

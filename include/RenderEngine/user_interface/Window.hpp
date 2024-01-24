@@ -20,6 +20,8 @@ namespace RenderEngine
         Window(const GPU& gpu, const WindowSettings& settings);
         ~Window();
     public:
+        void operator=(const Window& other);
+    public:
         ///< Update the window's display, and the window's inputs (keyboard and mouse)
         void update();
         ///< Get the x/y position of the window
@@ -70,12 +72,11 @@ namespace RenderEngine
     public:
         const std::shared_ptr<WindowState>& _get_state() const;
         const VkSurfaceKHR& _get_vk_surface() const;
-    protected:
-        std::shared_ptr<WindowState> _state; // This must be above keyboard and mouse in the class definition
     public:
+        std::shared_ptr<WindowState> _state; // This must be above keyboard and mouse in the class definition
         Keyboard keyboard;
         Mouse mouse;
-        const GPU& gpu;
+        const GPU* gpu;
         SwapChain swap_chain;
     };
 }

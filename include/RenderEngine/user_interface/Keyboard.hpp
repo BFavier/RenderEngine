@@ -23,9 +23,6 @@ namespace RenderEngine
     public:
         const Keyboard& operator=(const Keyboard& other);
     public:
-        const std::shared_ptr<WindowState>& _get_state() const;
-        void _set_state(const std::shared_ptr<WindowState>& state);
-    protected:
         std::shared_ptr<WindowState> _state = nullptr;
     };
 }

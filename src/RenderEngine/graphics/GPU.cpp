@@ -30,17 +30,18 @@ GPU::GPU(VkPhysicalDevice device, const WindowState& events, const std::vector<s
         available_extension_names.push_back(std::string(properties.extensionName));
     }
     // build list of extensions to enable
+    _enabled_extensions.reset(new std::set<std::string>());
     std::vector<const char*> enabled_extensions;
     for (const std::string& extension_name : extensions)
     {
         if (std::find(available_extension_names.begin(), available_extension_names.end(), extension_name) != available_extension_names.end())
         {
             enabled_extensions.push_back(extension_name.c_str());
-            _enabled_extensions.insert(extension_name);
+            _enabled_extensions->insert(extension_name);
         }
     }
     // Check if swap chain extension is supported
-    bool swap_chain_supported = (_enabled_extensions.find(VK_KHR_SWAPCHAIN_EXTENSION_NAME) != _enabled_extensions.end());
+    bool swap_chain_supported = (_enabled_extensions->find(VK_KHR_SWAPCHAIN_EXTENSION_NAME) != _enabled_extensions->end());
     // Select the best matching queue families for each application
     std::map<uint32_t, uint32_t> selected_families_count; // number of purpose each queue is selected for
     std::optional<uint32_t> graphics_family = _select_queue_family(queue_families, VK_QUEUE_GRAPHICS_BIT, selected_families_count);
@@ -74,7 +75,7 @@ GPU::GPU(VkPhysicalDevice device, const WindowState& events, const std::vector<s
     device_info.enabledExtensionCount = enabled_extensions.size();
     VkDevice* logical_device = new VkDevice();
     VkResult result = vkCreateDevice(_physical_device, &device_info, nullptr, logical_device);
-    _logical_device = std::shared_ptr<VkDevice>(logical_device, _deallocate_device);
+    _logical_device.reset(logical_device, _deallocate_device);
     if (result != VK_SUCCESS)
     {
         THROW_ERROR("failed to create logical device")
