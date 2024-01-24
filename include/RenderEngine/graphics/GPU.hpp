@@ -14,6 +14,8 @@ namespace RenderEngine
 
     class GPU
     {
+    // A GPU is a piece of hardware to perform rendering calculations onto.
+    // There can be several GPUs on a single computer.
 
     enum Type {INTEGRATED_GPU, DISCRETE_GPU, VIRTUAL_GPU, CPU, UNKNOWN};
 
