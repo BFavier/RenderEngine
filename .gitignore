@@ -4,3 +4,4 @@ CMakeUserPresets.json
 *.dll
 *.a
 *.exe
+*.spv
