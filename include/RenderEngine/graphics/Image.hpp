@@ -17,6 +17,7 @@ namespace RenderEngine
         enum Format {GRAY=VK_FORMAT_R8_SRGB, RGB=VK_FORMAT_B8G8R8_SRGB, RGBA=VK_FORMAT_B8G8R8A8_SRGB};
     public:
         Image() = delete;
+        Image(const GPU& gpu,  uint32_t width, uint32_t height, Image::Format _format);
         Image(const GPU& gpu, const std::string& file_path, std::optional<Image::Format> = std::optional<Image::Format>());
         Image(const GPU& gpu, uint32_t width, uint32_t height, Image::Format format);
         Image(const GPU& gpu, uint32_t width, uint32_t height, Image::Format format, const VkImage& vk_image);

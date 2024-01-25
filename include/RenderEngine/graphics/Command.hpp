@@ -4,12 +4,12 @@
 
 namespace RenderEngine
 {
-    class CommandBuffer
+    class Command
     {
     public:
-        CommandBuffer() = delete;
-        CommandBuffer(VkCommandPool command_pool, VkQueue queue);
-        ~CommandBuffer();
+        Command() = delete;
+        Command(VkCommandPool command_pool, VkQueue queue);
+        ~Command();
     public:
         const GPU* gpu;
         uint32_t n_commands = 0;

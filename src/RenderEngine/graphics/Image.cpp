@@ -1,6 +1,12 @@
 #include <RenderEngine/graphics/Image.hpp>
 using namespace RenderEngine;
 
+Image::Image(const GPU& gpu,  uint32_t width, uint32_t height, Image::Format _format) : gpu(&_gpu)
+{
+    allocate_vk_image();
+    allocate_vk_image_view();
+}
+
 Image::Image(const GPU& _gpu, const std::string& image_path, std::optional<Image::Format> _format) : gpu(&_gpu)
 {
     int i_width, i_height, n_channels, n_required_channels;
@@ -39,6 +45,7 @@ Image::Image(const GPU& _gpu, const std::string& image_path, std::optional<Image
 Image::Image(const GPU& _gpu, uint32_t _width, uint32_t _height, Image::Format _format) : gpu(&_gpu), width(_width), height(_height), format(_format)
 {
     allocate_vk_image();
+    allocate_vk_image_view();
 }
 
 Image::Image(const GPU& _gpu, uint32_t _width, uint32_t _height, Image::Format _format, const VkImage& vk_image) : gpu(&_gpu), width(_width), height(_height), format(_format)

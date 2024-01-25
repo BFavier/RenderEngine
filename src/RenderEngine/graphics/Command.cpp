@@ -1,8 +1,8 @@
-#include <RenderEngine/graphics/CommandBuffer.hpp>
+#include <RenderEngine/graphics/Command.hpp>
 using namespace RenderEngine;
 
 
-CommandBuffer::CommandBuffer(VkCommandPool command_pool, VkQueue queue) : _command_pool(command_pool), _queue(queue)
+Command::Command(VkCommandPool command_pool, VkQueue queue) : _command_pool(command_pool), _queue(queue)
 {
     VkCommandBufferAllocateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -18,7 +18,7 @@ CommandBuffer::CommandBuffer(VkCommandPool command_pool, VkQueue queue) : _comma
     vkBeginCommandBuffer(_command_buffer, &beginInfo);
 }
 
-CommandBuffer::~CommandBuffer()
+Command::~Command()
 {
     vkEndCommandBuffer(_command_buffer);
     VkSubmitInfo submitInfo{};
