@@ -5,7 +5,6 @@
 #include <string>
 #include <optional>
 #include <RenderEngine/utilities/External.hpp>
-#include <RenderEngine/Engine.hpp>
 
 namespace RenderEngine
 {
@@ -17,17 +16,18 @@ namespace RenderEngine
     // A GPU is a piece of hardware to perform rendering calculations onto.
     // There can be several GPUs on a single computer.
 
-    enum Type {DISCRETE_GPU=VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU,
-               INTEGRATED_GPU=VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU,
-               VIRTUAL_GPU=VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU,
-               CPU=VK_PHYSICAL_DEVICE_TYPE_CPU,
-               UNKNOWN=VK_PHYSICAL_DEVICE_TYPE_OTHER};
+    public:
+        enum Type {DISCRETE_GPU=VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU,
+                INTEGRATED_GPU=VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU,
+                VIRTUAL_GPU=VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU,
+                CPU=VK_PHYSICAL_DEVICE_TYPE_CPU,
+                UNKNOWN=VK_PHYSICAL_DEVICE_TYPE_OTHER};
 
     public:
         GPU() = delete;
         GPU(VkPhysicalDevice device, const WindowState& events, const std::vector<std::string>& extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME});
-        GPU(const GPU& other);
         ~GPU();
+    public:
         // Device name
         std::string device_name() const;
         // Device constructor name
@@ -37,12 +37,6 @@ namespace RenderEngine
         // Returns the type of the device
         Type type() const;
     public:
-        static std::vector<GPU> get_devices();
-        static GPU get_best_device();
-        static void _deallocate_device(const VkDevice* device);
-    public:
-        void operator=(const GPU& other);
-    public:
         VkPhysicalDevice _physical_device;
         VkPhysicalDeviceProperties _device_properties;
         VkPhysicalDeviceFeatures _device_features;
@@ -51,8 +45,8 @@ namespace RenderEngine
         std::optional<std::pair<uint32_t, VkQueue>> _transfer_family_queue;
         std::optional<std::pair<uint32_t, VkQueue>> _compute_family_queue;
         std::optional<std::pair<uint32_t, VkQueue>> _present_family_queue;
-        std::shared_ptr<std::set<std::string>> _enabled_extensions;
-        std::shared_ptr<VkDevice> _logical_device;
+        std::set<std::string> _enabled_extensions;
+        VkDevice _logical_device;
     protected:
         // add a queue family of given type to the selected families
         std::optional<uint32_t> _select_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,

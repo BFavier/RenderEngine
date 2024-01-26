@@ -1,10 +1,9 @@
 #pragma once
 #include <string>
 #include <RenderEngine/utilities/External.hpp>
-#include "WindowSettings.hpp"
-#include "WindowState.hpp"
-#include "Keyboard.hpp"
-#include "Mouse.hpp"
+#include <RenderEngine/user_interface/WindowSettings.hpp>
+#include <RenderEngine/user_interface/Keyboard.hpp>
+#include <RenderEngine/user_interface/Mouse.hpp>
 #include <RenderEngine/graphics/SwapChain.hpp>
 
 namespace RenderEngine
@@ -15,20 +14,23 @@ namespace RenderEngine
     public:
         Window() = delete;
         Window(const GPU& gpu);
-        Window(const Window& other);
         Window(const GPU& gpu, const std::string& title, unsigned int width, unsigned int height);
         Window(const GPU& gpu, const WindowSettings& settings);
         ~Window();
     public:
-        void operator=(const Window& other);
+        Keyboard keyboard;
+        Mouse mouse;
+        SwapChain* _swap_chain;
+        GLFWwindow* _glfw_window;
+        VkSurfaceKHR _vk_surface;
     public:
         ///< Update the window's display, and the window's inputs (keyboard and mouse)
         void update();
         ///< Get the x/y position of the window
-        unsigned int x() const;
-        unsigned int y() const;
+        int x() const;
+        int y() const;
         ///< Move the window to the given position on it's screen
-        void move(unsigned int x, unsigned int y);
+        void move(int x, int y);
         ///< Get the width/height of the screen the window is on
         unsigned int screen_width() const;
         unsigned int screen_height() const;
@@ -41,7 +43,7 @@ namespace RenderEngine
         bool full_screen() const;
         ///< Set whether the window should be in full screen
         void full_screen(bool enabled);
-        ///< Close the window
+        ///< Request the window to close (closing will return true)
         void close();
         ///< Returns true if the user asked for the window to close
         bool closing() const;
@@ -70,13 +72,21 @@ namespace RenderEngine
         ///< Enables or disable vertical syncing
         void vsync(bool enabled);
     public:
-        const std::shared_ptr<WindowState>& _get_state() const;
-        const VkSurfaceKHR& _get_vk_surface() const;
-    public:
-        std::shared_ptr<WindowState> _state; // This must be above keyboard and mouse in the class definition
-        Keyboard keyboard;
-        Mouse mouse;
-        const GPU* gpu;
-        SwapChain swap_chain;
+        static void _window_resize_callback(GLFWwindow* window, int width, int height);
+        static void _mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+        static void _mouse_position_callback(GLFWwindow* window, double xpos, double ypos);
+        static void _mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+        static void _keyboard_button_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
+    protected:
+        void _initialize(const WindowSettings& settings);
+        void _set_unchanged();
+    protected:
+        int _x;
+        int _y;
+        unsigned int _window_width = 0;
+        unsigned int _window_height = 0;
+        std::string _window_title;
+        bool _window_full_screen = false;
+        bool _window_vsync = false;
     };
 }

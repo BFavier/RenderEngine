@@ -2,14 +2,8 @@
 #include <RenderEngine/user_interface/Window.hpp>
 using namespace RenderEngine;
 
-Mouse::Mouse(const Window& window)
+Mouse::Mouse(const Window& window) : _window(window)
 {
-    _state = window._get_state();
-}
-
-Mouse::Mouse(const Mouse& other)
-{
-    *this = other;
 }
 
 Mouse::~Mouse()
@@ -18,69 +12,85 @@ Mouse::~Mouse()
 
 const Button& Mouse::button(const std::string& button_name) const
 {
-    const std::map<const std::string, Button>& buttons = _state->_mouse_buttons;
-    if (buttons.find(button_name) == buttons.end())
+    if (_buttons.find(button_name) == _buttons.end())
     {
-        throw std::runtime_error("The button " + button_name + " doesn't exist.");
+        THROW_ERROR("The button " + button_name + " doesn't exist.");
     }
-    return buttons.at(button_name);
+    return _buttons.at(button_name);
 }
 
 const std::map<const std::string, Button>& Mouse::buttons() const
 {
-    return _state->_mouse_buttons;
+    return _buttons;
 }
 
-double Mouse::x() const
+unsigned int Mouse::x() const
 {
-    return _state->_mouse_x;
+    return _x;
 }
 
-double Mouse::y() const
+unsigned int Mouse::y() const
 {
-    return _state->_mouse_y;
+    return _y;
 }
 
-double Mouse::dx() const
+int Mouse::dx() const
 {
-    return _state->_mouse_dx;
+    return _dx;
 }
 
-double Mouse::dy() const
+int Mouse::dy() const
 {
-    return _state->_mouse_dy;
+    return _dy;
 }
 
-double Mouse::wheel_x() const
+double Mouse::wheel_dx() const
 {
-    return _state->_mouse_wheel_x;
+    return _wheel_dx;
 }
 
-double Mouse::wheel_y() const
+double Mouse::wheel_dy() const
 {
-    return _state->_mouse_wheel_y;
+    return _wheel_dy;
 }
 
 bool Mouse::hidden() const
 {
-    return _state->_mouse_hidden;
+    return _mouse_hidden;
 }
 
 void Mouse::hide(bool h)
 {
     if (h)
     {
-        glfwSetInputMode(_state->_glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        glfwSetInputMode(_window._glfw_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     }
     else
     {
-        glfwSetInputMode(_state->_glfw_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        glfwSetInputMode(_window._glfw_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     }
-    _state->_mouse_hidden = h;
+    _mouse_hidden = h;
 }
 
-const Mouse& Mouse::operator=(const Mouse& other)
+void Mouse::_set_button(const std::string& name, const Button& button)
 {
-    _state = other._state;
-    return *this;
+    _buttons[name] = button;
+}
+
+void Mouse::_initialize()
+{
+
+}
+
+void Mouse::_set_unchanged()
+{
+    for (std::pair<const std::string, Button>& button : _buttons)
+    {
+        button.second.was_pressed = false;
+        button.second.was_released = false;
+    }
+    _dx = 0.;
+    _dy = 0.;
+    _wheel_dx = 0.;
+    _wheel_dy = 0.;
 }

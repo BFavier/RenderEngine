@@ -1,10 +1,14 @@
 #include <RenderEngine/Engine.hpp>
+#include <RenderEngine/graphics/GPU.hpp>
+#include <RenderEngine/user_interface/WindowSettings.hpp>
+#include <RenderEngine/user_interface/WindowState.hpp>
 
 using namespace RenderEngine;
 
 bool Engine::_initialized = false;
 VkInstance Engine::_vk_instance;
 VkDebugUtilsMessengerEXT Engine::_debug_messenger;
+std::vector<const GPU> Engine::GPUs;
 
 void Engine::initialize(const std::vector<std::string>& validation_layers)
 {
@@ -71,8 +75,66 @@ void Engine::initialize(const std::vector<std::string>& validation_layers)
     {
         THROW_ERROR("Failed to set up debug messenger")
     }
+    // fill up the GPUs
+    uint32_t device_count = 0;
+    vkEnumeratePhysicalDevices(_vk_instance, &device_count, nullptr);
+    std::vector<VkPhysicalDevice> devices(device_count);
+    vkEnumeratePhysicalDevices(_vk_instance, &device_count, devices.data());
+    WindowSettings settings;
+    settings.visible = false;
+    WindowState events(settings);  // Create a dummy window to check
+    for(VkPhysicalDevice& device : devices)
+    {
+        GPUs.emplace_back(GPU(device, events));
+    }
     // setup the terminate function
     std::atexit(Engine::terminate);
+}
+
+const GPU& Engine::get_best_device()
+{
+    // list the available GPUs and split them by type
+    std::vector<const GPU&> discrete_GPUs;
+    std::vector<const GPU&> other_GPUs;
+    for (const GPU& gpu : GPUs)
+    {
+        if (gpu.type() == GPU::Type::DISCRETE_GPU)
+        {
+            discrete_GPUs.emplace_back(gpu);
+        }
+        else
+        {
+            other_GPUs.emplace_back(gpu);
+        }
+    }
+    // chose the best available subset of GPUs
+    std::vector<const GPU&>* subset;
+    if (discrete_GPUs.size() > 0)
+    {
+        subset = &discrete_GPUs;
+    }
+    else if (other_GPUs.size() > 0)
+    {
+        subset = &other_GPUs;
+    }
+    else
+    {
+        THROW_ERROR("No GPU found that match the criteria")
+    }
+    // select the GPU with most memory
+    unsigned int max_memory = 0;
+    unsigned int i_max = 0;
+    for (unsigned int i=0; i<subset->size(); i++)
+    {
+        const GPU& gpu = (*subset)[i];
+        unsigned int memory = gpu.memory();
+        if (memory > max_memory)
+        {
+            i_max = i;
+            max_memory = memory;
+        }
+    }
+    return (*subset)[i_max];
 }
 
 void Engine::terminate()

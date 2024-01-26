@@ -3,8 +3,7 @@
 #include <string>
 #include <memory>
 #include <GLFW/glfw3.h>
-#include "WindowState.hpp"
-#include "Button.hpp"
+#include <RenderEngine/user_interface/Button.hpp>
 
 namespace RenderEngine
 {
@@ -12,17 +11,23 @@ namespace RenderEngine
 
     class Keyboard
     {
+
+    friend class Window;
+    
     public:
         Keyboard() = delete;
         Keyboard(const Window& window);
-        Keyboard(const Keyboard& other);
         ~Keyboard();
     public:
         const std::map<const std::string, Button>& keys() const;
         const Button& key(const std::string& name) const;
-    public:
-        const Keyboard& operator=(const Keyboard& other);
-    public:
-        std::shared_ptr<WindowState> _state = nullptr;
+    protected:
+        std::string _get_key_name(int key, int scancode);
+        void _set_key(const std::string& name, const Button& key);
+        void _initialize();
+        void _set_unchanged();
+    protected:
+        const Window& _window;
+        std::map<const std::string, Button> _keys;
     };
 }

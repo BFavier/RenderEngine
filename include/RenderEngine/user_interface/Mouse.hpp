@@ -2,8 +2,7 @@
 #include <map>
 #include <memory>
 #include <GLFW/glfw3.h>
-#include "WindowState.hpp"
-#include "Button.hpp"
+#include <RenderEngine/user_interface/Button.hpp>
 
 namespace RenderEngine
 {
@@ -11,27 +10,39 @@ namespace RenderEngine
 
     class Mouse
     {
+    
+    friend class Window;
+
     public:
         Mouse() = delete;
         Mouse(const Window& window);
-        Mouse(const Mouse& other);
         ~Mouse();
     public:
         const Button& button(const std::string& button_name) const;
         const std::map<const std::string, Button>& buttons() const;
-        double x() const;
-        double y() const;
-        double dx() const;
-        double dy() const;
-        double wheel_x() const;
-        double wheel_y() const;
+        unsigned int x() const;
+        unsigned int y() const;
+        int dx() const;
+        int dy() const;
+        double wheel_dx() const;
+        double wheel_dy() const;
         double x_rel() const;
         double y_rel() const;
         bool hidden() const;
         void hide(bool hide);
-    public:
-        const Mouse& operator=(const Mouse& other);
-    public:
-        std::shared_ptr<WindowState> _state;
+    protected:
+        void _set_button(const std::string& name, const Button& button);
+        void _initialize();
+        void _set_unchanged();
+    protected:
+        unsigned int _x;
+        unsigned int _y;
+        int _dx;
+        int _dy;
+        double _wheel_dx;
+        double _wheel_dy;
+        const Window& _window;
+        bool _mouse_hidden = false;
+        std::map<const std::string, Button> _buttons;
     };
 }

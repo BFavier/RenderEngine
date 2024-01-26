@@ -8,8 +8,12 @@
 
 namespace RenderEngine
 {
+    class GPU;
+
     class Engine
     {
+    public:
+        Engine() = delete;
     public:
         //Initialize the used libraries
         static void initialize(const std::vector<std::string>& validation_layers={});
@@ -23,10 +27,12 @@ namespace RenderEngine
                                                               void* pUserData);
         static VkResult _create_debug_utils_messenger_EXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
         static void _destroy_debug_utils_messenger_EXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
+        static const GPU& get_best_device();
     protected:
         ///< If true, the game engine was already initialized
         static bool _initialized;
         static VkInstance _vk_instance;
         static VkDebugUtilsMessengerEXT _debug_messenger;
+        static std::vector<const GPU> GPUs;
     };
 }

@@ -3,8 +3,8 @@
 #include <string>
 #include <cctype> //for function "toupper"
 #include <RenderEngine/utilities/External.hpp>
-#include "Button.hpp"
-#include "WindowSettings.hpp"
+#include <RenderEngine/user_interface/Button.hpp>
+#include <RenderEngine/user_interface/WindowSettings.hpp>
 
 namespace RenderEngine
 {
@@ -42,7 +42,5 @@ namespace RenderEngine
         static void _mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
         static void _keyboard_button_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
         static std::string _get_key_name(int key, int scancode);
-    protected:
-        void _initialize(const WindowSettings& settings);
     };
 }
