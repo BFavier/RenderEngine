@@ -8,11 +8,12 @@ project(RenderEngine)
 
 # add_library(${PROJECT_NAME} SHARED
 add_executable(${PROJECT_NAME}
+    src/RenderEngine/graphics/Buffer.cpp
     src/RenderEngine/graphics/GPU.cpp
     src/RenderEngine/graphics/Image.cpp
     src/RenderEngine/graphics/Shader.cpp
     src/RenderEngine/graphics/SwapChain.cpp
-    src/RenderEngine/user_interface/WindowState.cpp
+    src/RenderEngine/user_interface/Window.cpp
     src/RenderEngine/user_interface/Keyboard.cpp
     src/RenderEngine/user_interface/Mouse.cpp
     src/RenderEngine/user_interface/Timer.cpp

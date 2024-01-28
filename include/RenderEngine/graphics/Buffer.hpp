@@ -13,7 +13,7 @@ namespace RenderEngine
         Buffer(const GPU& gpu, VkDeviceSize size);
         ~Buffer();
     public:
-        const GPU* gpu;
+        const GPU& gpu;
         VkDeviceSize size;
         VkBuffer _buffer;
         VkDeviceMemory _buffer_memory;

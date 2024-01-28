@@ -1,13 +1,7 @@
 #include <RenderEngine/graphics/Image.hpp>
 using namespace RenderEngine;
 
-Image::Image(const GPU& gpu,  uint32_t width, uint32_t height, Image::Format _format) : gpu(&_gpu)
-{
-    allocate_vk_image();
-    allocate_vk_image_view();
-}
-
-Image::Image(const GPU& _gpu, const std::string& image_path, std::optional<Image::Format> _format) : gpu(&_gpu)
+Image::Image(const GPU& _gpu, const std::string& image_path, std::optional<Image::Format> _format) : gpu(_gpu)
 {
     int i_width, i_height, n_channels, n_required_channels;
     if (_format.has_value())
@@ -16,10 +10,13 @@ Image::Image(const GPU& _gpu, const std::string& image_path, std::optional<Image
         {
             case Image::Format::GRAY:
                 n_required_channels = 1;
+                break;
             case Image::Format::RGB:
                 n_required_channels = 3;
+                break;
             case Image::Format::RGBA:
                 n_required_channels = 4;
+                break;
             default:
                 n_required_channels = 0;
         }
@@ -42,41 +39,28 @@ Image::Image(const GPU& _gpu, const std::string& image_path, std::optional<Image
     stbi_image_free(imgData);
 }
 
-Image::Image(const GPU& _gpu, uint32_t _width, uint32_t _height, Image::Format _format) : gpu(&_gpu), width(_width), height(_height), format(_format)
+Image::Image(const GPU& _gpu, uint32_t _width, uint32_t _height, Image::Format _format) : gpu(_gpu), width(_width), height(_height), format(_format)
 {
     allocate_vk_image();
     allocate_vk_image_view();
 }
 
-Image::Image(const GPU& _gpu, uint32_t _width, uint32_t _height, Image::Format _format, const VkImage& vk_image) : gpu(&_gpu), width(_width), height(_height), format(_format)
+Image::Image(const GPU& _gpu, uint32_t _width, uint32_t _height, Image::Format _format, const VkImage& vk_image) : gpu(_gpu), width(_width), height(_height), format(_format)
 {
     allocate_vk_image(std::optional<VkImage>(vk_image));
     allocate_vk_image_view();
 }
 
-Image::Image(const GPU& _gpu, uint32_t _width, uint32_t _height, Image::Format _format, const std::vector<unsigned char>& data) : gpu(&_gpu), width(_width), height(_height), format(_format)
+Image::Image(const GPU& _gpu, uint32_t _width, uint32_t _height, Image::Format _format, const std::vector<unsigned char>& data) : gpu(_gpu), width(_width), height(_height), format(_format)
 {
     allocate_vk_image();
     allocate_vk_image_view();
 }
 
-Image::Image(const Image& other)
-{
-    operator=(other);
-}
-
 Image::~Image()
 {
-}
-
-void Image::operator=(const Image& other)
-{
-    gpu = other.gpu;
-    width = other.width;
-    height = other.height;
-    format = other.format;
-    _vk_image = other._vk_image;
-    _vk_image_view = other._vk_image_view;
+    vkDestroyImageView(gpu._logical_device, _vk_image_view, nullptr);
+    vkDestroyImage(gpu._logical_device, _vk_image, nullptr);
 }
 
 void Image::allocate_vk_image(const std::optional<VkImage>& image)
@@ -97,21 +81,18 @@ void Image::allocate_vk_image(const std::optional<VkImage>& image)
         info.extent.depth = 1;
         info.mipLevels = 1;
         info.arrayLayers = 1;
-        if (vkCreateImage(*gpu->_logical_device, &info, nullptr, pointer) != VK_SUCCESS)
+        if (vkCreateImage(gpu._logical_device, &info, nullptr, pointer) != VK_SUCCESS)
         {
             THROW_ERROR("failed to create image")
         }
     }
-    std::cout << "Created image " << *pointer << std::endl;
-    _vk_image.reset(pointer, std::bind(_deallocate_vk_image, std::placeholders::_1, *gpu));
 }
 
 void Image::allocate_vk_image_view()
 {
-    _vk_image_view.reset(new VkImageView, std::bind(_deallocate_vk_image_view, std::placeholders::_1, *gpu));
     VkImageViewCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    info.image = *_vk_image;
+    info.image = _vk_image;
     info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     info.format = static_cast<VkFormat>(format);
     info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -123,46 +104,32 @@ void Image::allocate_vk_image_view()
     info.subresourceRange.levelCount = 1;
     info.subresourceRange.baseArrayLayer = 0;
     info.subresourceRange.layerCount = 1;
-    if (vkCreateImageView(*gpu->_logical_device, &info, nullptr, _vk_image_view.get()) != VK_SUCCESS)
+    if (vkCreateImageView(gpu._logical_device, &info, nullptr, &_vk_image_view) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create image view")
     }
 }
 
-void Image::_deallocate_vk_image(VkImage* vk_image, const GPU& gpu)
-{
-    std::cout << "Calling image deallocator" << std::endl;
-    vkDestroyImage(*gpu._logical_device, *vk_image, nullptr);
-    delete vk_image;
-}
+// void Image::upload_data(unsigned char* data)
+// {
+//     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
-void Image::_deallocate_vk_image_view(VkImageView* vk_image_view, const GPU& gpu)
-{
-    std::cout << "Calling image view deallocator" << std::endl;
-    vkDestroyImageView(*gpu._logical_device, *vk_image_view, nullptr);
-    delete vk_image_view;
-}
+//     VkBufferImageCopy region{};
+//     region.bufferOffset = 0;
+//     region.bufferRowLength = 0;
+//     region.bufferImageHeight = 0;
+//     region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//     region.imageSubresource.mipLevel = 0;
+//     region.imageSubresource.baseArrayLayer = 0;
+//     region.imageSubresource.layerCount = 1;
+//     region.imageOffset = {0, 0, 0};
+//     region.imageExtent = {
+//         width,
+//         height,
+//         1
+//     };
 
-void Image::upload_data(unsigned char* data)
-{
-    VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+//     vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-    VkBufferImageCopy region{};
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-    region.imageOffset = {0, 0, 0};
-    region.imageExtent = {
-        width,
-        height,
-        1
-    };
-
-    vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-
-    endSingleTimeCommands(commandBuffer);
-}
+//     endSingleTimeCommands(commandBuffer);
+// }

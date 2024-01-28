@@ -1,6 +1,7 @@
 #pragma once
 #include <map>
 #include <memory>
+#include <string>
 #include <GLFW/glfw3.h>
 #include <RenderEngine/user_interface/Button.hpp>
 
@@ -32,8 +33,6 @@ namespace RenderEngine
         void hide(bool hide);
     protected:
         void _set_button(const std::string& name, const Button& button);
-        void _initialize();
-        void _set_unchanged();
     protected:
         unsigned int _x;
         unsigned int _y;

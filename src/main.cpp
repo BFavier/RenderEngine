@@ -7,10 +7,10 @@ using namespace RenderEngine;
 int main()
 {
     Engine::initialize({"VK_LAYER_KHRONOS_validation"});
-    GPU gpu = GPU::get_best_device();
+    GPU gpu = Engine::get_best_device();
     WindowSettings settings;
     settings.transparent = true;
-    Window* pointer = new Window(gpu, settings);
+    Window* pointer = new Window(settings);
     Window& window = *pointer;
     Mouse& mouse = window.mouse;
     Keyboard& keyboard = window.keyboard;
@@ -21,9 +21,9 @@ int main()
         {
             std::cout << "mouse position changed to " << mouse.x() << ", " << mouse.y() << " (" << timer.dt() << ") " << std::endl;
         }
-        if (mouse.wheel_y() != 0)
+        if (mouse.wheel_dy() != 0)
         {
-            std::cout << "mouse sheel moved of " << mouse.wheel_y() << " (" << timer.dt() << ") " << std::endl;
+            std::cout << "mouse sheel moved of " << mouse.wheel_dy() << " (" << timer.dt() << ") " << std::endl;
         }
         for (std::pair<std::string, const Button&> button : mouse.buttons())
         {

@@ -24,8 +24,6 @@ namespace RenderEngine
     protected:
         std::string _get_key_name(int key, int scancode);
         void _set_key(const std::string& name, const Button& key);
-        void _initialize();
-        void _set_unchanged();
     protected:
         const Window& _window;
         std::map<const std::string, Button> _keys;

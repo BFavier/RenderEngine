@@ -37,7 +37,7 @@ void Shader::_set_vk_shader(const std::vector<unsigned char>& code)
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = code.size();
     createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-    if (vkCreateShaderModule(*gpu._logical_device, &createInfo, nullptr, &_vk_shader) != VK_SUCCESS)
+    if (vkCreateShaderModule(gpu._logical_device, &createInfo, nullptr, &_vk_shader) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create shader module")
     }

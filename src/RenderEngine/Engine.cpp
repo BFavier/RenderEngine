@@ -1,7 +1,7 @@
 #include <RenderEngine/Engine.hpp>
 #include <RenderEngine/graphics/GPU.hpp>
 #include <RenderEngine/user_interface/WindowSettings.hpp>
-#include <RenderEngine/user_interface/WindowState.hpp>
+#include <RenderEngine/user_interface/Window.hpp>
 
 using namespace RenderEngine;
 
@@ -82,10 +82,10 @@ void Engine::initialize(const std::vector<std::string>& validation_layers)
     vkEnumeratePhysicalDevices(_vk_instance, &device_count, devices.data());
     WindowSettings settings;
     settings.visible = false;
-    WindowState events(settings);  // Create a dummy window to check
+    Window dummy(settings);
     for(VkPhysicalDevice& device : devices)
     {
-        GPUs.emplace_back(GPU(device, events));
+        GPUs.emplace_back(GPU(device, dummy));
     }
     // setup the terminate function
     std::atexit(Engine::terminate);
@@ -93,6 +93,14 @@ void Engine::initialize(const std::vector<std::string>& validation_layers)
 
 const GPU& Engine::get_best_device()
 {
+    if (!Engine::_initialized)
+    {
+        THROW_ERROR("Tried getting the GPU before initializing engine.")
+    }
+    if (Engine::GPUs.size() == 0)
+    {
+        THROW_ERROR("No GPU available on current machine.")
+    }
     // list the available GPUs and split them by type
     std::vector<const GPU&> discrete_GPUs;
     std::vector<const GPU&> other_GPUs;

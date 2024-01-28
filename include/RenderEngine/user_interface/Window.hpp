@@ -13,15 +13,14 @@ namespace RenderEngine
     {
     public:
         Window() = delete;
-        Window(const GPU& gpu);
-        Window(const GPU& gpu, const std::string& title, unsigned int width, unsigned int height);
-        Window(const GPU& gpu, const WindowSettings& settings);
+        Window(const std::string& title, unsigned int width, unsigned int height);
+        Window(const WindowSettings& settings);
         ~Window();
     public:
         Keyboard keyboard;
         Mouse mouse;
-        SwapChain* _swap_chain;
-        GLFWwindow* _glfw_window;
+        SwapChain* _swap_chain = nullptr;
+        GLFWwindow* _glfw_window = nullptr;
         VkSurfaceKHR _vk_surface;
     public:
         ///< Update the window's display, and the window's inputs (keyboard and mouse)

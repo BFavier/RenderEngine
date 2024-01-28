@@ -44,6 +44,16 @@ int Mouse::dy() const
     return _dy;
 }
 
+double Mouse::x_rel() const
+{
+    return static_cast<double>(x()) / std::max(1U, _window.width() - 1);
+}
+
+double Mouse::y_rel() const
+{
+    return static_cast<double>(y()) / std::max(1U, _window.height() - 1);
+}
+
 double Mouse::wheel_dx() const
 {
     return _wheel_dx;
@@ -75,22 +85,4 @@ void Mouse::hide(bool h)
 void Mouse::_set_button(const std::string& name, const Button& button)
 {
     _buttons[name] = button;
-}
-
-void Mouse::_initialize()
-{
-
-}
-
-void Mouse::_set_unchanged()
-{
-    for (std::pair<const std::string, Button>& button : _buttons)
-    {
-        button.second.was_pressed = false;
-        button.second.was_released = false;
-    }
-    _dx = 0.;
-    _dy = 0.;
-    _wheel_dx = 0.;
-    _wheel_dy = 0.;
 }

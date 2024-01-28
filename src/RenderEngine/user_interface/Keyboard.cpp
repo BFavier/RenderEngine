@@ -133,12 +133,3 @@ void Keyboard::_set_key(const std::string& name, const Button& key)
 {
     _keys[name] = key;
 }
-
-void Keyboard::_set_unchanged()
-{
-    for (std::pair<const std::string, Button>& button : _keys)
-    {
-        button.second.was_pressed = false;
-        button.second.was_released = false;
-    }
-}

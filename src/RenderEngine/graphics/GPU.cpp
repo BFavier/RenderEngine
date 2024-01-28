@@ -2,11 +2,11 @@
 #include <RenderEngine/utilities/Macro.hpp>
 #include <set>
 #include <utility>
-#include <RenderEngine/user_interface/WindowState.hpp>
+#include <RenderEngine/user_interface/Window.hpp>
 
 using namespace RenderEngine;
 
-GPU::GPU(VkPhysicalDevice device, const WindowState& events, const std::vector<std::string>& extensions)
+GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<std::string>& extensions)
 {
     // Save physical device
     _physical_device = device;
@@ -50,7 +50,7 @@ GPU::GPU(VkPhysicalDevice device, const WindowState& events, const std::vector<s
     std::optional<uint32_t> present_family;
     if (swap_chain_supported)
     {
-        present_family = _select_present_queue_family(queue_families, events, selected_families_count, graphics_family, graphics_queue_is_present_queue);
+        present_family = _select_present_queue_family(queue_families, window, selected_families_count, graphics_family, graphics_queue_is_present_queue);
     }
     // Create logical device
     std::vector<std::vector<float>> priorities;
@@ -78,7 +78,7 @@ GPU::GPU(VkPhysicalDevice device, const WindowState& events, const std::vector<s
     {
         THROW_ERROR("failed to create logical device")
     }
-    // retrieve the queue WindowState
+    // retrieve the queues handle
     _query_queue_handle(_graphics_family_queue, graphics_family, selected_families_count);
     _query_queue_handle(_transfer_family_queue, transfer_family, selected_families_count);
     _query_queue_handle(_compute_family_queue, compute_family, selected_families_count);
@@ -222,7 +222,7 @@ std::optional<uint32_t> GPU::_select_queue_family(std::vector<VkQueueFamilyPrope
 }
 
 std::optional<uint32_t> GPU::_select_present_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,
-                                                          const WindowState& events, std::map<uint32_t, uint32_t>& selected_families_count,
+                                                          const Window& window, std::map<uint32_t, uint32_t>& selected_families_count,
                                                           const std::optional<uint32_t>& graphics_family, bool& graphics_queue_is_present_queue) const
 {
     std::optional<uint32_t> queue_family;
@@ -231,7 +231,7 @@ std::optional<uint32_t> GPU::_select_present_queue_family(std::vector<VkQueueFam
     if (graphics_family.has_value())
     {
         VkBool32 present_support = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(_physical_device, graphics_family.value(), events._vk_surface, &present_support);
+        vkGetPhysicalDeviceSurfaceSupportKHR(_physical_device, graphics_family.value(), window._vk_surface, &present_support);
         if (present_support)
         {
             graphics_queue_is_present_queue = true;
@@ -242,7 +242,7 @@ std::optional<uint32_t> GPU::_select_present_queue_family(std::vector<VkQueueFam
     for (uint32_t i=0; i<queue_families.size(); i++)
     {
         VkBool32 present_support = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(_physical_device, i, events._vk_surface, &present_support);
+        vkGetPhysicalDeviceSurfaceSupportKHR(_physical_device, i, window._vk_surface, &present_support);
         if (present_support && queue_families[i].queueCount > 0)
         {
             queue_family = i;

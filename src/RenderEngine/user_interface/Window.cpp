@@ -6,30 +6,18 @@
 #include <RenderEngine/graphics/GPU.hpp>
 using namespace RenderEngine;
 
-Window::Window(const GPU& _gpu) : keyboard(*this), mouse(*this)
-{
-    WindowSettings settings;
-    _initialize(settings);
-    keyboard._initialize();
-    mouse._initialize();
-}
-
-Window::Window(const GPU& _gpu, const std::string& title, unsigned int width, unsigned int height) : keyboard(*this), mouse(*this)
+Window::Window(const std::string& title, unsigned int width, unsigned int height) : keyboard(*this), mouse(*this)
 {
     WindowSettings settings;
     settings.title = title;
     settings.width = width;
     settings.height = height;
     _initialize(settings);
-    keyboard._initialize();
-    mouse._initialize();
 }
 
-Window::Window(const GPU& _gpu, const WindowSettings& settings) : keyboard(*this), mouse(*this)
+Window::Window(const WindowSettings& settings) : keyboard(*this), mouse(*this)
 {
     _initialize(settings);
-    keyboard._initialize();
-    mouse._initialize();
 }
 
 Window::~Window()
@@ -39,8 +27,7 @@ Window::~Window()
 void Window::update()
 {
     //Polling events
-    keyboard._set_unchanged();
-    mouse._set_unchanged();
+    _set_unchanged();
     glfwPollEvents();
     //Drawing to screen
 
@@ -89,14 +76,14 @@ void Window::_initialize(const WindowSettings& settings)
     glfwGetCursorPos(_glfw_window, &xpos, &ypos);
     mouse._x = static_cast<unsigned int>(xpos);
     mouse._y = static_cast<unsigned int>(xpos);
-    mouse._button["LEFT CLICK"];
-    mouse._button["RIGHT CLICK"];
-    mouse._button["MIDDLE CLICK"];
-    mouse._button["MB4"];
-    mouse._button["MB5"];
-    mouse._button["MB6"];
-    mouse._button["MB7"];
-    mouse._button["MB8"];
+    mouse._buttons["LEFT CLICK"];
+    mouse._buttons["RIGHT CLICK"];
+    mouse._buttons["MIDDLE CLICK"];
+    mouse._buttons["MB4"];
+    mouse._buttons["MB5"];
+    mouse._buttons["MB6"];
+    mouse._buttons["MB7"];
+    mouse._buttons["MB8"];
     // Setup keyboard events
     glfwSetKeyCallback(_glfw_window, _keyboard_button_callback);
     for (int i=0; i<357; i++)
@@ -119,37 +106,47 @@ void Window::move(int x, int y)
     glfwSetWindowPos(_glfw_window, x, y);
 }
 
+int Window::x() const
+{
+    return _x;
+}
+
+int Window::y() const
+{
+    return _y;
+}
+
 unsigned int Window::screen_width() const
 {
     GLFWmonitor* monitor = glfwGetWindowMonitor(_glfw_window);
     const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-    return mode->width;
+    return static_cast<unsigned int>(mode->width);
 }
 
 unsigned int Window::screen_height() const
 {
     GLFWmonitor* monitor = glfwGetWindowMonitor(_glfw_window);
     const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-    return mode->height;
+    return static_cast<unsigned int>(mode->height);
 }
 
 unsigned int Window::width() const
 {
     int w;
     glfwGetWindowSize(_glfw_window, &w, nullptr);
-    return w;
+    return static_cast<unsigned int>(w);
 }
 
 unsigned int Window::height() const
 {
     int h;
     glfwGetWindowSize(_glfw_window, nullptr, &h);
-    return h;
+    return static_cast<unsigned int>(h);
 }
 
 void Window::resize(unsigned int width, unsigned int height)
 {
-    glfwSetWindowSize(_glfw_window, width, height);
+    glfwSetWindowSize(_glfw_window, static_cast<int>(width), static_cast<int>(height));
 }
 
 bool Window::full_screen() const
@@ -322,17 +319,17 @@ void Window::_mouse_button_callback(GLFWwindow* window, int button, int action, 
 void Window::_mouse_position_callback(GLFWwindow* window, double xpos, double ypos)
 {
     Window* h = static_cast<Window*>(glfwGetWindowUserPointer(window));
-    h->mouse.dx = xpos - h->mouse.x;
-    h->mouse.dy = ypos - h->mouse.y;
-    h->mouse.x = xpos;
-    h->mouse.y = ypos;
+    h->mouse._dx = xpos - h->mouse._x;
+    h->mouse._dy = ypos - h->mouse._y;
+    h->mouse._x = xpos;
+    h->mouse._y = ypos;
 }
 
 void Window::_mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     Window* h = static_cast<Window*>(glfwGetWindowUserPointer(window));
-    h->mouse.wheel_dx = xoffset;
-    h->mouse.wheel_dy = yoffset;
+    h->mouse._wheel_dx = xoffset;
+    h->mouse._wheel_dy = yoffset;
 }
 
 void Window::_keyboard_button_callback(GLFWwindow* window, int key, int scancode, int action, int mods)

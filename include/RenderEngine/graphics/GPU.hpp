@@ -9,12 +9,10 @@
 namespace RenderEngine
 {
     class Window;
-    class WindowState;
 
     class GPU
     {
-    // A GPU is a piece of hardware to perform rendering calculations onto.
-    // There can be several GPUs on a single computer.
+    // A GPU is a piece of hardware to perform rendering calculations onto. There can be several GPUs on a single computer.
 
     public:
         enum Type {DISCRETE_GPU=VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU,
@@ -25,7 +23,7 @@ namespace RenderEngine
 
     public:
         GPU() = delete;
-        GPU(VkPhysicalDevice device, const WindowState& events, const std::vector<std::string>& extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME});
+        GPU(VkPhysicalDevice device, const Window& window, const std::vector<std::string>& extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME});
         ~GPU();
     public:
         // Device name
@@ -54,7 +52,7 @@ namespace RenderEngine
                                                      std::map<uint32_t, uint32_t>& selected_families_count) const;
         // select the present queue family specificaly
         std::optional<uint32_t> _select_present_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,
-                                                             const WindowState& events, std::map<uint32_t, uint32_t>& selected_families_count,
+                                                             const Window& window, std::map<uint32_t, uint32_t>& selected_families_count,
                                                              const std::optional<uint32_t>& graphics_family, bool& graphics_queue_is_present_queue) const;
         // query the queue handle of a previously created queue
         void _query_queue_handle(std::optional<std::pair<uint32_t, VkQueue>>& queue,

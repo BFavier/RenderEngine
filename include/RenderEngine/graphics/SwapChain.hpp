@@ -19,12 +19,8 @@ namespace RenderEngine
         SwapChain(const GPU& gpu, const Window& window);
         ~SwapChain();
     public:
-        void operator=(const SwapChain& other);
-    public:
-        const GPU* gpu;
-        std::shared_ptr<std::vector<Image>> images;
-        std::shared_ptr<VkSwapchainKHR> _swap_chain;
-    public:
-        static void _deallocate_swap_chain(VkSwapchainKHR* swap_chain, const GPU& gpu); 
+        const GPU& gpu;
+        std::vector<Image> images;
+        VkSwapchainKHR _swap_chain;
     };
 }
