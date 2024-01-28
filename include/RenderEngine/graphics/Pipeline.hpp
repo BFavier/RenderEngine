@@ -11,6 +11,6 @@ namespace RenderEngine
         Pipeline(const GPU& gpu);
         ~Pipeline();
     public:
-        VkPipelineLayout _vk_graphic_pipeline;
+        VkPipelineLayout _vk_graphic_pipeline = VK_NULL_HANDLE;
     };
 }

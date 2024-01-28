@@ -72,8 +72,7 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<std::s
     device_info.pEnabledFeatures = &_device_features;
     device_info.ppEnabledExtensionNames = enabled_extensions.data();
     device_info.enabledExtensionCount = enabled_extensions.size();
-    VkDevice* logical_device = new VkDevice();
-    VkResult result = vkCreateDevice(_physical_device, &device_info, nullptr, logical_device);
+    VkResult result = vkCreateDevice(_physical_device, &device_info, nullptr, &_logical_device);
     if (result != VK_SUCCESS)
     {
         THROW_ERROR("failed to create logical device")

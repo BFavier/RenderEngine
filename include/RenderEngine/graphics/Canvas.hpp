@@ -10,14 +10,10 @@ namespace RenderEngine
     {
         public:
             Canvas() = delete;
-            // Canvas(const Canvas& other);
             Canvas(const GPU& gpu,  uint32_t width, uint32_t height);
             Canvas(const GPU& gpu, uint32_t width, uint32_t height, const VkImage& vk_imag);
             ~Canvas();
-        public:
-            void operator=(const Canvas& other);
         protected:
-            const GPU* gpu;
             void draw();
         public:
             std::shared_ptr<VkFramebuffer> _frame_buffer;

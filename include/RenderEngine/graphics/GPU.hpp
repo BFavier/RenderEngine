@@ -35,7 +35,7 @@ namespace RenderEngine
         // Returns the type of the device
         Type type() const;
     public:
-        VkPhysicalDevice _physical_device;
+        VkPhysicalDevice _physical_device = VK_NULL_HANDLE;
         VkPhysicalDeviceProperties _device_properties;
         VkPhysicalDeviceFeatures _device_features;
         VkPhysicalDeviceMemoryProperties _device_memory;
@@ -44,7 +44,7 @@ namespace RenderEngine
         std::optional<std::pair<uint32_t, VkQueue>> _compute_family_queue;
         std::optional<std::pair<uint32_t, VkQueue>> _present_family_queue;
         std::set<std::string> _enabled_extensions;
-        VkDevice _logical_device;
+        VkDevice _logical_device = VK_NULL_HANDLE;
     protected:
         // add a queue family of given type to the selected families
         std::optional<uint32_t> _select_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,

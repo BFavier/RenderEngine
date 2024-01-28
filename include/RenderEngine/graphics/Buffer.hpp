@@ -15,8 +15,8 @@ namespace RenderEngine
     public:
         const GPU& gpu;
         VkDeviceSize size;
-        VkBuffer _buffer;
-        VkDeviceMemory _buffer_memory;
+        VkBuffer _buffer = VK_NULL_HANDLE;
+        VkDeviceMemory _buffer_memory = VK_NULL_HANDLE;
     public:
         void upload(const unsigned char* data, size_t length, size_t offset = 0);
         void download(unsigned char* data, size_t length, size_t offset) const;

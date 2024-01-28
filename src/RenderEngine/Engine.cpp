@@ -8,7 +8,7 @@ using namespace RenderEngine;
 bool Engine::_initialized = false;
 VkInstance Engine::_vk_instance;
 VkDebugUtilsMessengerEXT Engine::_debug_messenger;
-std::vector<const GPU> Engine::GPUs;
+std::vector<GPU> Engine::GPUs;
 
 void Engine::initialize(const std::vector<std::string>& validation_layers)
 {
@@ -91,7 +91,12 @@ void Engine::initialize(const std::vector<std::string>& validation_layers)
     std::atexit(Engine::terminate);
 }
 
-const GPU& Engine::get_best_device()
+const std::vector<GPU>& Engine::get_detected_GPUs()
+{
+    return GPUs;
+}
+
+const GPU& Engine::get_best_GPU()
 {
     if (!Engine::_initialized)
     {
@@ -102,21 +107,22 @@ const GPU& Engine::get_best_device()
         THROW_ERROR("No GPU available on current machine.")
     }
     // list the available GPUs and split them by type
-    std::vector<const GPU&> discrete_GPUs;
-    std::vector<const GPU&> other_GPUs;
-    for (const GPU& gpu : GPUs)
+    std::vector<int> discrete_GPUs;
+    std::vector<int> other_GPUs;
+    for (int i=0; i < GPUs.size(); i++)
     {
+        const GPU& gpu = GPUs[i];
         if (gpu.type() == GPU::Type::DISCRETE_GPU)
         {
-            discrete_GPUs.emplace_back(gpu);
+            discrete_GPUs.push_back(i);
         }
         else
         {
-            other_GPUs.emplace_back(gpu);
+            other_GPUs.push_back(i);
         }
     }
     // chose the best available subset of GPUs
-    std::vector<const GPU&>* subset;
+    std::vector<int>* subset;
     if (discrete_GPUs.size() > 0)
     {
         subset = &discrete_GPUs;
@@ -134,7 +140,7 @@ const GPU& Engine::get_best_device()
     unsigned int i_max = 0;
     for (unsigned int i=0; i<subset->size(); i++)
     {
-        const GPU& gpu = (*subset)[i];
+        const GPU& gpu = GPUs[(*subset)[i]];
         unsigned int memory = gpu.memory();
         if (memory > max_memory)
         {
@@ -142,7 +148,7 @@ const GPU& Engine::get_best_device()
             max_memory = memory;
         }
     }
-    return (*subset)[i_max];
+    return GPUs[(*subset)[i_max]];
 }
 
 void Engine::terminate()

@@ -26,7 +26,7 @@ void Canvas::allocate_frame_buffer()
     info.height = swapChainExtent.height;
     info.layers = 1;
 
-    if (vkCreateFramebuffer(*gpu->_logical_device, &info, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS)
+    if (vkCreateFramebuffer(gpu._logical_device, &info, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to create framebuffer!");
     }

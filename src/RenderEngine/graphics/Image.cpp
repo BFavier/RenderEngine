@@ -1,4 +1,6 @@
 #include <RenderEngine/graphics/Image.hpp>
+#define STB_IMAGE_IMPLEMENTATION  
+#include <stb/stb_image.h>
 using namespace RenderEngine;
 
 Image::Image(const GPU& _gpu, const std::string& image_path, std::optional<Image::Format> _format) : gpu(_gpu)

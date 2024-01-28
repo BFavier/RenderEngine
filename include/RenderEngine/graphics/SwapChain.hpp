@@ -21,6 +21,6 @@ namespace RenderEngine
     public:
         const GPU& gpu;
         std::vector<Image> images;
-        VkSwapchainKHR _swap_chain;
+        VkSwapchainKHR _swap_chain = VK_NULL_HANDLE;
     };
 }

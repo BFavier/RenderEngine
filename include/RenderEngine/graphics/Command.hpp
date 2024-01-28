@@ -8,13 +8,13 @@ namespace RenderEngine
     {
     public:
         Command() = delete;
-        Command(VkCommandPool command_pool, VkQueue queue);
+        Command(const GPU& gpu, VkCommandPool command_pool, VkQueue queue);
         ~Command();
     public:
-        const GPU* gpu;
+        const GPU& gpu;
         uint32_t n_commands = 0;
-        VkQueue _queue;
-        VkCommandPool _command_pool;
-        VkCommandBuffer _command_buffer;
+        VkQueue _queue = VK_NULL_HANDLE;
+        VkCommandPool _command_pool = VK_NULL_HANDLE;
+        VkCommandBuffer _command_buffer = VK_NULL_HANDLE;
     };
 }

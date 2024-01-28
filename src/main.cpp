@@ -7,11 +7,10 @@ using namespace RenderEngine;
 int main()
 {
     Engine::initialize({"VK_LAYER_KHRONOS_validation"});
-    GPU gpu = Engine::get_best_device();
+    GPU gpu = Engine::get_best_GPU();
     WindowSettings settings;
     settings.transparent = true;
-    Window* pointer = new Window(settings);
-    Window& window = *pointer;
+    Window window(settings);
     Mouse& mouse = window.mouse;
     Keyboard& keyboard = window.keyboard;
     Timer timer;
@@ -41,7 +40,5 @@ int main()
         }
         window.update();
     }
-    delete pointer;
-    std::cout << "deleting GPU" << std::endl;
     return EXIT_SUCCESS;
 }

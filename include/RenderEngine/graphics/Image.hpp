@@ -28,8 +28,8 @@ namespace RenderEngine
         uint32_t width;
         uint32_t height;
         Format format;
-        VkImage _vk_image;
-        VkImageView _vk_image_view;
+        VkImage _vk_image = VK_NULL_HANDLE;
+        VkImageView _vk_image_view = VK_NULL_HANDLE;
     protected:
         void allocate_vk_image(const std::optional<VkImage>& image = std::optional<VkImage>());
         void allocate_vk_image_view();

@@ -17,7 +17,7 @@ namespace RenderEngine
         ~Shader();
     public:
         const GPU& gpu;
-        VkShaderModule _vk_shader;
+        VkShaderModule _vk_shader = VK_NULL_HANDLE;
     public:
         static std::vector<unsigned char> load_binary(const std::string& file_path);
     protected:
