@@ -8,7 +8,7 @@ using namespace RenderEngine;
 bool Internal::_initialized = false;
 VkInstance Internal::_vk_instance;
 VkDebugUtilsMessengerEXT Internal::_debug_messenger;
-std::vector<GPU*> Internal::GPUs;
+std::vector<std::shared_ptr<GPU>> Internal::GPUs;
 
 void Internal::initialize(const std::vector<std::string>& validation_layers)
 {
@@ -89,13 +89,13 @@ void Internal::initialize(const std::vector<std::string>& validation_layers)
     Window dummy_window(settings);
     for(VkPhysicalDevice& device : devices)
     {
-        GPUs.push_back(new GPU(device, dummy_window, validation_layer_names));
+        GPUs.emplace_back(new GPU(device, dummy_window, validation_layer_names));
     }
     // setup the terminate function
     std::atexit(Internal::terminate);
 }
 
-const std::vector<GPU*>& Internal::get_detected_GPUs()
+const std::vector<std::shared_ptr<GPU>>& Internal::get_detected_GPUs()
 {
     return GPUs;
 }
@@ -113,15 +113,15 @@ const GPU& Internal::get_best_GPU()
     // list the available GPUs and split them by type
     std::list<GPU*> discrete_GPUs;
     std::list<GPU*> other_GPUs;
-    for (GPU* gpu : GPUs)
+    for (const std::shared_ptr<GPU>& gpu : GPUs)
     {
         if (gpu->type() == GPU::Type::DISCRETE_GPU)
         {
-            discrete_GPUs.push_back(gpu);
+            discrete_GPUs.push_back(gpu.get());
         }
         else
         {
-            other_GPUs.push_back(gpu);
+            other_GPUs.push_back(gpu.get());
         }
     }
     // chose the best available subset of GPUs
@@ -155,10 +155,6 @@ const GPU& Internal::get_best_GPU()
 
 void Internal::terminate()
 {
-    for (GPU* gpu : GPUs)
-    {
-        delete gpu;
-    }
     GPUs.clear();
     //Terminate Vulkan
     _destroy_debug_utils_messenger_EXT(_vk_instance, _debug_messenger, nullptr);
