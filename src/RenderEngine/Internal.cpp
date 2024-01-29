@@ -1,16 +1,16 @@
-#include <RenderEngine/Engine.hpp>
+#include <RenderEngine/Internal.hpp>
 #include <RenderEngine/graphics/GPU.hpp>
 #include <RenderEngine/user_interface/WindowSettings.hpp>
 #include <RenderEngine/user_interface/Window.hpp>
 
 using namespace RenderEngine;
 
-bool Engine::_initialized = false;
-VkInstance Engine::_vk_instance;
-VkDebugUtilsMessengerEXT Engine::_debug_messenger;
-std::vector<GPU> Engine::GPUs;
+bool Internal::_initialized = false;
+VkInstance Internal::_vk_instance;
+VkDebugUtilsMessengerEXT Internal::_debug_messenger;
+std::vector<GPU*> Internal::GPUs;
 
-void Engine::initialize(const std::vector<std::string>& validation_layers)
+void Internal::initialize(const std::vector<std::string>& validation_layers)
 {
     if (_initialized)
     {
@@ -20,14 +20,14 @@ void Engine::initialize(const std::vector<std::string>& validation_layers)
     //Initialize GLFW
     if (!glfwInit())
     {
-        THROW_ERROR("Failed to initialize the library GLFW")
+        THROW_ERROR("Failed to initialize the library GLFW");
     }
     // Set application name
-    VkApplicationInfo appInfo{};
+    VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = "RenderEngine";
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.pEngineName = "Engine";
+    appInfo.pEngineName = "Internal";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.apiVersion = VK_API_VERSION_1_0;
     // setup validation layers
@@ -38,7 +38,7 @@ void Engine::initialize(const std::vector<std::string>& validation_layers)
         if (std::find(available_validation_layers.begin(), available_validation_layers.end(), layer_name) == available_validation_layers.end())
         {
             std::string error_message = "Unsupported validation layer: '" + layer_name + "'";
-            THROW_ERROR(error_message)
+            THROW_ERROR(error_message);
         }
         validation_layer_names.push_back(layer_name.c_str());
     }
@@ -50,7 +50,7 @@ void Engine::initialize(const std::vector<std::string>& validation_layers)
     debug_create_info.pfnUserCallback = _debug_callback;
     debug_create_info.pUserData = nullptr;
     std::vector<const char*> extensions = {VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
-    VkInstanceCreateInfo createInfo{};
+    VkInstanceCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
     createInfo.enabledLayerCount = validation_layer_names.size();
@@ -68,12 +68,12 @@ void Engine::initialize(const std::vector<std::string>& validation_layers)
     VkResult result = vkCreateInstance(&createInfo, nullptr, &_vk_instance);
     if (result != VK_SUCCESS)
     {
-        THROW_ERROR("Failed to create the Vulkan instance")
+        THROW_ERROR("Failed to create the Vulkan instance");
     }
     // setup validation layers callback function
     if (_create_debug_utils_messenger_EXT(_vk_instance, &debug_create_info, nullptr, &_debug_messenger) != VK_SUCCESS)
     {
-        THROW_ERROR("Failed to set up debug messenger")
+        THROW_ERROR("Failed to set up debug messenger");
     }
     // fill up the GPUs
     uint32_t device_count = 0;
@@ -81,78 +81,85 @@ void Engine::initialize(const std::vector<std::string>& validation_layers)
     std::vector<VkPhysicalDevice> devices(device_count);
     vkEnumeratePhysicalDevices(_vk_instance, &device_count, devices.data());
     WindowSettings settings;
+    settings.title = "DummyWindow";
+    settings.width = 5;
+    settings.height = 5;
     settings.visible = false;
-    Window dummy(settings);
+    settings.initialize_swapchain = false;
+    Window dummy_window(settings);
     for(VkPhysicalDevice& device : devices)
     {
-        GPUs.emplace_back(GPU(device, dummy));
+        GPUs.push_back(new GPU(device, dummy_window, validation_layer_names));
     }
     // setup the terminate function
-    std::atexit(Engine::terminate);
+    std::atexit(Internal::terminate);
 }
 
-const std::vector<GPU>& Engine::get_detected_GPUs()
+const std::vector<GPU*>& Internal::get_detected_GPUs()
 {
     return GPUs;
 }
 
-const GPU& Engine::get_best_GPU()
+const GPU& Internal::get_best_GPU()
 {
-    if (!Engine::_initialized)
+    if (!Internal::_initialized)
     {
-        THROW_ERROR("Tried getting the GPU before initializing engine.")
+        THROW_ERROR("Tried getting the GPU before initializing engine.");
     }
-    if (Engine::GPUs.size() == 0)
+    if (GPUs.size() == 0)
     {
-        THROW_ERROR("No GPU available on current machine.")
+        THROW_ERROR("No GPU available on current machine.");
     }
     // list the available GPUs and split them by type
-    std::vector<int> discrete_GPUs;
-    std::vector<int> other_GPUs;
-    for (int i=0; i < GPUs.size(); i++)
+    std::list<GPU*> discrete_GPUs;
+    std::list<GPU*> other_GPUs;
+    for (GPU* gpu : GPUs)
     {
-        const GPU& gpu = GPUs[i];
-        if (gpu.type() == GPU::Type::DISCRETE_GPU)
+        if (gpu->type() == GPU::Type::DISCRETE_GPU)
         {
-            discrete_GPUs.push_back(i);
+            discrete_GPUs.push_back(gpu);
         }
         else
         {
-            other_GPUs.push_back(i);
+            other_GPUs.push_back(gpu);
         }
     }
     // chose the best available subset of GPUs
-    std::vector<int>* subset;
+    std::list<GPU*> subset;
     if (discrete_GPUs.size() > 0)
     {
-        subset = &discrete_GPUs;
+        subset = discrete_GPUs;
     }
     else if (other_GPUs.size() > 0)
     {
-        subset = &other_GPUs;
+        subset = other_GPUs;
     }
     else
     {
-        THROW_ERROR("No GPU found that match the criteria")
+        THROW_ERROR("No GPU found that match the criteria");
     }
     // select the GPU with most memory
     unsigned int max_memory = 0;
-    unsigned int i_max = 0;
-    for (unsigned int i=0; i<subset->size(); i++)
+    GPU* best = nullptr;
+    for (GPU* gpu : subset)
     {
-        const GPU& gpu = GPUs[(*subset)[i]];
-        unsigned int memory = gpu.memory();
+        unsigned int memory = gpu->memory();
         if (memory > max_memory)
         {
-            i_max = i;
+            best = gpu;
             max_memory = memory;
         }
     }
-    return GPUs[(*subset)[i_max]];
+    return *best;
 }
 
-void Engine::terminate()
+void Internal::terminate()
 {
+    for (GPU* gpu : GPUs)
+    {
+        delete gpu;
+    }
+    GPUs.clear();
     //Terminate Vulkan
     _destroy_debug_utils_messenger_EXT(_vk_instance, _debug_messenger, nullptr);
     vkDestroyInstance(_vk_instance, nullptr);
@@ -162,21 +169,21 @@ void Engine::terminate()
     _initialized = false;
 }
 
-std::vector<std::string> Engine::get_available_validation_layers()
+std::vector<std::string> Internal::get_available_validation_layers()
 {
     uint32_t layer_count;
     vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
     std::vector<VkLayerProperties> available_layers(layer_count);
     vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
     std::vector<std::string> layer_names;
-    for (VkLayerProperties layer : available_layers)
+    for (const VkLayerProperties& layer : available_layers)
     {
         layer_names.push_back(std::string(layer.layerName));
     }
     return layer_names;
 }
 
-std::vector<std::string> Engine::get_available_vulkan_extensions()
+std::vector<std::string> Internal::get_available_vulkan_extensions()
 {
     uint32_t extension_count = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
@@ -190,13 +197,13 @@ std::vector<std::string> Engine::get_available_vulkan_extensions()
     return available_extensions;
 }
 
-VkInstance Engine::get_vulkan_instance()
+VkInstance Internal::get_vulkan_instance()
 {
-    Engine::initialize();
+    Internal::initialize();
     return _vk_instance;
 }
 
-VKAPI_ATTR VkBool32 VKAPI_CALL Engine::_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+VKAPI_ATTR VkBool32 VKAPI_CALL Internal::_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                                                        VkDebugUtilsMessageTypeFlagsEXT messageType,
                                                        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
                                                        void* pUserData)
@@ -214,7 +221,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Engine::_debug_callback(VkDebugUtilsMessageSeveri
     return VK_FALSE;
 }
 
-VkResult Engine::_create_debug_utils_messenger_EXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
+VkResult Internal::_create_debug_utils_messenger_EXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
 {
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (func != nullptr)
@@ -227,7 +234,7 @@ VkResult Engine::_create_debug_utils_messenger_EXT(VkInstance instance, const Vk
     }
 }
 
-void Engine::_destroy_debug_utils_messenger_EXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
+void Internal::_destroy_debug_utils_messenger_EXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator)
 {
     auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
     if (func != nullptr)

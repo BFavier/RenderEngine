@@ -13,7 +13,7 @@ Buffer::Buffer(const GPU& _gpu, VkDeviceSize _size) : gpu(_gpu), size(_size)
     info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     if (vkCreateBuffer(gpu._logical_device, &info, nullptr, &_buffer) != VK_SUCCESS)
     {
-        THROW_ERROR("Failed to create buffer.")
+        THROW_ERROR("Failed to create buffer.");
     }
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(gpu._logical_device, _buffer, &memRequirements);
@@ -23,7 +23,7 @@ Buffer::Buffer(const GPU& _gpu, VkDeviceSize _size) : gpu(_gpu), size(_size)
     allocInfo.memoryTypeIndex = find_memory_type(gpu._physical_device, memRequirements.memoryTypeBits, properties);
     if (vkAllocateMemory(gpu._logical_device, &allocInfo, nullptr, &_buffer_memory) != VK_SUCCESS)
     {
-        THROW_ERROR("failed to allocate buffer memory!")
+        THROW_ERROR("failed to allocate buffer memory!");
     }
     vkBindBufferMemory(gpu._logical_device, _buffer, _buffer_memory, 0);
 }
@@ -59,5 +59,5 @@ uint32_t Buffer::find_memory_type(VkPhysicalDevice physical_device, uint32_t typ
             return i;
         }
     }
-    THROW_ERROR("Failed to find suitable memory type.")
+    THROW_ERROR("Failed to find suitable memory type.");
 }

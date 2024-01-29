@@ -12,7 +12,7 @@ Pipeline::Pipeline(const GPU& gpu)
     pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
     if (vkCreatePipelineLayout(*gpu._logical_device, &pipelineLayoutInfo, nullptr, &_vk_graphic_pipeline) != VK_SUCCESS)
     {
-        THROW_ERROR("failed to create pipeline layout!")
+        THROW_ERROR("failed to create pipeline layout!");
     }
 }
 

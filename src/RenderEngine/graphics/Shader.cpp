@@ -21,7 +21,7 @@ std::vector<unsigned char> Shader::load_binary(const std::string& file_path)
     std::ifstream file(file_path, std::ios::ate | std::ios::binary);
     if (!file.is_open())
     {
-        THROW_ERROR("failed to open file")
+        THROW_ERROR("failed to open file");
     }
     size_t fileSize = static_cast<size_t>(file.tellg());
     std::vector<unsigned char> buffer(fileSize);
@@ -39,6 +39,6 @@ void Shader::_set_vk_shader(const std::vector<unsigned char>& code)
     createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
     if (vkCreateShaderModule(gpu._logical_device, &createInfo, nullptr, &_vk_shader) != VK_SUCCESS)
     {
-        THROW_ERROR("failed to create shader module")
+        THROW_ERROR("failed to create shader module");
     }
 }

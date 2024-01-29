@@ -1,5 +1,5 @@
 #include <RenderEngine/user_interface/WindowState.hpp>
-#include <RenderEngine/Engine.hpp>
+#include <RenderEngine/Internal.hpp>
 
 using namespace RenderEngine;
 
@@ -26,7 +26,7 @@ WindowState::WindowState(const WindowSettings& settings)
 WindowState::~WindowState()
 {
     glfwDestroyWindow(_glfw_window);
-    vkDestroySurfaceKHR(Engine::get_vulkan_instance(), _vk_surface, nullptr);
+    vkDestroySurfaceKHR(Internal::get_vulkan_instance(), _vk_surface, nullptr);
 }
 
 void WindowState::_window_resize_callback(GLFWwindow* window, int width, int height)

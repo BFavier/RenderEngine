@@ -1,4 +1,4 @@
-#include <RenderEngine/Engine.hpp>
+#include <RenderEngine/Internal.hpp>
 #include <RenderEngine/user_interface/Window.hpp>
 #include <RenderEngine/user_interface/Keyboard.hpp>
 #include <RenderEngine/user_interface/Mouse.hpp>
@@ -6,7 +6,12 @@
 #include <RenderEngine/graphics/GPU.hpp>
 using namespace RenderEngine;
 
-Window::Window(const std::string& title, unsigned int width, unsigned int height) : keyboard(*this), mouse(*this)
+Window::Window(const WindowSettings& settings) : keyboard(*this), mouse(*this)
+{
+    _initialize(settings);
+}
+
+Window::Window(const GPU& _gpu, const std::string& title, unsigned int width, unsigned int height) : gpu(&_gpu), keyboard(*this), mouse(*this)
 {
     WindowSettings settings;
     settings.title = title;
@@ -15,7 +20,7 @@ Window::Window(const std::string& title, unsigned int width, unsigned int height
     _initialize(settings);
 }
 
-Window::Window(const WindowSettings& settings) : keyboard(*this), mouse(*this)
+Window::Window(const GPU& _gpu, const WindowSettings& settings) : gpu(&_gpu), keyboard(*this), mouse(*this)
 {
     _initialize(settings);
 }
@@ -26,6 +31,10 @@ Window::~Window()
 
 void Window::update()
 {
+    if (_swap_chain == nullptr)
+    {
+        _create_swapchain();
+    }
     //Polling events
     _set_unchanged();
     glfwPollEvents();
@@ -36,7 +45,7 @@ void Window::update()
 
 void Window::_initialize(const WindowSettings& settings)
 {
-    Engine::initialize();
+    Internal::initialize();
     //Create the GLFW window
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_VISIBLE, settings.visible);
@@ -94,11 +103,25 @@ void Window::_initialize(const WindowSettings& settings)
     // Setup window events
     glfwSetWindowSizeCallback(_glfw_window, _window_resize_callback);
     // Create the vkSurface
-    VkResult result = glfwCreateWindowSurface(Engine::get_vulkan_instance(), _glfw_window, NULL, &_vk_surface);
+    VkResult result = glfwCreateWindowSurface(Internal::get_vulkan_instance(), _glfw_window, NULL, &_vk_surface);
     if (result != VK_SUCCESS)
     {
-        THROW_ERROR("Failed to create the Vulkan surface")
+        THROW_ERROR("Failed to create the Vulkan surface");
     }
+    // create the swap chain
+    if (settings.initialize_swapchain)
+    {
+        _create_swapchain();
+    }
+}
+
+void Window::_create_swapchain()
+{
+    if (_swap_chain != nullptr)
+    {
+        delete _swap_chain;
+    }
+    _swap_chain = new SwapChain(*gpu, *this);
 }
 
 void Window::move(int x, int y)

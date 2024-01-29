@@ -19,7 +19,7 @@ add_executable(${PROJECT_NAME}
     src/RenderEngine/user_interface/Timer.cpp
     src/RenderEngine/user_interface/Window.cpp
     src/RenderEngine/utilities/Functions.cpp
-    src/RenderEngine/Engine.cpp
+    src/RenderEngine/Internal.cpp
     src/main.cpp)
 target_include_directories(${PROJECT_NAME} PRIVATE include/)
 target_link_libraries(${PROJECT_NAME}

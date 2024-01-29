@@ -10,10 +10,10 @@ namespace RenderEngine
 {
     class GPU;
 
-    class Engine
+    class Internal
     {
     public:
-        Engine() = delete;
+        Internal() = delete;
     public:
         //Initialize the used libraries
         static void initialize(const std::vector<std::string>& validation_layers={});
@@ -21,7 +21,7 @@ namespace RenderEngine
         static std::vector<std::string> get_available_validation_layers();
         static std::vector<std::string> get_available_vulkan_extensions();
         static VkInstance get_vulkan_instance();
-        static const std::vector<GPU>& get_detected_GPUs();
+        static const std::vector<GPU*>& get_detected_GPUs();
         static const GPU& get_best_GPU();
     protected:
             static VKAPI_ATTR VkBool32 VKAPI_CALL _debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -35,6 +35,6 @@ namespace RenderEngine
         static bool _initialized;
         static VkInstance _vk_instance;
         static VkDebugUtilsMessengerEXT _debug_messenger;
-        static std::vector<GPU> GPUs;
+        static std::vector<GPU*> GPUs;
     };
 }

@@ -6,13 +6,120 @@
 
 using namespace RenderEngine;
 
-GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<std::string>& extensions)
+/*
+struct QueueFamilyIndices {
+    std::optional<uint32_t> graphicsFamily;
+    std::optional<uint32_t> presentFamily;
+
+    bool isComplete() {
+        return graphicsFamily.has_value() && presentFamily.has_value();
+    }
+};
+
+QueueFamilyIndices findQueueFamilies(const Window& window, VkPhysicalDevice device) {
+    QueueFamilyIndices indices;
+
+    uint32_t queueFamilyCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+    int i = 0;
+    for (const auto& queueFamily : queueFamilies) {
+        if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            indices.graphicsFamily = i;
+        }
+
+        VkBool32 presentSupport = false;
+        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, window._vk_surface, &presentSupport);
+
+        if (presentSupport) {
+            indices.presentFamily = i;
+        }
+
+        if (indices.isComplete()) {
+            break;
+        }
+
+        i++;
+    }
+
+    return indices;
+}
+
+GPU::GPU(VkPhysicalDevice _device, const Window& window, const std::vector<const char*>& validation_layers, const std::vector<std::string>& extensions)
+{
+    _physical_device = _device;
+    QueueFamilyIndices indices = findQueueFamilies(window, _physical_device);
+
+    // list available extensions
+    uint32_t extension_count;
+    vkEnumerateDeviceExtensionProperties(_physical_device, nullptr, &extension_count, nullptr);
+    std::vector<VkExtensionProperties> available_extensions(extension_count);
+    vkEnumerateDeviceExtensionProperties(_physical_device, nullptr, &extension_count, available_extensions.data());
+    std::vector<std::string> available_extension_names;
+    for (VkExtensionProperties& properties : available_extensions)
+    {
+        available_extension_names.push_back(std::string(properties.extensionName));
+    }
+    // build list of extensions to enable
+    std::vector<const char*> enabled_extensions;
+    for (const std::string& extension_name : extensions)
+    {
+        if (std::find(available_extension_names.begin(), available_extension_names.end(), extension_name) != available_extension_names.end())
+        {
+            enabled_extensions.push_back(extension_name.c_str());
+            _enabled_extensions.insert(extension_name);
+        }
+    }
+
+    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+    std::set<uint32_t> uniqueQueueFamilies = {};//{ indices.graphicsFamily.value(), indices.presentFamily.value() };
+
+    float queuePriority = 1.0f;
+    for (uint32_t queueFamily : uniqueQueueFamilies) {
+        VkDeviceQueueCreateInfo queueCreateInfo{};
+        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfo.queueFamilyIndex = queueFamily;
+        queueCreateInfo.queueCount = 1;
+        queueCreateInfo.pQueuePriorities = &queuePriority;
+        queueCreateInfos.push_back(queueCreateInfo);
+    }
+
+    VkPhysicalDeviceFeatures deviceFeatures{};
+    //vkGetPhysicalDeviceFeatures(gpu._physical_device, &deviceFeatures);
+
+    VkDeviceCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    createInfo.queueCreateInfoCount = queueCreateInfos.size();
+    createInfo.pQueueCreateInfos = queueCreateInfos.data();
+    createInfo.pEnabledFeatures = &deviceFeatures;
+    createInfo.enabledExtensionCount = enabled_extensions.size();
+    createInfo.ppEnabledExtensionNames = enabled_extensions.data();
+    createInfo.enabledLayerCount = validation_layers.size();
+    createInfo.ppEnabledLayerNames = validation_layers.data();
+
+    if (vkCreateDevice(_physical_device, &createInfo, nullptr, &_logical_device) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create logical device!");
+    }
+
+    VkQueue graphicsQueue;
+    VkQueue presentQueue;
+    vkGetDeviceQueue(_logical_device, indices.graphicsFamily.value(), 0, &graphicsQueue);
+    vkGetDeviceQueue(_logical_device, indices.presentFamily.value(), 0, &presentQueue);
+    _graphics_family_queue = std::make_pair(0, graphicsQueue);
+    _present_family_queue = std::make_pair(0, presentQueue);
+}
+*/
+
+GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const char*>& validation_layers, const std::vector<std::string>& extensions)
 {
     // Save physical device
     _physical_device = device;
     // List properties and features
     vkGetPhysicalDeviceProperties(device, &_device_properties);
-    vkGetPhysicalDeviceFeatures(device, &_device_features);
+    //vkGetPhysicalDeviceFeatures(device, &_device_features);
     vkGetPhysicalDeviceMemoryProperties(device, &_device_memory);
     // List the queue families
     uint32_t queue_family_count = 0;
@@ -65,6 +172,7 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<std::s
         info.pQueuePriorities = priorities.back().data();
         selected_families.push_back(info);
     }
+
     VkDeviceCreateInfo device_info = {};
     device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_info.pQueueCreateInfos = selected_families.data();
@@ -72,10 +180,11 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<std::s
     device_info.pEnabledFeatures = &_device_features;
     device_info.ppEnabledExtensionNames = enabled_extensions.data();
     device_info.enabledExtensionCount = enabled_extensions.size();
-    VkResult result = vkCreateDevice(_physical_device, &device_info, nullptr, &_logical_device);
-    if (result != VK_SUCCESS)
+    device_info.enabledLayerCount = validation_layers.size();
+    device_info.ppEnabledLayerNames = validation_layers.data();
+    if (vkCreateDevice(_physical_device, &device_info, nullptr, &_logical_device) != VK_SUCCESS)
     {
-        THROW_ERROR("failed to create logical device")
+        THROW_ERROR("failed to create logical device");
     }
     // retrieve the queues handle
     _query_queue_handle(_graphics_family_queue, graphics_family, selected_families_count);
@@ -174,7 +283,7 @@ std::optional<uint32_t> GPU::_select_queue_family(std::vector<VkQueueFamilyPrope
     }
     // Looking for the most specialized queue
     std::optional<uint32_t> selected_family;
-    unsigned int min_n_functionalities;
+    unsigned int min_n_functionalities = 0;
     for (std::pair<const uint32_t, VkQueueFamilyProperties>& family : valid_families)
     {
         // if there is no selected family yet, set current family and number of functionalities

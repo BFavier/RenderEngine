@@ -11,12 +11,22 @@ namespace RenderEngine
 
     class Window
     {
+
+    friend class Internal; // RenderEngine::Internal can create dummy windows
+    
     public:
         Window() = delete;
-        Window(const std::string& title, unsigned int width, unsigned int height);
-        Window(const WindowSettings& settings);
+        Window(const Window& other) = delete;
+        Window& operator=(const Window& other) = delete;
+        Window(Window&&) = default;
+        Window& operator=(Window&&) = default;
+        Window(const GPU& gpu, const std::string& title, unsigned int width, unsigned int height);
+        Window(const GPU& gpu, const WindowSettings& settings);
         ~Window();
+    protected:
+        Window(const WindowSettings& settings);
     public:
+        const GPU* gpu = nullptr;
         Keyboard keyboard;
         Mouse mouse;
         SwapChain* _swap_chain = nullptr;
@@ -78,6 +88,7 @@ namespace RenderEngine
         static void _keyboard_button_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
     protected:
         void _initialize(const WindowSettings& settings);
+        void _create_swapchain();
         void _set_unchanged();
     protected:
         int _x;

@@ -26,5 +26,7 @@ namespace RenderEngine
         bool vsync = true;
         ///< Number of samples for the Multi Sample Anti Aliasing
         unsigned int anti_aliasing = 1;
+        ///< If true, the swap chain is created at window construction time, otherwise it is only initialized at next 'update' call.
+        bool initialize_swapchain = true;
     };
 }

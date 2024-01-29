@@ -85,7 +85,7 @@ void Image::allocate_vk_image(const std::optional<VkImage>& image)
         info.arrayLayers = 1;
         if (vkCreateImage(gpu._logical_device, &info, nullptr, pointer) != VK_SUCCESS)
         {
-            THROW_ERROR("failed to create image")
+            THROW_ERROR("failed to create image");
         }
     }
 }
@@ -108,7 +108,7 @@ void Image::allocate_vk_image_view()
     info.subresourceRange.layerCount = 1;
     if (vkCreateImageView(gpu._logical_device, &info, nullptr, &_vk_image_view) != VK_SUCCESS)
     {
-        THROW_ERROR("failed to create image view")
+        THROW_ERROR("failed to create image view");
     }
 }
 
