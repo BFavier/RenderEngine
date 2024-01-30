@@ -11,7 +11,7 @@ Window::Window(const WindowSettings& settings) : keyboard(*this), mouse(*this)
     _initialize(settings);
 }
 
-Window::Window(const GPU& _gpu, const std::string& title, unsigned int width, unsigned int height) : gpu(&_gpu), keyboard(*this), mouse(*this)
+Window::Window(const std::shared_ptr<GPU>& _gpu, const std::string& title, unsigned int width, unsigned int height) : gpu(_gpu), keyboard(*this), mouse(*this)
 {
     WindowSettings settings;
     settings.title = title;
@@ -20,20 +20,23 @@ Window::Window(const GPU& _gpu, const std::string& title, unsigned int width, un
     _initialize(settings);
 }
 
-Window::Window(const GPU& _gpu, const WindowSettings& settings) : gpu(&_gpu), keyboard(*this), mouse(*this)
+Window::Window(const std::shared_ptr<GPU>& _gpu, const WindowSettings& settings) : gpu(_gpu), keyboard(*this), mouse(*this)
 {
     _initialize(settings);
 }
 
 Window::~Window()
 {
+    delete _swap_chain;
+    vkDestroySurfaceKHR(Internal::get_vulkan_instance(), _vk_surface, nullptr);
+    glfwDestroyWindow(_glfw_window);
 }
 
 void Window::update()
 {
     if (_swap_chain == nullptr)
     {
-        _create_swapchain();
+        _recreate_swapchain();
     }
     //Polling events
     _set_unchanged();
@@ -111,17 +114,26 @@ void Window::_initialize(const WindowSettings& settings)
     // create the swap chain
     if (settings.initialize_swapchain)
     {
-        _create_swapchain();
+        _recreate_swapchain();
     }
 }
 
-void Window::_create_swapchain()
+void Window::_recreate_swapchain()
 {
     if (_swap_chain != nullptr)
     {
-        delete _swap_chain;
+        _delete_swapchain();
     }
-    _swap_chain = new SwapChain(*gpu, *this);
+    if (_window_width > 0 && _window_height > 0)
+    {
+        _swap_chain = new SwapChain(gpu, *this);
+    }
+}
+
+void Window::_delete_swapchain()
+{
+    delete _swap_chain;
+    _swap_chain = nullptr;
 }
 
 void Window::move(int x, int y)
@@ -170,6 +182,7 @@ unsigned int Window::height() const
 void Window::resize(unsigned int width, unsigned int height)
 {
     glfwSetWindowSize(_glfw_window, static_cast<int>(width), static_cast<int>(height));
+    _delete_swapchain();
 }
 
 bool Window::full_screen() const
@@ -197,6 +210,7 @@ void Window::full_screen(bool enabled)
         glfwGetWindowSize(_glfw_window, &w, &h);
         glfwSetWindowMonitor(_glfw_window, nullptr,  x, y, w, h, GLFW_DONT_CARE);
     }
+    _delete_swapchain();
 }
 
 void Window::close()
@@ -267,6 +281,10 @@ bool Window::vsync() const
 
 void Window::vsync(bool enabled)
 {
+    if (_window_vsync == enabled)
+    {
+        return;
+    }
     _window_vsync = enabled;
     if (enabled)
     {
@@ -276,6 +294,7 @@ void Window::vsync(bool enabled)
     {
         glfwSwapInterval(0);
     }
+    _delete_swapchain();
 }
 
 void Window::_set_unchanged()
@@ -301,7 +320,7 @@ void Window::_window_resize_callback(GLFWwindow* window, int width, int height)
     Window* h = static_cast<Window*>(glfwGetWindowUserPointer(window));
     h->_window_width = width;
     h->_window_height = height;
-    // glfwSetWindowSize(h->_glfw_window, width, height);
+    h->_delete_swapchain();
 }
 
 void Window::_mouse_button_callback(GLFWwindow* window, int button, int action, int mods)

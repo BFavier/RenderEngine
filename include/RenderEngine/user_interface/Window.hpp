@@ -12,39 +12,43 @@ namespace RenderEngine
     class Window
     {
 
+    friend class Mouse;  // Mouse can access the _glfw_window attribute
+    friend class SwapChain; // SwapChain can access the _vk_surface and _glfw_window attributes
+    friend class GPU; // GPU can access the _vk_surface attribute
     friend class Internal; // RenderEngine::Internal can create dummy windows
     
-    public:
+    public: // This class is non copyable
         Window() = delete;
         Window(const Window& other) = delete;
         Window& operator=(const Window& other) = delete;
         Window(Window&&) = default;
         Window& operator=(Window&&) = default;
-        Window(const GPU& gpu, const std::string& title, unsigned int width, unsigned int height);
-        Window(const GPU& gpu, const WindowSettings& settings);
+    public:
+        Window(const std::shared_ptr<GPU>& gpu, const std::string& title, unsigned int width, unsigned int height);
+        Window(const std::shared_ptr<GPU>& gpu, const WindowSettings& settings);
         ~Window();
-    protected:
+    protected: // This constructor allows to create a dummy window without GPU (swapchain creation will fail)
         Window(const WindowSettings& settings);
     public:
-        const GPU* gpu = nullptr;
+        std::shared_ptr<GPU> gpu;
         Keyboard keyboard;
         Mouse mouse;
-        SwapChain* _swap_chain = nullptr;
-        GLFWwindow* _glfw_window = nullptr;
-        VkSurfaceKHR _vk_surface;
     public:
-        ///< Update the window's display, and the window's inputs (keyboard and mouse)
+        ///< Update the window's display, and the window's inputs states (keyboard and mouse)
         void update();
-        ///< Get the x/y position of the window
+        ///< Get the x position of the window in the screen
         int x() const;
+        ///< Get the y position of the window in the screen
         int y() const;
         ///< Move the window to the given position on it's screen
         void move(int x, int y);
-        ///< Get the width/height of the screen the window is on
+        ///< Get the width of the screen the window is on
         unsigned int screen_width() const;
+        ///< Get the height of the screen the window is on
         unsigned int screen_height() const;
-        ///< Get the widht/height of the window
+        ///< Get the widht of the window
         unsigned int width() const;
+        ///< Get the height of the window
         unsigned int height() const;
         ///< Resize the window to the given width and height
         void resize(unsigned int width, unsigned int height);
@@ -52,7 +56,7 @@ namespace RenderEngine
         bool full_screen() const;
         ///< Set whether the window should be in full screen
         void full_screen(bool enabled);
-        ///< Request the window to close (closing will return true)
+        ///< Request the window to close
         void close();
         ///< Returns true if the user asked for the window to close
         bool closing() const;
@@ -88,7 +92,8 @@ namespace RenderEngine
         static void _keyboard_button_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
     protected:
         void _initialize(const WindowSettings& settings);
-        void _create_swapchain();
+        void _recreate_swapchain();
+        void _delete_swapchain();
         void _set_unchanged();
     protected:
         int _x;
@@ -98,5 +103,8 @@ namespace RenderEngine
         std::string _window_title;
         bool _window_full_screen = false;
         bool _window_vsync = false;
+        SwapChain* _swap_chain = nullptr;
+        GLFWwindow* _glfw_window = nullptr;
+        VkSurfaceKHR _vk_surface = VK_NULL_HANDLE;
     };
 }

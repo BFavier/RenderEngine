@@ -23,14 +23,15 @@ namespace RenderEngine
                    CPU=VK_PHYSICAL_DEVICE_TYPE_CPU,
                    UNKNOWN=VK_PHYSICAL_DEVICE_TYPE_OTHER};
 
-    public:
+    public: // This class is non copyable
         GPU() = delete;
         GPU(const GPU& other) = delete;
         GPU& operator=(const GPU& other) = delete;
         GPU(GPU&&) = default;
         GPU& operator=(GPU&&) = default;
+    public:
         ~GPU();
-    protected:
+    protected: // only the class RenderEngine::Internal can create GPUs
         GPU(VkPhysicalDevice device, const Window& window, const std::vector<const char*>& validation_layer_names, const std::vector<std::string>& extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME});
     public:
         // Device name

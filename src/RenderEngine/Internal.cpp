@@ -91,41 +91,37 @@ void Internal::initialize(const std::vector<std::string>& validation_layers)
     {
         GPUs.emplace_back(new GPU(device, dummy_window, validation_layer_names));
     }
-    // setup the terminate function
-    std::atexit(Internal::terminate);
 }
 
 const std::vector<std::shared_ptr<GPU>>& Internal::get_detected_GPUs()
 {
+    Internal::initialize();
     return GPUs;
 }
 
-const GPU& Internal::get_best_GPU()
+const std::shared_ptr<GPU>& Internal::get_best_GPU()
 {
-    if (!Internal::_initialized)
-    {
-        THROW_ERROR("Tried getting the GPU before initializing engine.");
-    }
+    Internal::initialize();
     if (GPUs.size() == 0)
     {
         THROW_ERROR("No GPU available on current machine.");
     }
     // list the available GPUs and split them by type
-    std::list<GPU*> discrete_GPUs;
-    std::list<GPU*> other_GPUs;
+    std::vector<std::shared_ptr<GPU>> discrete_GPUs;
+    std::vector<std::shared_ptr<GPU>> other_GPUs;
     for (const std::shared_ptr<GPU>& gpu : GPUs)
     {
         if (gpu->type() == GPU::Type::DISCRETE_GPU)
         {
-            discrete_GPUs.push_back(gpu.get());
+            discrete_GPUs.push_back(gpu);
         }
         else
         {
-            other_GPUs.push_back(gpu.get());
+            other_GPUs.push_back(gpu);
         }
     }
     // chose the best available subset of GPUs
-    std::list<GPU*> subset;
+    std::vector<std::shared_ptr<GPU>> subset;
     if (discrete_GPUs.size() > 0)
     {
         subset = discrete_GPUs;
@@ -140,8 +136,8 @@ const GPU& Internal::get_best_GPU()
     }
     // select the GPU with most memory
     unsigned int max_memory = 0;
-    GPU* best = nullptr;
-    for (GPU* gpu : subset)
+    std::shared_ptr<GPU> best = nullptr;
+    for (std::shared_ptr<GPU> gpu : subset)
     {
         unsigned int memory = gpu->memory();
         if (memory > max_memory)
@@ -150,19 +146,18 @@ const GPU& Internal::get_best_GPU()
             max_memory = memory;
         }
     }
-    return *best;
+    return best;
 }
 
 void Internal::terminate()
 {
+    _initialized = false;
     GPUs.clear();
     //Terminate Vulkan
     _destroy_debug_utils_messenger_EXT(_vk_instance, _debug_messenger, nullptr);
     vkDestroyInstance(_vk_instance, nullptr);
     //Terminate GLFW
     glfwTerminate();
-    //set the flag back
-    _initialized = false;
 }
 
 std::vector<std::string> Internal::get_available_validation_layers()

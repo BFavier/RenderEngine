@@ -3,25 +3,25 @@
 #include <RenderEngine/user_interface/Window.hpp>
 using namespace RenderEngine;
 
-SwapChain::SwapChain(const GPU& _gpu, const Window& window) : gpu(_gpu)
+SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : gpu(_gpu)
 {
-    if (!gpu._graphics_family_queue.has_value() || !gpu._present_family_queue.has_value())
+    if (!gpu->_graphics_family_queue.has_value() || !gpu->_present_family_queue.has_value())
     {
         THROW_ERROR("The provided GPU does not support presenting to windows");
     }
     // Query window surface capacibilties
     const VkSurfaceKHR& surface = window._vk_surface;
     VkSurfaceCapabilitiesKHR capabilities;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu._physical_device, surface, &capabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu->_physical_device, surface, &capabilities);
     // Choosing surface format
     uint32_t n_supported_formats;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu._physical_device, surface, &n_supported_formats, nullptr);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu->_physical_device, surface, &n_supported_formats, nullptr);
     if (n_supported_formats == 0)
     {
         THROW_ERROR("The GPU supports 0 surface formats.");
     }
     std::vector<VkSurfaceFormatKHR> supported_formats(n_supported_formats);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu._physical_device, surface, &n_supported_formats, supported_formats.data());
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu->_physical_device, surface, &n_supported_formats, supported_formats.data());
     VkSurfaceFormatKHR surface_format;
     bool format_found = false;
     for (const VkSurfaceFormatKHR& sf : supported_formats)
@@ -39,13 +39,13 @@ SwapChain::SwapChain(const GPU& _gpu, const Window& window) : gpu(_gpu)
     }
     // Choosing present mode
     uint32_t n_present_modes;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu._physical_device, surface, &n_present_modes, nullptr);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu->_physical_device, surface, &n_present_modes, nullptr);
     if (n_present_modes == 0)
     {
         THROW_ERROR("The GPU supports 0 presentation modes to a screen.");
     }
     std::vector<VkPresentModeKHR> supported_present_modes(n_present_modes);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu._physical_device, surface, &n_present_modes, supported_present_modes.data());
+    vkGetPhysicalDeviceSurfacePresentModesKHR(gpu->_physical_device, surface, &n_present_modes, supported_present_modes.data());
     VkPresentModeKHR present_mode;
     if (!window.vsync() &&
         (std::find(supported_present_modes.begin(), supported_present_modes.end(), VK_PRESENT_MODE_IMMEDIATE_KHR) != supported_present_modes.end()))
@@ -90,9 +90,9 @@ SwapChain::SwapChain(const GPU& _gpu, const Window& window) : gpu(_gpu)
     swap_chain_infos.imageExtent = extent;
     swap_chain_infos.imageArrayLayers = 1;
     swap_chain_infos.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    if (gpu._graphics_family_queue.value() != gpu._present_family_queue.value())
+    if (gpu->_graphics_family_queue.value() != gpu->_present_family_queue.value())
     {
-        std::vector<uint32_t> family_indices = {gpu._graphics_family_queue.value().first, gpu._present_family_queue.value().first};
+        std::vector<uint32_t> family_indices = {gpu->_graphics_family_queue.value().first, gpu->_present_family_queue.value().first};
         swap_chain_infos.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         swap_chain_infos.queueFamilyIndexCount = family_indices.size();
         swap_chain_infos.pQueueFamilyIndices = family_indices.data();
@@ -108,21 +108,24 @@ SwapChain::SwapChain(const GPU& _gpu, const Window& window) : gpu(_gpu)
     swap_chain_infos.presentMode = present_mode;
     swap_chain_infos.clipped = VK_TRUE;
     swap_chain_infos.oldSwapchain = VK_NULL_HANDLE;
-    if (vkCreateSwapchainKHR(gpu._logical_device, &swap_chain_infos, nullptr, &_swap_chain) != VK_SUCCESS)
+    if (vkCreateSwapchainKHR(gpu->_logical_device, &swap_chain_infos, nullptr, &_swap_chain) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create the swap chain");
     }
     // Getting the vkImages
-    vkGetSwapchainImagesKHR(gpu._logical_device, _swap_chain, &image_count, nullptr); // just in case our requested image count was not respected, query it again
+    vkGetSwapchainImagesKHR(gpu->_logical_device, _swap_chain, &image_count, nullptr); // just in case our requested image count was not respected, query it again
     std::vector<VkImage> vk_images(image_count, VK_NULL_HANDLE);
-    vkGetSwapchainImagesKHR(gpu._logical_device, _swap_chain, &image_count, vk_images.data());
+    vkGetSwapchainImagesKHR(gpu->_logical_device, _swap_chain, &image_count, vk_images.data());
     for (int i=0; i<image_count; i++)
     {
-        images.emplace_back(Image(gpu, extent.width, extent.height, static_cast<Image::Format>(surface_format.format), vk_images[i]));
+        std::shared_ptr<VkImage> vk_image(new VkImage); // Using the standard dealocator instead of Image::_deallocate_image because VkImage aquired from the swap chain should NOT be deleted using VkDestroyImage
+        *vk_image = vk_images[i];
+        images.push_back(Image(gpu, extent.width, extent.height, static_cast<Image::Format>(surface_format.format), vk_image));
     }
 }
 
 SwapChain::~SwapChain()
 {
-    vkDestroySwapchainKHR(gpu._logical_device, _swap_chain, nullptr);
+    images.clear();
+    vkDestroySwapchainKHR(gpu->_logical_device, _swap_chain, nullptr);
 }

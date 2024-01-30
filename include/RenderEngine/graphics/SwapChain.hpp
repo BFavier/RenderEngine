@@ -14,13 +14,16 @@ namespace RenderEngine
 
     class SwapChain
     {
-    public:
+    public: // this object is non copyable
         SwapChain() = delete;
-        SwapChain(const GPU& gpu, const Window& window);
+        SwapChain(const SwapChain& other) = delete;
+        const SwapChain& operator=(const SwapChain& other) = delete;
+    public:
+        SwapChain(const std::shared_ptr<GPU>& gpu, const Window& window);
         ~SwapChain();
     public:
-        const GPU& gpu;
+        std::shared_ptr<GPU> gpu;
         std::vector<Image> images;
-        VkSwapchainKHR _swap_chain = VK_NULL_HANDLE;
+        VkSwapchainKHR _swap_chain;
     };
 }

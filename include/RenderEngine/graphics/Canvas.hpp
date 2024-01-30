@@ -15,7 +15,7 @@ namespace RenderEngine
             ~Canvas();
         protected:
             void draw();
-        public:
+        protected:
             std::shared_ptr<VkFramebuffer> _frame_buffer;
         protected:
             void allocate_frame_buffer();
