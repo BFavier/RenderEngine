@@ -42,41 +42,118 @@ Shader::~Shader()
 void Shader::_create_render_pass(const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_inputs,
                                  const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_outputs)
 {
-    // Creating attachment references
+    // Ordering unique attachments
+    std::vector<std::pair<std::string, Type>> unique_attachments; // The list of all unique attachments
+    std::map<std::pair<std::string, Type>, unsigned int> attachment_indexes; // The attachment index that is attributed to each unique attachments
+    std::map<std::pair<std::string, Type>, std::set<unsigned int>> input_subpasses; // subpass indexes at which the given attachment is used as input
+    std::map<std::pair<std::string, Type>, std::set<unsigned int>> output_subpasses;  // subpass indexes at which the given attachment is used as output
+    {
+        std::set<std::pair<std::string, Type>> set_unique_attachments;
+        for (unsigned int i=0;i<fragment_inputs.size();i++)
+        {
+            for (const std::pair<std::string, Type>& in : fragment_inputs[i])
+            {
+                set_unique_attachments.insert(in);
+                input_subpasses[in].insert(i);
+            }
+            for (const std::pair<std::string, Type>& out : fragment_outputs[i])
+            {
+                set_unique_attachments.insert(out);
+                output_subpasses[out].insert(i);
+            }
+        }
+        unsigned int index = 0;
+        for (const std::pair<std::string, Type>& att : set_unique_attachments)
+        {
+            attachment_indexes[att] = index;
+            unique_attachments.push_back(att);
+            index += 1;
+        }
+    }
+    // Creating unique attachment descriptions
+    std::vector<VkAttachmentDescription> attachments;
+    {
+        // Color attachments
+        for (const std::pair<std::string, Type>& att : unique_attachments)
+        {
+            VkAttachmentDescription attachment{};
+            attachment.format = static_cast<VkFormat>(Shader::Format[att.second]);
+            attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            attachment.storeOp = output_subpasses[att].size() == 0 ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE;
+            attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            attachment.initialLayout = input_subpasses[att].size() == 0 ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            attachment.finalLayout = output_subpasses[att].size() == 0 ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            attachments.push_back(attachment);
+        }
+        // Depth attachments
+        VkAttachmentDescription attachment{};
+        attachment.format = VK_FORMAT_D32_SFLOAT;
+        attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachments.push_back(attachment);
+    }
+    // Creating attachment references and attachment reserve
     std::vector<std::vector<VkAttachmentReference>> color_attachment_refs;
     std::vector<std::vector<VkAttachmentReference>> input_attachment_refs;
     std::vector<std::vector<uint32_t>> reserve_attachments;
     std::vector<VkAttachmentReference> depth_buffer_refs;
-    for (unsigned int i=0 : )
+    for (unsigned int i=0;i<fragment_inputs.size();i++)
     {
-        // Color atachments
+        // Color attachments
         uint32_t j=0;
         std::vector<VkAttachmentReference> color_refs;
-        for (j=j; j<?; j++)
+        for (const std::pair<std::string, Type>& att : fragment_outputs[i])
         {
-            color_refs.push_back({j, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
+            color_refs.push_back({attachment_indexes[att], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
         }
         color_attachment_refs.push_back(color_refs);
         // Input attachments
         std::vector<VkAttachmentReference> input_refs;
-        for (j=j; j<?; j++)
+        for (const std::pair<std::string, Type>& att : fragment_inputs[i])
         {
-            input_refs.push_back({j, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
+            input_refs.push_back({attachment_indexes[att], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
         }
         input_attachment_refs.push_back(input_refs);
         // Reserved attachments
         std::vector<uint32_t> reserve;
-        for (j=j; j<?; j++)
+        uint32_t j=0;
+        for (const std::pair<std::string, Type>& att : unique_attachments)
         {
-            reserve.push_back(j);
+            if (std::find(fragment_inputs[i].begin(), fragment_inputs[i].end(), att) == fragment_inputs[i].end()
+                && std::find(fragment_outputs[i].begin(), fragment_outputs[i].end(), att) == fragment_outputs[i].end())
+            {
+                reserve.push_back(j);
+            }
+            j += 1;
         }
         reserve_attachments.push_back(reserve);
         // Depth attachments
         depth_buffer_refs.push_back({j, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL});
     }
+    // Creating attachment dependencies
+    std::vector<VkSubpassDependency> dependencies; // https://www.reddit.com/r/vulkan/comments/s80reu/subpass_dependencies_what_are_those_and_why_do_i/
+    for (unsigned int i=0;i<fragment_inputs.size();i++)
+    {
+        VkSubpassDependency dependency{}; // A dependency of an attachment between two subpasses
+        dependency.srcSubpass = i;
+        dependency.dstSubpass = i+1;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+        dependencies.push_back(dependency);
+    }
     // Creating subpasses
     std::vector<VkSubpassDescription> subpasses;
-    for (unsigned int i=0; i<?; i++)
+    for (unsigned int i=0;i<fragment_inputs.size();i++)
     {
         VkSubpassDescription subpass;
         subpass.flags = 0;
@@ -91,26 +168,6 @@ void Shader::_create_render_pass(const std::vector<std::vector<std::pair<std::st
         subpass.pDepthStencilAttachment = &depth_buffer_refs[i];
         subpasses.push_back(subpass);
     }
-    // Creating attachment descriptions
-    std::vector<VkAttachmentDescription> attachments;
-    for ()
-    {
-        // Color attachments
-        for ()
-        {
-            
-            VkAttachmentDescription attachment{};
-            attachment.format = static_cast<VkFormat>(Image::Format::RGBA);
-            attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-            attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-            attachments.push_back(attachment);
-        }
-    }
     // Creating render pass
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -118,8 +175,8 @@ void Shader::_create_render_pass(const std::vector<std::vector<std::pair<std::st
     renderPassInfo.pAttachments = attachments.data();
     renderPassInfo.subpassCount = subpasses.size();
     renderPassInfo.pSubpasses = subpasses.data();
-    renderPassInfo.dependencyCount = 0;
-    renderPassInfo.pDependencies = nullptr;
+    renderPassInfo.dependencyCount = dependencies.size();
+    renderPassInfo.pDependencies = dependencies.data();
     if (vkCreateRenderPass(gpu->_logical_device, &renderPassInfo, nullptr, &_render_pass) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to create render pass!");
@@ -274,11 +331,11 @@ void Shader::_create_pipeline()
     pipelineInfo.pColorBlendState = &color_blending;
     pipelineInfo.pDynamicState = &dynamic_state;
     pipelineInfo.layout = pipeline_layout;
-    pipelineInfo.renderPass = renderPass;
+    pipelineInfo.renderPass = _render_pass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
     pipelineInfo.basePipelineIndex = -1; // Optional
-    if (vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS)
+    if (vkCreateGraphicsPipelines(gpu->_logical_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create graphics pipeline!");
     }

@@ -1,5 +1,5 @@
 #pragma once
-#include <RenderEngine/graphics/shaders/ShaderSubpass.hpp>
+#include <RenderEngine/utilities/External.hpp>
 #include <vector>
 #include <memory>
 
@@ -24,9 +24,10 @@ namespace RenderEngine
         const Shader& operator=(const Shader& other) = delete;
     public:
         Shader(const std::shared_ptr<GPU>& gpu,
-               const std::vector<std::vector<std::pair<std::string, Type>>>& vertex_buffer_inputs,
+               const std::vector<std::vector<std::pair<std::string, Type>>>& vertex_inputs,
                const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_inputs,
-               const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_outputs);
+               const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_outputs,
+               const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> codes);
         ~Shader();
     protected:
         std::shared_ptr<GPU> gpu;
