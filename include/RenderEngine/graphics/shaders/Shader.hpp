@@ -2,6 +2,7 @@
 #include <RenderEngine/utilities/External.hpp>
 #include <vector>
 #include <memory>
+#include <string>
 
 // An exemple of shader wilth multiple subpasses :
 // https://github.com/SaschaWillems/Vulkan/blob/master/examples/subpasses/subpasses.cpp
@@ -24,21 +25,25 @@ namespace RenderEngine
         const Shader& operator=(const Shader& other) = delete;
     public:
         Shader(const std::shared_ptr<GPU>& gpu,
+               const std::vector<std::vector<std::vector<VkDescriptorSetLayoutBinding>>>& bindings_sets, // for each subpass, for each layout set, descriptor of all bindings
                const std::vector<std::vector<std::pair<std::string, Type>>>& vertex_inputs,
                const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_inputs,
                const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_outputs,
-               const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> codes);
+               const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode);
         ~Shader();
     protected:
         std::shared_ptr<GPU> gpu;
         VkRenderPass _render_pass = VK_NULL_HANDLE;
+        std::vector<std::vector<std::pair<VkShaderStageFlagBits, VkShaderModule>>> _modules;
+        std::vector<std::vector<VkDescriptorSetLayout>> _descriptor_set_layouts;
         std::vector<VkPipelineLayout> _pipeline_layouts;
-        std::vector<std::vector<VkShaderModule>> _modules;
         std::vector<VkPipeline> _pipelines;
     protected:
         void _create_render_pass(const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_inputs,
                                  const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_outputs);
-        void _create_pipeline();
+        void _create_pipelines(const std::vector<std::vector<std::vector<VkDescriptorSetLayoutBinding>>>& bindings_sets,
+                               const std::vector<std::vector<std::pair<std::string, Type>>>& vertex_inputs,
+                               const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode);
         VkShaderModule _code_to_module(const std::vector<unsigned char>& code);
     };
 }
