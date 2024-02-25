@@ -9,6 +9,7 @@ project(RenderEngine)
 # add_library(${PROJECT_NAME} SHARED
 add_executable(${PROJECT_NAME}
     src/RenderEngine/graphics/Buffer.cpp
+    src/RenderEngine/graphics/Canvas.cpp
     src/RenderEngine/graphics/GPU.cpp
     src/RenderEngine/graphics/Image.cpp
     src/RenderEngine/graphics/shaders/Shader.cpp

@@ -16,24 +16,39 @@ namespace RenderEngine
     // A Shader is a succession of ShaderSubpass
     {
     public:
-        enum Type{FLOAT, VEC2, VEC3, VEC4, INT, IVEC2, IVEC3, IVEC4, UINT, UVEC2, UVEC3, UVEC4, DOUBLE, DVEC2, DVEC3, DVEC4};
-        static const std::vector<VkFormat> Format;
-        static const std::vector<unsigned char> ByteSize;
+        enum Type{FLOAT=VK_FORMAT_R32_SFLOAT,
+                  VEC2=VK_FORMAT_R32G32_SFLOAT,
+                  VEC3=VK_FORMAT_R32G32B32_SFLOAT,
+                  VEC4=VK_FORMAT_R32G32B32A32_SFLOAT,
+                  INT=VK_FORMAT_R32_SINT,
+                  IVEC2=VK_FORMAT_R32G32_SINT,
+                  IVEC3=VK_FORMAT_R32G32B32_SINT,
+                  IVEC4=VK_FORMAT_R32G32B32A32_SINT,
+                  UINT=VK_FORMAT_R32_UINT,
+                  UVEC2=VK_FORMAT_R32G32_UINT,
+                  UVEC3=VK_FORMAT_R32G32B32_UINT,
+                  UVEC4=VK_FORMAT_R32G32B32A32_UINT,
+                  DOUBLE=VK_FORMAT_R64_SFLOAT,
+                  DVEC2=VK_FORMAT_R64G64_SFLOAT,
+                  DVEC3=VK_FORMAT_R64G64B64_SFLOAT,
+                  DVEC4=VK_FORMAT_R64G64B64A64_SFLOAT};
     public: // This object is non copyable
         Shader() = delete;
         Shader(const Shader& other) = delete;
         const Shader& operator=(const Shader& other) = delete;
     public:
-        Shader(const std::shared_ptr<GPU>& gpu,
-               const std::vector<std::vector<std::vector<VkDescriptorSetLayoutBinding>>>& bindings_sets, // for each subpass, for each layout set, descriptor of all bindings
-               const std::vector<std::vector<std::pair<std::string, Type>>>& vertex_inputs,
-               const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_inputs,
-               const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_outputs,
-               const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode);
+        Shader(const GPU* gpu,
+               const std::vector<std::vector<std::vector<VkDescriptorSetLayoutBinding>>>& bindings_sets, // for each subpass, for each layout set, descriptor of all bindings (textures, Uniform Buffer Objects, ...)
+               const std::vector<std::vector<std::pair<VkVertexInputBindingDescription, VkVertexInputAttributeDescription>>>& vertex_inputs, // for each subpass, for each vertex input, it's description
+               const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_inputs, // for each subpass, the description of all fragment inputs color attachments
+               const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_outputs, // for each subpass the description of all fragment outputs color attachments (excepted depth buffer)
+               const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode // for each subpass, for each shader stage, the bytecode of the compiled spirv file
+               );
         ~Shader();
     protected:
-        std::shared_ptr<GPU> gpu;
+        const GPU* gpu = nullptr;
         VkRenderPass _render_pass = VK_NULL_HANDLE;
+        std::vector<std::pair<std::string, Type>> _color_attachments; // The list of all unique color attachments names and types
         std::vector<std::vector<std::pair<VkShaderStageFlagBits, VkShaderModule>>> _modules;
         std::vector<std::vector<VkDescriptorSetLayout>> _descriptor_set_layouts;
         std::vector<VkPipelineLayout> _pipeline_layouts;
@@ -42,7 +57,7 @@ namespace RenderEngine
         void _create_render_pass(const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_inputs,
                                  const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_outputs);
         void _create_pipelines(const std::vector<std::vector<std::vector<VkDescriptorSetLayoutBinding>>>& bindings_sets,
-                               const std::vector<std::vector<std::pair<std::string, Type>>>& vertex_inputs,
+                               const std::vector<std::vector<std::pair<VkVertexInputBindingDescription, VkVertexInputAttributeDescription>>>& vertex_inputs,
                                const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode);
         VkShaderModule _code_to_module(const std::vector<unsigned char>& code);
     };

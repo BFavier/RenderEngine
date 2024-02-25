@@ -2,11 +2,18 @@
 #include <RenderEngine/graphics/Canvas.hpp>
 using namespace RenderEngine;
 
-Canvas::Canvas(const GPU& gpu,  uint32_t width, uint32_t height) : Image::Image(gpu, width, height, Image::RGBA)
+Canvas::Canvas(std::shared_ptr<GPU> _gpu, uint32_t width, uint32_t height) :
+    image(_gpu, width, height, Image::RGBA),
+    handles(_gpu, width, height, Image::Format::POINTER, Image::AntiAliasing::X1, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, false),
+    depth_buffer(_gpu, width, height, Image::Format::DEPTH, Image::AntiAliasing::X1, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, false)
 {
 }
 
-Canvas::Canvas(const GPU& gpu,  uint32_t width, uint32_t height, const VkImage& vk_image) : Image::Image(gpu, width, height, Image::RGBA, vk_image)
+
+Canvas::Canvas(const Image& _image) :
+    image(_image),
+    handles(_image.gpu, _image.width(), _image.height(), Image::Format::POINTER, Image::AntiAliasing::X1, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, false),
+    depth_buffer(_image.gpu, _image.width(), _image.height(), Image::Format::DEPTH, Image::AntiAliasing::X1, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, false)
 {
 }
 

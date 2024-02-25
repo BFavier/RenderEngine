@@ -42,6 +42,8 @@ namespace RenderEngine
         uint64_t memory() const;
         // Returns the type of the device
         Type type() const;
+        // Return the best supported depth format
+        std::pair<VkImageTiling, VkFormat> depth_format() const;
     public:
         VkPhysicalDevice _physical_device = VK_NULL_HANDLE;
         VkPhysicalDeviceProperties _device_properties{};

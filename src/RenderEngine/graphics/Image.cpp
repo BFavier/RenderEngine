@@ -31,36 +31,77 @@ Image::Image(const std::shared_ptr<GPU>& _gpu, const std::string& image_path, st
     //
     if (_format.has_value())
     {
-        format = _format.value();
+        _format = _format.value();
     }
     else
     {
-        format = Image::Format::RGBA;
+        _format = Image::Format::RGBA;
     }
     allocate_vk_image();
     stbi_image_free(imgData);
 }
 
-Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t _width, uint32_t _height, Image::Format _format) : gpu(_gpu), width(_width), height(_height), format(_format)
+Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Image::Format format) : gpu(_gpu), _width(width), _height(height), _format(format)
 {
     allocate_vk_image();
     allocate_vk_image_view();
 }
 
-Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t _width, uint32_t _height, Image::Format _format, const std::shared_ptr<VkImage>& vk_image) : gpu(_gpu), width(_width), height(_height), format(_format)
+// Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Image::Format format, const std::vector<unsigned char>& data) : gpu(_gpu), _width(width), _height(height), _format(format)
+// {
+//     allocate_vk_image();
+//     allocate_vk_image_view();
+// }
+
+Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Image::Format format, Image::AntiAliasing sample_count, VkImageTiling tiling, VkImageUsageFlags usage, bool mip_mapping) : gpu(_gpu), _width(width), _height(height), _format(format)
+{
+    gpu = _gpu;
+    _width = width;
+    _height = height;
+    _format = format;
+    _sample_count = sample_count;
+    _tiling = tiling;
+    _usage = usage;
+    if (mip_mapping)
+    {
+        _mip_levels = std::min(static_cast<uint32_t>(std::log2(width)), static_cast<uint32_t>(std::log2(height)));
+    }
+    else
+    {
+        _mip_levels = 1;
+    }
+    allocate_vk_image();
+    allocate_vk_image_view();
+}
+
+Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Image::Format format, const std::shared_ptr<VkImage>& vk_image) : gpu(_gpu), _width(width), _height(height), _format(format)
 {
     _vk_image = vk_image;
     allocate_vk_image_view();
 }
 
-Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t _width, uint32_t _height, Image::Format _format, const std::vector<unsigned char>& data) : gpu(_gpu), width(_width), height(_height), format(_format)
-{
-    allocate_vk_image();
-    allocate_vk_image_view();
-}
-
 Image::~Image()
 {
+}
+
+uint32_t Image::width() const
+{
+    return _width;
+}
+
+uint32_t Image::height() const
+{
+    return _height;
+}
+
+Image::Format Image::format() const
+{
+    return _format;
+}
+
+Image::AntiAliasing Image::sample_count() const
+{
+    return _sample_count;
 }
 
 void Image::allocate_vk_image()
@@ -69,12 +110,18 @@ void Image::allocate_vk_image()
     VkImageCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     info.imageType = VK_IMAGE_TYPE_2D;
-    info.format = static_cast<VkFormat>(format);
-    info.extent.width = width;
-    info.extent.height = height;
+    info.format = static_cast<VkFormat>(_format);
+    info.extent.width = _width;
+    info.extent.height = _height;
     info.extent.depth = 1;
-    info.mipLevels = 1;
-    info.arrayLayers = 1;
+    info.arrayLayers = 1; // Only one image is allocated
+    info.tiling = _tiling;
+    info.samples = static_cast<VkSampleCountFlagBits>(_sample_count);
+    info.usage = _usage;
+    info.mipLevels = _mip_levels;
+    info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    info.queueFamilyIndexCount = 0;
+    info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     if (vkCreateImage(gpu->_logical_device, &info, nullptr, _vk_image.get()) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create image");
@@ -88,14 +135,14 @@ void Image::allocate_vk_image_view()
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     info.image = *_vk_image;
     info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    info.format = static_cast<VkFormat>(format);
+    info.format = static_cast<VkFormat>(_format);
     info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
     info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
     info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
     info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
     info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     info.subresourceRange.baseMipLevel = 0;
-    info.subresourceRange.levelCount = 1;
+    info.subresourceRange.levelCount = _mip_levels;
     info.subresourceRange.baseArrayLayer = 0;
     info.subresourceRange.layerCount = 1;
     if (vkCreateImageView(gpu->_logical_device, &info, nullptr, _vk_image_view.get()) != VK_SUCCESS)

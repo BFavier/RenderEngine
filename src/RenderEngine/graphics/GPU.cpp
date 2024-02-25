@@ -222,6 +222,30 @@ std::optional<uint32_t> GPU::_select_queue_family(std::vector<VkQueueFamilyPrope
     return selected_family;
 }
 
+std::pair<VkImageTiling, VkFormat> GPU::depth_format() const
+{
+    std::vector<VkFormat> formats = {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT};
+    for (VkFormat format : formats)
+    {
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(_physical_device, format, &props);
+        if ((props.optimalTilingFeatures & format) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+        {
+            return std::make_pair(VK_IMAGE_TILING_OPTIMAL, format);
+        }
+    }
+    for (VkFormat format : formats)
+    {
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(_physical_device, format, &props);
+        if ((props.linearTilingFeatures & format) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+        {
+            return std::make_pair(VK_IMAGE_TILING_LINEAR, format);
+        }
+    }
+    throw std::runtime_error("Failed to find compatible depth format on GPU");
+}
+
 std::optional<uint32_t> GPU::_select_present_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,
                                                           const Window& window, std::map<uint32_t, uint32_t>& selected_families_count,
                                                           const std::optional<uint32_t>& graphics_family, bool& graphics_queue_is_present_queue) const

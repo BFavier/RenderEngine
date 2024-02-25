@@ -24,7 +24,7 @@ namespace RenderEngine
         static const std::vector<std::shared_ptr<GPU>>& get_detected_GPUs();
         static const std::shared_ptr<GPU>& get_best_GPU();
     protected:
-            static VKAPI_ATTR VkBool32 VKAPI_CALL _debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+        static VKAPI_ATTR VkBool32 VKAPI_CALL _debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                                                               VkDebugUtilsMessageTypeFlagsEXT messageType,
                                                               const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
                                                               void* pUserData);
