@@ -1,4 +1,3 @@
-#pragma once
 #include <RenderEngine/graphics/shaders/Shader.hpp>
 #include <RenderEngine/graphics/GPU.hpp>
 #include <RenderEngine/utilities/Macro.hpp>
@@ -6,7 +5,7 @@
 using namespace RenderEngine;
 
 Shader::Shader(const GPU* _gpu,
-               const std::vector<std::vector<std::vector<VkDescriptorSetLayoutBinding>>>& bindings_sets,
+               const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& bindings_sets,
                const std::vector<std::vector<std::pair<VkVertexInputBindingDescription, VkVertexInputAttributeDescription>>>& vertex_inputs,
                const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_inputs,
                const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_outputs,
@@ -188,23 +187,30 @@ void Shader::_create_render_pass(const std::vector<std::vector<std::pair<std::st
     }
 }
 
-void Shader::_create_pipelines(const std::vector<std::vector<std::vector<VkDescriptorSetLayoutBinding>>>& bindings_sets,
+void Shader::_create_pipelines(const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& bindings_sets,
                                const std::vector<std::vector<std::pair<VkVertexInputBindingDescription, VkVertexInputAttributeDescription>>>& vertex_inputs,
                                const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode)
 {
     // Create descriptor set layouts
     // https://stackoverflow.com/questions/56928041/what-is-the-purpose-of-multiple-setlayoutcounts-of-vulkan-vkpipelinelayoutcreate
     _descriptor_set_layouts.resize(bindings_sets.size()); // description of all descriptor of a given set of bindings : "layout (set = 0, binding = 1) uniform sampler2D Texture"
-    for (unsigned int i=0;i<bindings_sets.size();i++)
+    _bindings.resize(bindings_sets.size());
+    for (unsigned int i=0;i<bindings_sets.size();i++) // for each subpass
     {
         _descriptor_set_layouts[i].resize(bindings_sets[i].size());
-        for (unsigned int j=0;j<bindings_sets[i].size();j++)
+        for (unsigned int j=0;j<bindings_sets[i].size();j++) // for each descriptor set
         {
+            std::vector<VkDescriptorSetLayoutBinding> bindings_desc;
+            for (const std::pair<std::string, VkDescriptorSetLayoutBinding>& b : bindings_sets[i][j])
+            {
+                bindings_desc.push_back(b.second);
+                _bindings[i].push_back(std::make_pair(b.first, b.second.descriptorType));
+            }
             VkDescriptorSetLayoutCreateInfo desc_set_info{};
             desc_set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
             desc_set_info.flags = 0;
-            desc_set_info.bindingCount = bindings_sets[i][j].size();
-            desc_set_info.pBindings = bindings_sets[i][j].data();
+            desc_set_info.bindingCount = bindings_desc.size();
+            desc_set_info.pBindings = bindings_desc.data();
             if (vkCreateDescriptorSetLayout(gpu->_logical_device, &desc_set_info, nullptr, &_descriptor_set_layouts[i][j]) != VK_SUCCESS)
             {
                 throw std::runtime_error("failed to create descriptor set layout!");

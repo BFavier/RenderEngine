@@ -38,7 +38,7 @@ namespace RenderEngine
         const Shader& operator=(const Shader& other) = delete;
     public:
         Shader(const GPU* gpu,
-               const std::vector<std::vector<std::vector<VkDescriptorSetLayoutBinding>>>& bindings_sets, // for each subpass, for each layout set, descriptor of all bindings (textures, Uniform Buffer Objects, ...)
+               const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& bindings_sets, // for each subpass, for each layout set, descriptor of all bindings (textures, Uniform Buffer Objects, ...)
                const std::vector<std::vector<std::pair<VkVertexInputBindingDescription, VkVertexInputAttributeDescription>>>& vertex_inputs, // for each subpass, for each vertex input, it's description
                const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_inputs, // for each subpass, the description of all fragment inputs color attachments
                const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_outputs, // for each subpass the description of all fragment outputs color attachments (excepted depth buffer)
@@ -48,15 +48,16 @@ namespace RenderEngine
     protected:
         const GPU* gpu = nullptr;
         VkRenderPass _render_pass = VK_NULL_HANDLE;
+        std::vector<std::vector<std::pair<std::string, VkDescriptorType>>> _bindings; // The list of all unique bindingss names and types
         std::vector<std::pair<std::string, Type>> _color_attachments; // The list of all unique color attachments names and types
-        std::vector<std::vector<std::pair<VkShaderStageFlagBits, VkShaderModule>>> _modules;
-        std::vector<std::vector<VkDescriptorSetLayout>> _descriptor_set_layouts;
-        std::vector<VkPipelineLayout> _pipeline_layouts;
-        std::vector<VkPipeline> _pipelines;
+        std::vector<std::vector<std::pair<VkShaderStageFlagBits, VkShaderModule>>> _modules; // for each subpass, one or more stage modules
+        std::vector<std::vector<VkDescriptorSetLayout>> _descriptor_set_layouts; // for each subpass, one or more descriptor set layout
+        std::vector<VkPipelineLayout> _pipeline_layouts; // pipeline layout for each subpass
+        std::vector<VkPipeline> _pipelines;  // pipeline for each subpass
     protected:
         void _create_render_pass(const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_inputs,
                                  const std::vector<std::vector<std::pair<std::string, Type>>>& fragment_outputs);
-        void _create_pipelines(const std::vector<std::vector<std::vector<VkDescriptorSetLayoutBinding>>>& bindings_sets,
+        void _create_pipelines(const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& bindings_sets,
                                const std::vector<std::vector<std::pair<VkVertexInputBindingDescription, VkVertexInputAttributeDescription>>>& vertex_inputs,
                                const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode);
         VkShaderModule _code_to_module(const std::vector<unsigned char>& code);
