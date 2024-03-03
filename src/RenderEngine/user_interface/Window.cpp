@@ -32,6 +32,15 @@ Window::~Window()
     glfwDestroyWindow(_glfw_window);
 }
 
+
+Canvas& Window::back_frame()
+{
+    uint32_t i;
+    vkAcquireNextImageKHR(gpu->_logical_device, _swap_chain->_swap_chain, UINT64_MAX, VK_NULL_HANDLE, VK_NULL_HANDLE, &i);
+    return _swap_chain->canvas[i];
+}
+
+
 void Window::update()
 {
     if (_swap_chain == nullptr)

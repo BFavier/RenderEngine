@@ -34,6 +34,8 @@ namespace RenderEngine
         Keyboard keyboard;
         Mouse mouse;
     public:
+        ///< returns the next Canvas to draw to from the swapchain. Wait until an image is available
+        Canvas& back_frame();
         ///< Update the window's display, and the window's inputs states (keyboard and mouse)
         void update();
         ///< Get the x position of the window in the screen
