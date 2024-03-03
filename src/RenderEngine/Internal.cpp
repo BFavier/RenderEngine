@@ -99,7 +99,7 @@ const std::vector<std::shared_ptr<GPU>>& Internal::get_detected_GPUs()
     return GPUs;
 }
 
-const std::shared_ptr<GPU>& Internal::get_best_GPU()
+const std::shared_ptr<GPU> Internal::get_best_GPU()
 {
     Internal::initialize();
     if (GPUs.size() == 0)

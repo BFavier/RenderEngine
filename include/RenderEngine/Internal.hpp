@@ -22,7 +22,7 @@ namespace RenderEngine
         static std::vector<std::string> get_available_vulkan_extensions();
         static VkInstance get_vulkan_instance();
         static const std::vector<std::shared_ptr<GPU>>& get_detected_GPUs();
-        static const std::shared_ptr<GPU>& get_best_GPU();
+        static const std::shared_ptr<GPU> get_best_GPU();
     protected:
         static VKAPI_ATTR VkBool32 VKAPI_CALL _debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                                                               VkDebugUtilsMessageTypeFlagsEXT messageType,
