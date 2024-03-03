@@ -20,10 +20,14 @@ namespace RenderEngine
             Image depth_buffer;
         protected:
             std::shared_ptr<VkFramebuffer> _frame_buffer = nullptr;
+            std::shared_ptr<VkCommandBuffer> _draw_command_buffer = nullptr;
+            std::shared_ptr<VkCommandBuffer> _fill_command_buffer = nullptr;
         protected:
             void allocate_frame_buffer();
+            void allocate_command_buffer(std::shared_ptr<VkCommandBuffer>& command_buffer, VkCommandPool pool);
         public:
             void draw();
             static void _deallocate_frame_buffer(const std::shared_ptr<GPU>& gpu, VkFramebuffer* frame_buffer);
+            static void _deallocate_command_buffer(const std::shared_ptr<GPU>& gpu, const VkCommandPool& pool, VkCommandBuffer* command_buffer);
     };
 }
