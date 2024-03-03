@@ -93,36 +93,41 @@ void Shader::_create_render_pass(const std::vector<std::vector<std::string>>& in
     std::vector<VkAttachmentReference> depth_buffer_refs;
     for (unsigned int i=0;i<input_attachments.size();i++) // for each subpass
     {
-        // Color attachments
-        uint32_t j=0;
-        std::vector<VkAttachmentReference> color_refs;
-        for (const std::string& att : output_attachments[i])
+        // Attachment references
         {
-            color_refs.push_back({attachment_indexes[att], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
-        }
-        color_attachment_refs.push_back(color_refs);
-        // Input attachments
-        std::vector<VkAttachmentReference> input_refs;
-        for (const std::string& att : input_attachments[i])
-        {
-            input_refs.push_back({attachment_indexes[att], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
-        }
-        input_attachment_refs.push_back(input_refs);
-        // Reserved attachments
-        std::vector<uint32_t> reserve;
-        uint32_t j=0;
-        for (const std::pair<std::string, Type>& att : _attachments)
-        {
-            if (std::find(input_attachments[i].begin(), input_attachments[i].end(), att.first) == input_attachments[i].end()
-                && std::find(output_attachments[i].begin(), output_attachments[i].end(), att.first) == output_attachments[i].end())
+            // Color attachments
+            uint32_t j=0;
+            std::vector<VkAttachmentReference> color_refs;
+            for (const std::string& att : output_attachments[i])
             {
-                reserve.push_back(j);
+                color_refs.push_back({attachment_indexes[att], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
             }
-            j += 1;
+            color_attachment_refs.push_back(color_refs);
+            // Input attachments
+            std::vector<VkAttachmentReference> input_refs;
+            for (const std::string& att : input_attachments[i])
+            {
+                input_refs.push_back({attachment_indexes[att], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
+            }
+            input_attachment_refs.push_back(input_refs);
+            // Depth attachments
+            depth_buffer_refs.push_back({ j, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL });
         }
-        reserve_attachments.push_back(reserve);
-        // Depth attachments
-        depth_buffer_refs.push_back({j, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL});
+        // Reserved attachments
+        {
+            std::vector<uint32_t> reserve;
+            uint32_t j=0;
+            for (const std::pair<std::string, Type>& att : _attachments)
+            {
+                if (std::find(input_attachments[i].begin(), input_attachments[i].end(), att.first) == input_attachments[i].end()
+                    && std::find(output_attachments[i].begin(), output_attachments[i].end(), att.first) == output_attachments[i].end())
+                {
+                    reserve.push_back(j);
+                }
+                j += 1;
+            }
+            reserve_attachments.push_back(reserve);
+        }
     }
     // Creating attachment dependencies
     std::vector<VkSubpassDependency> dependencies; // https://www.reddit.com/r/vulkan/comments/s80reu/subpass_dependencies_what_are_those_and_why_do_i/

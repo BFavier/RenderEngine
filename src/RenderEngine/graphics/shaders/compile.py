@@ -44,7 +44,7 @@ CLASS_HEADER = """#pragma once
 
 namespace RenderEngine
 {{
-    class {shader_name} : Shader
+    class {shader_name} : public Shader
     {{
     public:
         {shader_name}() = delete;
