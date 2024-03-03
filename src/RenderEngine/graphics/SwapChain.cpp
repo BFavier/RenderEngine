@@ -26,7 +26,7 @@ SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : g
     bool format_found = false;
     for (const VkSurfaceFormatKHR& sf : supported_formats)
     {
-        if (sf.format == static_cast<VkFormat>(Image::Format::RGBA) && sf.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        if (sf.format == static_cast<VkFormat>(Image::Format::BGRA) && sf.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
         {
             surface_format = sf;
             format_found = true;
@@ -104,7 +104,7 @@ SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : g
         swap_chain_infos.pQueueFamilyIndices = nullptr;
     }
     swap_chain_infos.preTransform = capabilities.currentTransform;
-    swap_chain_infos.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;//VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR;
+    swap_chain_infos.compositeAlpha = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR; // VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR;
     swap_chain_infos.presentMode = present_mode;
     swap_chain_infos.clipped = VK_TRUE;
     swap_chain_infos.oldSwapchain = VK_NULL_HANDLE;
@@ -120,12 +120,12 @@ SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : g
     {
         std::shared_ptr<VkImage> vk_image(new VkImage); // Using the standard dealocator instead of Image::_deallocate_image because VkImage aquired from the swap chain should NOT be deleted using VkDestroyImage
         *vk_image = vk_images[i];
-        images.push_back(Image(gpu, extent.width, extent.height, static_cast<Image::Format>(surface_format.format), vk_image));
+        canvas.push_back(Canvas(Image(gpu, extent.width, extent.height, static_cast<Image::Format>(surface_format.format), vk_image)));
     }
 }
 
 SwapChain::~SwapChain()
 {
-    images.clear();
+    canvas.clear();
     vkDestroySwapchainKHR(gpu->_logical_device, _swap_chain, nullptr);
 }

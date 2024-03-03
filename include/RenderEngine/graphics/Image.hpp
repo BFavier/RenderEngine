@@ -9,14 +9,14 @@
 
 namespace RenderEngine
 {
-
     class Image
     // An image is a collection of pixels stored on a gpu, with a width, a height, and a color format
     {
     public:
         enum Format {GRAY=VK_FORMAT_R8_SRGB,
-                     RGB=VK_FORMAT_B8G8R8_SRGB,
-                     RGBA=VK_FORMAT_B8G8R8A8_SRGB,
+                     RGB=VK_FORMAT_R8G8B8_SRGB,
+                     RGBA=VK_FORMAT_R8G8B8A8_SRGB,
+                     BGRA=VK_FORMAT_B8G8R8A8_SRGB, // for swap chain images only
                      POINTER=VK_FORMAT_R32G32_UINT,
                      DEPTH=0};
         enum AntiAliasing {X1=VK_SAMPLE_COUNT_1_BIT,

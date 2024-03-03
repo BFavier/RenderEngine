@@ -19,6 +19,9 @@ Image::Image(const std::shared_ptr<GPU>& _gpu, const std::string& image_path, st
             case Image::Format::RGBA:
                 n_required_channels = 4;
                 break;
+            case Image::Format::BGRA:
+                n_required_channels = 4;
+                break;
             default:
                 n_required_channels = 0;
         }

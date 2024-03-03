@@ -1,7 +1,7 @@
 #pragma once
 #include <RenderEngine/utilities/External.hpp>
 #include <RenderEngine/utilities/Macro.hpp>
-#include <RenderEngine/graphics/Image.hpp>
+#include <RenderEngine/graphics/Canvas.hpp>
 #include <vector>
 #include <algorithm>
 #include <memory>
@@ -23,7 +23,7 @@ namespace RenderEngine
         ~SwapChain();
     public:
         std::shared_ptr<GPU> gpu;
-        std::vector<Image> images;
+        std::vector<Canvas> canvas;
         VkSwapchainKHR _swap_chain;
     };
 }

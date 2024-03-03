@@ -42,7 +42,6 @@ void Canvas::allocate_frame_buffer()
     {
         THROW_ERROR("failed to create framebuffer");
     }
-
 }
 
 
