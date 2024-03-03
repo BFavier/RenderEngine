@@ -5,6 +5,7 @@
 #include <string>
 #include <optional>
 #include <RenderEngine/utilities/External.hpp>
+#include <RenderEngine/graphics/shaders/DemoShader.hpp>
 
 namespace RenderEngine
 {
@@ -49,24 +50,27 @@ namespace RenderEngine
         VkPhysicalDeviceProperties _device_properties{};
         VkPhysicalDeviceFeatures _device_features{};
         VkPhysicalDeviceMemoryProperties _device_memory{};
-        std::optional<std::pair<uint32_t, VkQueue>> _graphics_family_queue;
-        std::optional<std::pair<uint32_t, VkQueue>> _transfer_family_queue;
-        std::optional<std::pair<uint32_t, VkQueue>> _compute_family_queue;
-        std::optional<std::pair<uint32_t, VkQueue>> _present_family_queue;
+        std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _graphics_family_queue; // (queue family, VkQueue, VkCOmmandPool)
+        std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _transfer_family_queue;
+        std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _compute_family_queue;
+        std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _present_family_queue;
         std::set<std::string> _enabled_extensions;
         VkDevice _logical_device = VK_NULL_HANDLE;
+        DemoShader* shader3d = nullptr;
     protected:
-        // add a queue family of given type to the selected families
-        std::optional<uint32_t> _select_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,
-                                                     VkQueueFlagBits queue_type,
-                                                     std::map<uint32_t, uint32_t>& selected_families_count) const;
-        // select the present queue family specificaly
-        std::optional<uint32_t> _select_present_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,
-                                                             const Window& window, std::map<uint32_t, uint32_t>& selected_families_count,
-                                                             const std::optional<uint32_t>& graphics_family, bool& graphics_queue_is_present_queue) const;
+        // returns the index of the queue family selected for 'queue_type' purpose. Modifies the 'selected_families_count'.
+        std::optional<uint32_t> _select_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,  // all available queue families
+                                                     VkQueueFlagBits queue_type,  // the type of queue to create
+                                                     std::map<uint32_t, uint32_t>& selected_families_count  // for each queue familly, tracks the number of queue that have already been selected
+                                                     ) const;
+        // select the index of the queue family selected for 'present' purprose. Modifies the 'selected_families_count'.
+        std::optional<uint32_t> _select_present_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,  // all available queue families
+                                                             const Window& window, std::map<uint32_t, uint32_t>& selected_families_count,  // for each queue familly, tracks the number of queue that have already been selected
+                                                             const std::optional<uint32_t>& graphics_family, // The previously selected graphics queue family index
+                                                             bool& graphics_queue_is_present_queue // Whether the selected present queue is the graphics queue
+                                                             ) const;
         // query the queue handle of a previously created queue
-        void _query_queue_handle(std::optional<std::pair<uint32_t, VkQueue>>& queue,
-                                 const std::optional<uint32_t>& queue_family,
-                                 std::map<uint32_t, uint32_t>& selected_families_count) const;
+        std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _query_queue_handle(const std::optional<uint32_t>& queue_family,
+                                                                                        std::map<uint32_t, uint32_t>& selected_families_count) const;
     };
 }

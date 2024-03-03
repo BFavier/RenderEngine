@@ -153,7 +153,7 @@ void Shader::_create_render_pass(const std::vector<std::vector<std::string>>& in
     std::vector<VkSubpassDescription> subpasses;
     for (unsigned int i=0;i<input_attachments.size();i++)
     {
-        VkSubpassDescription subpass;
+        VkSubpassDescription subpass{};
         subpass.flags = 0;
         subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
         subpass.colorAttachmentCount = color_attachment_refs[i].size();

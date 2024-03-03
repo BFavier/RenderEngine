@@ -55,7 +55,7 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
     // Create logical device
     std::vector<std::vector<float>> priorities;
     std::vector<VkDeviceQueueCreateInfo> selected_families;
-    for (std::pair<const uint32_t, uint32_t>& queue_family_count : selected_families_count)
+    for (const std::pair<uint32_t, uint32_t>& queue_family_count : selected_families_count)
     {
         priorities.push_back(std::vector(queue_family_count.second, 1.0f));
         VkDeviceQueueCreateInfo info = {};
@@ -80,16 +80,16 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
         THROW_ERROR("failed to create logical device");
     }
     // retrieve the queues handle
-    _query_queue_handle(_graphics_family_queue, graphics_family, selected_families_count);
-    _query_queue_handle(_transfer_family_queue, transfer_family, selected_families_count);
-    _query_queue_handle(_compute_family_queue, compute_family, selected_families_count);
+    _graphics_family_queue = _query_queue_handle(graphics_family, selected_families_count);
+    _transfer_family_queue = _query_queue_handle(transfer_family, selected_families_count);
+    _compute_family_queue = _query_queue_handle(compute_family, selected_families_count);
     if (graphics_queue_is_present_queue)
     {
         _present_family_queue = _graphics_family_queue;
     }
     else
     {
-        _query_queue_handle(_present_family_queue, present_family, selected_families_count);
+        _present_family_queue = _query_queue_handle(present_family, selected_families_count);
     }
     // initialize shader
     shader3d = new DemoShader(this);
@@ -98,6 +98,23 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
 GPU::~GPU()
 {
     delete shader3d;
+    bool graphics_queue_is_present_queue = (_graphics_family_queue == _present_family_queue);
+    if (_graphics_family_queue.has_value())
+    {
+        vkDestroyCommandPool(_logical_device, std::get<2>(_graphics_family_queue.value()), nullptr);
+    }
+    if (_compute_family_queue.has_value())
+    {
+        vkDestroyCommandPool(_logical_device, std::get<2>(_compute_family_queue.value()), nullptr);
+    }
+    if (_transfer_family_queue.has_value())
+    {
+        vkDestroyCommandPool(_logical_device, std::get<2>(_transfer_family_queue.value()), nullptr);
+    }
+    if (_present_family_queue.has_value() && !graphics_queue_is_present_queue)
+    {
+        vkDestroyCommandPool(_logical_device, std::get<2>(_present_family_queue.value()), nullptr);
+    }
     vkDeviceWaitIdle(_logical_device);
     vkDestroyDevice(_logical_device, nullptr);
 }
@@ -282,16 +299,29 @@ std::optional<uint32_t> GPU::_select_present_queue_family(std::vector<VkQueueFam
     return queue_family;
 }
 
-void GPU::_query_queue_handle(std::optional<std::pair<uint32_t, VkQueue>>& queue,
-                              const std::optional<uint32_t>& queue_family,
-                              std::map<uint32_t, uint32_t>& selected_families_count) const
+std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> GPU::_query_queue_handle(const std::optional<uint32_t>& queue_family,
+                                                                          std::map<uint32_t, uint32_t>& selected_families_count) const
 {
+    std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> queue;
     if (queue_family.has_value())
     {
         uint32_t family = queue_family.value();
+        // query VkQueue object
         VkQueue queried_queue;
         vkGetDeviceQueue(_logical_device, family, selected_families_count[family]-1, &queried_queue);
-        queue = std::make_pair(family, queried_queue);
+        // create corresponding command pool
+        VkCommandPool pool;
+        VkCommandPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        poolInfo.queueFamilyIndex = family;
+        if (vkCreateCommandPool(_logical_device, &poolInfo, nullptr, &pool) != VK_SUCCESS)
+        {
+            THROW_ERROR("failed to create command pool!");
+        }
+        // put things together
+        queue = std::make_tuple(family, queried_queue, pool);
         selected_families_count[family] -= 1;
     }
+    return queue;
 }
