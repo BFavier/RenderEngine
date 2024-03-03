@@ -5,16 +5,17 @@
 using namespace RenderEngine;
 
 Shader::Shader(const GPU* _gpu,
-               const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& bindings_sets,
-               const std::vector<std::vector<std::pair<VkVertexInputBindingDescription, VkVertexInputAttributeDescription>>>& vertex_inputs,
+               const std::vector<std::vector<std::pair<std::string, VkVertexInputBindingDescription>>>& vertex_buffer_bindings,
+               const std::vector<std::vector<std::pair<std::string, VkVertexInputAttributeDescription>>>& vertex_buffer_attributes,
                const std::vector<std::pair<std::string, Type>>& attachments,
                const std::vector<std::vector<std::string>>& input_attachments,
                const std::vector<std::vector<std::string>>& output_attachments,
+               const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& descriptor_sets,
                const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode
                ) : gpu(_gpu), _attachments(attachments)
 {
     _create_render_pass(input_attachments, output_attachments);
-    _create_pipelines(bindings_sets, vertex_inputs, stages_bytecode);
+    _create_pipelines(vertex_buffer_bindings, vertex_buffer_attributes, descriptor_sets, stages_bytecode);
 }
 
 Shader::~Shader()
@@ -178,21 +179,22 @@ void Shader::_create_render_pass(const std::vector<std::vector<std::string>>& in
     }
 }
 
-void Shader::_create_pipelines(const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& bindings_sets,
-                               const std::vector<std::vector<std::pair<VkVertexInputBindingDescription, VkVertexInputAttributeDescription>>>& vertex_inputs,
+void Shader::_create_pipelines(const std::vector<std::vector<std::pair<std::string, VkVertexInputBindingDescription>>>& vertex_buffer_bindings,
+                               const std::vector<std::vector<std::pair<std::string, VkVertexInputAttributeDescription>>>& vertex_buffer_attributes,
+                               const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& descriptors_sets,
                                const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode)
 {
     // Create descriptor set layouts
     // https://stackoverflow.com/questions/56928041/what-is-the-purpose-of-multiple-setlayoutcounts-of-vulkan-vkpipelinelayoutcreate
-    _descriptor_set_layouts.resize(bindings_sets.size()); // description of all descriptor of a given set of bindings : "layout (set = 0, binding = 1) uniform sampler2D Texture"
-    _bindings.resize(bindings_sets.size());
-    for (unsigned int i=0;i<bindings_sets.size();i++) // for each subpass
+    _descriptor_set_layouts.resize(stages_bytecode.size()); // description of all descriptor of a given set of bindings : "layout (set = 0, binding = 1) uniform sampler2D Texture"
+    _bindings.resize(stages_bytecode.size());
+    for (unsigned int i=0;i<stages_bytecode.size();i++) // for each subpass
     {
-        _descriptor_set_layouts[i].resize(bindings_sets[i].size());
-        for (unsigned int j=0;j<bindings_sets[i].size();j++) // for each descriptor set
+        _descriptor_set_layouts[i].resize(stages_bytecode[i].size());
+        for (unsigned int j=0;j<stages_bytecode[i].size();j++) // for each descriptor set
         {
             std::vector<VkDescriptorSetLayoutBinding> bindings_desc;
-            for (const std::pair<std::string, VkDescriptorSetLayoutBinding>& b : bindings_sets[i][j])
+            for (const std::pair<std::string, VkDescriptorSetLayoutBinding>& b : descriptors_sets[i][j])
             {
                 bindings_desc.push_back(b.second);
                 _bindings[i].push_back(std::make_pair(b.first, b.second.descriptorType));
@@ -210,7 +212,7 @@ void Shader::_create_pipelines(const std::vector<std::vector<std::vector<std::pa
     }
     // Creating the pipeline layouts
     _pipeline_layouts.resize(stages_bytecode.size());
-    for (unsigned int i=0;i<bindings_sets.size();i++)
+    for (unsigned int i=0;i<stages_bytecode.size();i++)
     {
         VkPipelineLayoutCreateInfo pipeline_layout_info{};
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -252,11 +254,14 @@ void Shader::_create_pipelines(const std::vector<std::vector<std::vector<std::pa
         dynamic_state.pDynamicStates = dynamic_states.data();
         // Setting vertex buffer layout
         std::vector<VkVertexInputBindingDescription> vertex_input_bindings;
-        std::vector<VkVertexInputAttributeDescription> vertex_input_attributes;
-        for (const std::pair<VkVertexInputBindingDescription, VkVertexInputAttributeDescription>& vinput : vertex_inputs[i])
+        for (const std::pair<std::string, VkVertexInputBindingDescription>& vib : vertex_buffer_bindings[i])
         {
-            vertex_input_bindings.push_back(vinput.first);
-            vertex_input_attributes.push_back(vinput.second);
+            vertex_input_bindings.push_back(vib.second);
+        }
+        std::vector<VkVertexInputAttributeDescription> vertex_input_attributes;
+        for (const std::pair<std::string, VkVertexInputAttributeDescription>& via : vertex_buffer_attributes[i])
+        {
+            vertex_input_attributes.push_back(via.second);
         }
         VkPipelineVertexInputStateCreateInfo vertex_input_info{};
         vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
