@@ -10,19 +10,20 @@ namespace RenderEngine
     {
         public:
             Canvas() = delete;
-            Canvas(std::shared_ptr<GPU> gpu,  uint32_t width, uint32_t height);
+            Canvas(const std::shared_ptr<GPU>& gpu,  uint32_t width, uint32_t height);
             Canvas(const Image& image);
             ~Canvas();
         public:
+            std::shared_ptr<GPU> gpu = nullptr;
             Image image;
             Image handles;
             Image depth_buffer;
         protected:
-            std::shared_ptr<VkFramebuffer> _frame_buffer;
+            std::shared_ptr<VkFramebuffer> _frame_buffer = nullptr;
         protected:
             void allocate_frame_buffer();
         public:
             void draw();
-            static void _deallocate_frame_buffer();
+            static void _deallocate_frame_buffer(const std::shared_ptr<GPU>& gpu, VkFramebuffer* frame_buffer);
     };
 }

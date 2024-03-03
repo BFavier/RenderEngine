@@ -2,19 +2,23 @@
 #include <RenderEngine/graphics/Canvas.hpp>
 using namespace RenderEngine;
 
-Canvas::Canvas(std::shared_ptr<GPU> _gpu, uint32_t width, uint32_t height) :
+Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height) :
+    gpu(_gpu),
     image(_gpu, width, height, Image::RGBA),
     handles(_gpu, width, height, Image::Format::POINTER, Image::AntiAliasing::X1, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, false),
     depth_buffer(_gpu, width, height, Image::Format::DEPTH, Image::AntiAliasing::X1, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, false)
 {
+    allocate_frame_buffer();
 }
 
 
 Canvas::Canvas(const Image& _image) :
+    gpu(_image.gpu),
     image(_image),
     handles(_image.gpu, _image.width(), _image.height(), Image::Format::POINTER, Image::AntiAliasing::X1, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, false),
     depth_buffer(_image.gpu, _image.width(), _image.height(), Image::Format::DEPTH, Image::AntiAliasing::X1, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, false)
 {
+    allocate_frame_buffer();
 }
 
 Canvas::~Canvas()
@@ -24,22 +28,27 @@ Canvas::~Canvas()
 
 void Canvas::allocate_frame_buffer()
 {
+    _frame_buffer.reset(new VkFramebuffer, std::bind(&Canvas::_deallocate_frame_buffer, gpu, std::placeholders::_1));
+    std::vector<VkImageView> attachments = {*image._vk_image_view, *depth_buffer._vk_image_view};
     VkFramebufferCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    info.renderPass = renderPass;
-    info.attachmentCount = 1;
-    info.pAttachments = attachments;
-    info.width = swapChainExtent.width;
-    info.height = swapChainExtent.height;
+    info.renderPass = gpu->shader3d->_render_pass;
+    info.attachmentCount = attachments.size();
+    info.pAttachments = attachments.data();
+    info.width = image.width();
+    info.height = image.height();
     info.layers = 1;
-
-    if (vkCreateFramebuffer(gpu._logical_device, &info, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS)
+    if (vkCreateFramebuffer(gpu->_logical_device, &info, nullptr, _frame_buffer.get()) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to create framebuffer!");
     }
+
 }
 
-void _deallocate_frame_buffer()
+void _deallocate_frame_buffer(const std::shared_ptr<GPU>& gpu, VkFramebuffer* frame_buffer)
+{
+    vkDestroyFramebuffer(gpu->_logical_device, *frame_buffer, nullptr);
+}
 
 // void Canvas::draw()
 // {
