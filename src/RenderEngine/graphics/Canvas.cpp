@@ -40,12 +40,13 @@ void Canvas::allocate_frame_buffer()
     info.layers = 1;
     if (vkCreateFramebuffer(gpu->_logical_device, &info, nullptr, _frame_buffer.get()) != VK_SUCCESS)
     {
-        throw std::runtime_error("failed to create framebuffer!");
+        THROW_ERROR("failed to create framebuffer");
     }
 
 }
 
-void _deallocate_frame_buffer(const std::shared_ptr<GPU>& gpu, VkFramebuffer* frame_buffer)
+
+void Canvas::_deallocate_frame_buffer(const std::shared_ptr<GPU>& gpu, VkFramebuffer* frame_buffer)
 {
     vkDestroyFramebuffer(gpu->_logical_device, *frame_buffer, nullptr);
 }

@@ -72,7 +72,7 @@ void Window::_initialize(const WindowSettings& settings)
     _glfw_window = glfwCreateWindow(width, height, _window_title.c_str(), monitor, nullptr);
     if (_glfw_window == nullptr)
     {
-        throw std::runtime_error("Failed to create the window");
+        THROW_ERROR("Failed to create the window");
     }
     //Link to the keyboard and mouse events
     glfwSetWindowUserPointer(_glfw_window, this);

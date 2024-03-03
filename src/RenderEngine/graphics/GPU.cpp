@@ -91,10 +91,13 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
     {
         _query_queue_handle(_present_family_queue, present_family, selected_families_count);
     }
+    // initialize shader
+    shader3d = new DemoShader(this);
 }
 
 GPU::~GPU()
 {
+    delete shader3d;
     vkDeviceWaitIdle(_logical_device);
     vkDestroyDevice(_logical_device, nullptr);
 }
@@ -229,7 +232,7 @@ std::pair<VkImageTiling, VkFormat> GPU::depth_format() const
     {
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(_physical_device, format, &props);
-        if ((props.optimalTilingFeatures & format) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+        if ((props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
         {
             return std::make_pair(VK_IMAGE_TILING_OPTIMAL, format);
         }
@@ -238,12 +241,12 @@ std::pair<VkImageTiling, VkFormat> GPU::depth_format() const
     {
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(_physical_device, format, &props);
-        if ((props.linearTilingFeatures & format) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+        if ((props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) == VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
         {
             return std::make_pair(VK_IMAGE_TILING_LINEAR, format);
         }
     }
-    throw std::runtime_error("Failed to find compatible depth format on GPU");
+    THROW_ERROR("Failed to find compatible depth format on GPU");
 }
 
 std::optional<uint32_t> GPU::_select_present_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,

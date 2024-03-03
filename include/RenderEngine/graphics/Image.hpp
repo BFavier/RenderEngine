@@ -35,6 +35,8 @@ namespace RenderEngine
         ~Image();
     public:
         std::shared_ptr<GPU> gpu;
+        std::shared_ptr<VkImage> _vk_image = nullptr;
+        std::shared_ptr<VkImageView> _vk_image_view = nullptr;
     protected:
         uint32_t _width;
         uint32_t _height;
@@ -43,8 +45,6 @@ namespace RenderEngine
         VkImageTiling _tiling = VK_IMAGE_TILING_OPTIMAL;
         VkImageUsageFlags _usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
         uint32_t _mip_levels = 1;
-        std::shared_ptr<VkImage> _vk_image = nullptr;
-        std::shared_ptr<VkImageView> _vk_image_view = nullptr;
     protected:
         void allocate_vk_image();
         void allocate_vk_image_view();

@@ -32,9 +32,10 @@ namespace RenderEngine
                const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode // for each subpass, for each shader stage, the bytecode of the compiled spirv file
                );
         ~Shader();
+    public:
+        VkRenderPass _render_pass = VK_NULL_HANDLE;
     protected:
         const GPU* gpu = nullptr;
-        VkRenderPass _render_pass = VK_NULL_HANDLE;
         std::vector<std::vector<std::pair<std::string, VkDescriptorType>>> _bindings; // For each subpass, the list of all unique bindings names and types
         std::vector<std::pair<std::string, Type>> _attachments; // The list of all unique color attachments names and types
         std::vector<std::vector<std::pair<VkShaderStageFlagBits, VkShaderModule>>> _modules; // for each subpass, one or more stage modules

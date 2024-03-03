@@ -70,7 +70,7 @@ void Shader::_create_render_pass(const std::vector<std::vector<std::string>>& in
             attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;  // VK_ATTACHMENT_STORE_OP_DONT_CARE
             attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // VK_IMAGE_LAYOUT_UNDEFINED;
             attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED
             attachments.push_back(attachment);
         }
@@ -82,7 +82,7 @@ void Shader::_create_render_pass(const std::vector<std::vector<std::string>>& in
         attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED; // VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        attachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; // VK_IMAGE_LAYOUT_UNDEFINED;
         attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         attachments.push_back(attachment);
     }
@@ -96,7 +96,6 @@ void Shader::_create_render_pass(const std::vector<std::vector<std::string>>& in
         // Attachment references
         {
             // Color attachments
-            uint32_t j=0;
             std::vector<VkAttachmentReference> color_refs;
             for (const std::string& att : output_attachments[i])
             {
@@ -111,20 +110,18 @@ void Shader::_create_render_pass(const std::vector<std::vector<std::string>>& in
             }
             input_attachment_refs.push_back(input_refs);
             // Depth attachments
-            depth_buffer_refs.push_back({ j, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL });
+            depth_buffer_refs.push_back({static_cast<uint32_t>(attachments.size() - 1), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL});
         }
         // Reserved attachments
         {
             std::vector<uint32_t> reserve;
-            uint32_t j=0;
             for (const std::pair<std::string, Type>& att : _attachments)
             {
                 if (std::find(input_attachments[i].begin(), input_attachments[i].end(), att.first) == input_attachments[i].end()
                     && std::find(output_attachments[i].begin(), output_attachments[i].end(), att.first) == output_attachments[i].end())
                 {
-                    reserve.push_back(j);
+                    reserve.push_back(attachment_indexes[att.first]);
                 }
-                j += 1;
             }
             reserve_attachments.push_back(reserve);
         }
@@ -195,8 +192,8 @@ void Shader::_create_pipelines(const std::vector<std::vector<std::pair<std::stri
     _bindings.resize(stages_bytecode.size());
     for (unsigned int i=0;i<stages_bytecode.size();i++) // for each subpass
     {
-        _descriptor_set_layouts[i].resize(stages_bytecode[i].size());
-        for (unsigned int j=0;j<stages_bytecode[i].size();j++) // for each descriptor set
+        _descriptor_set_layouts[i].resize(descriptors_sets[i].size());
+        for (unsigned int j=0;j< descriptors_sets[i].size();j++) // for each descriptor set
         {
             std::vector<VkDescriptorSetLayoutBinding> bindings_desc;
             for (const std::pair<std::string, VkDescriptorSetLayoutBinding>& b : descriptors_sets[i][j])
@@ -211,7 +208,7 @@ void Shader::_create_pipelines(const std::vector<std::vector<std::pair<std::stri
             desc_set_info.pBindings = bindings_desc.data();
             if (vkCreateDescriptorSetLayout(gpu->_logical_device, &desc_set_info, nullptr, &_descriptor_set_layouts[i][j]) != VK_SUCCESS)
             {
-                throw std::runtime_error("failed to create descriptor set layout!");
+                THROW_ERROR("failed to create descriptor set layout!");
             }
         }
     }
@@ -227,7 +224,7 @@ void Shader::_create_pipelines(const std::vector<std::vector<std::pair<std::stri
         pipeline_layout_info.pPushConstantRanges = nullptr; // Optional
         if (vkCreatePipelineLayout(gpu->_logical_device, &pipeline_layout_info, nullptr, &_pipeline_layouts[i]) != VK_SUCCESS)
         {
-            throw std::runtime_error("failed to create pipeline layout!");
+            THROW_ERROR("failed to create pipeline layout!");
         }
     }
     //Creating pipeline for each subpass
@@ -248,7 +245,7 @@ void Shader::_create_pipelines(const std::vector<std::vector<std::pair<std::stri
             stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
             stage_info.stage = _modules[i][j].first;
             stage_info.module = _modules[i][j].second;
-            stage_info.pName = "";
+            stage_info.pName = "main";
             shader_stages.push_back(stage_info);
         }
         // Setting dynamic state
@@ -308,7 +305,10 @@ void Shader::_create_pipelines(const std::vector<std::vector<std::pair<std::stri
         multisampling.alphaToOneEnable = VK_FALSE; // Optional
         // Setting the depth and stencil buffers
         VkPipelineDepthStencilStateCreateInfo depth_stencil{};
-        depth_stencil.depthTestEnable = false;
+        depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        depth_stencil.depthTestEnable = VK_TRUE;
+        depth_stencil.depthWriteEnable = VK_TRUE;
+        depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
         // Setting color blending
         std::vector<VkPipelineColorBlendAttachmentState> color_blending_attachments;
         for (const std::pair<std::string, Type>& att : _attachments)
@@ -345,7 +345,7 @@ void Shader::_create_pipelines(const std::vector<std::vector<std::pair<std::stri
         pipelineInfo.pViewportState = &viewport_state;
         pipelineInfo.pRasterizationState = &rasterizer;
         pipelineInfo.pMultisampleState = &multisampling;
-        pipelineInfo.pDepthStencilState = nullptr; // Optional
+        pipelineInfo.pDepthStencilState = &depth_stencil;
         pipelineInfo.pColorBlendState = &color_blending;
         pipelineInfo.pDynamicState = &dynamic_state;
         pipelineInfo.layout = _pipeline_layouts[i];
