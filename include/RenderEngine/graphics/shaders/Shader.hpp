@@ -34,14 +34,14 @@ namespace RenderEngine
         ~Shader();
     public:
         VkRenderPass _render_pass = VK_NULL_HANDLE;
-    protected:
-        const GPU* gpu = nullptr;
+        std::vector<VkPipeline> _pipelines;  // pipeline for each subpass
+        std::vector<VkPipelineLayout> _pipeline_layouts; // pipeline layout for each subpass
         std::vector<std::vector<std::pair<std::string, VkDescriptorType>>> _bindings; // For each subpass, the list of all unique bindings names and types
         std::vector<std::pair<std::string, Type>> _attachments; // The list of all unique color attachments names and types
+    protected:
+        const GPU* gpu = nullptr;
         std::vector<std::vector<std::pair<VkShaderStageFlagBits, VkShaderModule>>> _modules; // for each subpass, one or more stage modules
         std::vector<std::vector<VkDescriptorSetLayout>> _descriptor_set_layouts; // for each subpass, one or more descriptor set layout
-        std::vector<VkPipelineLayout> _pipeline_layouts; // pipeline layout for each subpass
-        std::vector<VkPipeline> _pipelines;  // pipeline for each subpass
     protected:
         void _create_render_pass(const std::vector<std::vector<std::string>>& input_attachments,
                                  const std::vector<std::vector<std::string>>& output_attachments);

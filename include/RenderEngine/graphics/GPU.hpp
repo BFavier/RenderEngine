@@ -50,10 +50,10 @@ namespace RenderEngine
         VkPhysicalDeviceProperties _device_properties{};
         VkPhysicalDeviceFeatures _device_features{};
         VkPhysicalDeviceMemoryProperties _device_memory{};
-        std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _graphics_family_queue; // (queue family, VkQueue, VkCOmmandPool)
-        std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _transfer_family_queue;
-        std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _compute_family_queue;
-        std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _present_family_queue;
+        std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _graphics_queue; // (queue family, VkQueue, VkCOmmandPool)
+        std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _transfer_queue;
+        std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _compute_queue;
+        std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _present_queue;
         std::set<std::string> _enabled_extensions;
         VkDevice _logical_device = VK_NULL_HANDLE;
         DemoShader* shader3d = nullptr;

@@ -80,16 +80,16 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
         THROW_ERROR("failed to create logical device");
     }
     // retrieve the queues handle
-    _graphics_family_queue = _query_queue_handle(graphics_family, selected_families_count);
-    _transfer_family_queue = _query_queue_handle(transfer_family, selected_families_count);
-    _compute_family_queue = _query_queue_handle(compute_family, selected_families_count);
+    _graphics_queue = _query_queue_handle(graphics_family, selected_families_count);
+    _transfer_queue = _query_queue_handle(transfer_family, selected_families_count);
+    _compute_queue = _query_queue_handle(compute_family, selected_families_count);
     if (graphics_queue_is_present_queue)
     {
-        _present_family_queue = _graphics_family_queue;
+        _present_queue = _graphics_queue;
     }
     else
     {
-        _present_family_queue = _query_queue_handle(present_family, selected_families_count);
+        _present_queue = _query_queue_handle(present_family, selected_families_count);
     }
     // initialize shader
     shader3d = new DemoShader(this);
@@ -98,22 +98,22 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
 GPU::~GPU()
 {
     delete shader3d;
-    bool graphics_queue_is_present_queue = (_graphics_family_queue == _present_family_queue);
-    if (_graphics_family_queue.has_value())
+    bool graphics_queue_is_present_queue = (_graphics_queue == _present_queue);
+    if (_graphics_queue.has_value())
     {
-        vkDestroyCommandPool(_logical_device, std::get<2>(_graphics_family_queue.value()), nullptr);
+        vkDestroyCommandPool(_logical_device, std::get<2>(_graphics_queue.value()), nullptr);
     }
-    if (_compute_family_queue.has_value())
+    if (_compute_queue.has_value())
     {
-        vkDestroyCommandPool(_logical_device, std::get<2>(_compute_family_queue.value()), nullptr);
+        vkDestroyCommandPool(_logical_device, std::get<2>(_compute_queue.value()), nullptr);
     }
-    if (_transfer_family_queue.has_value())
+    if (_transfer_queue.has_value())
     {
-        vkDestroyCommandPool(_logical_device, std::get<2>(_transfer_family_queue.value()), nullptr);
+        vkDestroyCommandPool(_logical_device, std::get<2>(_transfer_queue.value()), nullptr);
     }
-    if (_present_family_queue.has_value() && !graphics_queue_is_present_queue)
+    if (_present_queue.has_value() && !graphics_queue_is_present_queue)
     {
-        vkDestroyCommandPool(_logical_device, std::get<2>(_present_family_queue.value()), nullptr);
+        vkDestroyCommandPool(_logical_device, std::get<2>(_present_queue.value()), nullptr);
     }
     vkDeviceWaitIdle(_logical_device);
     vkDestroyDevice(_logical_device, nullptr);

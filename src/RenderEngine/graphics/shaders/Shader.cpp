@@ -280,7 +280,9 @@ void Shader::_create_pipelines(const std::vector<std::vector<std::pair<std::stri
         VkPipelineViewportStateCreateInfo viewport_state{};
         viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
         viewport_state.viewportCount = 1;
+        viewport_state.pViewports = nullptr;
         viewport_state.scissorCount = 1;
+        viewport_state.pScissors = nullptr;
         // Setting the rasterizer
         VkPipelineRasterizationStateCreateInfo rasterizer{};
         rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;

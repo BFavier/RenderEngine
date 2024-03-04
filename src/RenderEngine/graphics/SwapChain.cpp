@@ -5,7 +5,7 @@ using namespace RenderEngine;
 
 SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : gpu(_gpu)
 {
-    if (!gpu->_graphics_family_queue.has_value() || !gpu->_present_family_queue.has_value())
+    if (!gpu->_graphics_queue.has_value() || !gpu->_present_queue.has_value())
     {
         THROW_ERROR("The provided GPU does not support presenting to windows");
     }
@@ -90,9 +90,9 @@ SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : g
     swap_chain_infos.imageExtent = extent;
     swap_chain_infos.imageArrayLayers = 1;
     swap_chain_infos.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    if (gpu->_graphics_family_queue != gpu->_present_family_queue)
+    if (gpu->_graphics_queue != gpu->_present_queue)
     {
-        std::vector<uint32_t> family_indices = {std::get<0>(gpu->_graphics_family_queue.value()), std::get<0>(gpu->_present_family_queue.value())};
+        std::vector<uint32_t> family_indices = {std::get<0>(gpu->_graphics_queue.value()), std::get<0>(gpu->_present_queue.value())};
         swap_chain_infos.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         swap_chain_infos.queueFamilyIndexCount = family_indices.size();
         swap_chain_infos.pQueueFamilyIndices = family_indices.data();
