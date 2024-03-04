@@ -25,7 +25,7 @@ namespace RenderEngine
             std::shared_ptr<VkFence> _rendered_fence = nullptr; // Fence that becomes 'signaled' once rendering ends on GPU (is initialized signaled)
             std::shared_ptr<VkFramebuffer> _frame_buffer = nullptr;
             std::shared_ptr<VkCommandBuffer> _draw_command_buffer = nullptr;
-            std::shared_ptr<VkCommandBuffer> _fill_command_buffer = nullptr;
+            // std::shared_ptr<VkCommandBuffer> _fill_command_buffer = nullptr;
         protected:
             void _wait_completion(); // blocks on CPU side until the rendering on GPU is complete, then reset command buffers
             void allocate_frame_buffer();

@@ -10,7 +10,9 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height
 {
     allocate_frame_buffer();
     allocate_command_buffer(_draw_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
-    allocate_command_buffer(_fill_command_buffer, std::get<2>(gpu->_transfer_queue.value()));
+    // allocate_command_buffer(_fill_command_buffer, std::get<2>(gpu->_transfer_queue.value()));
+    allocate_fence();
+    allocate_semaphore();
 }
 
 
@@ -22,7 +24,9 @@ Canvas::Canvas(const Image& _image) :
 {
     allocate_frame_buffer();
     allocate_command_buffer(_draw_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
-    allocate_command_buffer(_fill_command_buffer, std::get<2>(gpu->_transfer_queue.value()));
+    // allocate_command_buffer(_fill_command_buffer, std::get<2>(gpu->_transfer_queue.value()));
+    allocate_fence();
+    allocate_semaphore();
 }
 
 Canvas::~Canvas()
@@ -220,19 +224,26 @@ void Canvas::draw()
 
 void Canvas::render()
 {
-    // vkCmdEndRenderPass(*_draw_command_buffer);
-
-    // submit command buffers
-    std::vector<VkCommandBuffer> command_buffers = {*_draw_command_buffer, *_fill_command_buffer};
+    // nothing new to render
+    if (_rendering)
+    {
+        return;
+    }
+    // submit graphic commands
     VkPipelineStageFlags wait_stages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.waitSemaphoreCount = _dependencies.size();
     submitInfo.pWaitSemaphores = _dependencies.data();
     submitInfo.pWaitDstStageMask = &wait_stages;
-    submitInfo.commandBufferCount = command_buffers.size();
-    submitInfo.pCommandBuffers = command_buffers.data();
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = _draw_command_buffer.get();
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = _rendered_semaphore.get();
+    if (vkQueueSubmit(std::get<1>(gpu->_graphics_queue.value()), 1, &submitInfo, *_rendered_fence) != VK_SUCCESS)
+    {
+        THROW_ERROR("failed to submit draw command buffer!");
+    }
+    // set the rendering flag
+    _rendering = true;
 }

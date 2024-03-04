@@ -6,7 +6,8 @@ using namespace RenderEngine;
 
 int main()
 {
-    Internal::initialize({"VK_LAYER_KHRONOS_validation"});
+    Internal::initialize({"VK_LAYER_KHRONOS_validation"},
+                         {VK_EXT_DEBUG_UTILS_EXTENSION_NAME});
     {
         std::shared_ptr<GPU> gpu = Internal::get_best_GPU();
         WindowSettings settings;

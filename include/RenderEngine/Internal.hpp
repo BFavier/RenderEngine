@@ -16,7 +16,8 @@ namespace RenderEngine
         Internal() = delete;
     public:
         //Initialize the used libraries
-        static void initialize(const std::vector<std::string>& validation_layers={});
+        static void initialize(const std::vector<std::string>& validation_layers={},
+                               const std::vector<std::string>& extensions={VK_EXT_DEBUG_UTILS_EXTENSION_NAME});
         static void terminate();
         static std::vector<std::string> get_available_validation_layers();
         static std::vector<std::string> get_available_vulkan_extensions();
