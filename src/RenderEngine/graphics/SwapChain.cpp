@@ -26,7 +26,7 @@ SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : g
     bool format_found = false;
     for (const VkSurfaceFormatKHR& sf : supported_formats)
     {
-        if (sf.format == static_cast<VkFormat>(Image::Format::RGBA) && sf.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        if (sf.format == static_cast<VkFormat>(Format::RGBA) && sf.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
         {
             surface_format = sf;
             format_found = true;

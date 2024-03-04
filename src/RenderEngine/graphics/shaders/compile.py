@@ -13,16 +13,18 @@ UNIFORM_TYPES = {"sampler": "VK_DESCRIPTOR_TYPE_SAMPLER",
                  "sampler2D": "VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER",
                  "subpassInput": "VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT",
                  "UniformBufferObject": "VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER"}
+FRAMEBUFFER_FORMATS = ["ERROR", "Format::GRAY", "Format::UV", "Format::RGB", "Format::RGBA"]
 BUFFER_TYPE = "VK_DESCRIPTOR_TYPE_STORAGE_BUFFER"
 LAYOUT_REGEX = re.compile(r"layout *\((?:(?:input_attachment_index *= *(\d+))|(?:set *= *(\d+))|(?:binding *= *(\d+))|(?:offset *= *(\d+))|(?:location *= *(\d+))|(?:std\d+)|(?:, *))+\) *(in|out|uniform|buffer) +(\w+)(?:\s*{[^}]+})? *(\w+)?(?:\[(\d+)\])?;")
 
 
 CONSTRUCTOR_SRC = """#include <RenderEngine/graphics/shaders/{shader_name}.hpp>
+#include <RenderEngine/graphics/Format.hpp>
 using namespace RenderEngine;
 
 std::vector<std::vector<std::pair<std::string, VkVertexInputBindingDescription>>> vertex_buffer_bindings = {vertex_buffer_bindings};
 std::vector<std::vector<std::pair<std::string, VkVertexInputAttributeDescription>>> vertex_buffer_attributes = {vertex_buffer_attributes};
-std::vector<std::pair<std::string, Type>> attachments = {attachments};
+std::vector<std::pair<std::string, Format>> attachments = {attachments};
 std::vector<std::vector<std::string>> input_attachments = {input_attachments};
 std::vector<std::vector<std::string>> output_attachments = {output_attachments};
 std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>> descriptor_sets = {descriptor_sets};
@@ -150,7 +152,7 @@ def constructor(shader_path: pathlib.Path):
     # order unique attachments :
     # input attachment are identified by a name and an index, so we have to make sure they at at the correct index in the list of unique attachments
     all_input_attachments = {att["name"]: int(att["input_index"]) for subpass in layouts for att in subpass["input_attachments"]}
-    att_types = {att["name"]: f"Type::{att['type'].upper()}".encode() for subpass in layouts for att in subpass["output_attachments"]}
+    att_types = {att["name"]: FRAMEBUFFER_FORMATS[int(att["type"][-1])].encode() for subpass in layouts for att in subpass["output_attachments"]}
     att_indexes = {name: min((i, j) for i, subpass in enumerate(layouts) for j, att in enumerate(subpass["output_attachments"]) if att["name"] == name)
                    for name in att_types.keys() if name not in all_input_attachments.keys()}  # non-input attachments by first (subpass, attachment) apparition indexes
     attachments = [name for name, index in sorted(att_indexes.items(), key=lambda x: x[1])]

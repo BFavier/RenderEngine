@@ -2,6 +2,7 @@
 #include <RenderEngine/utilities/External.hpp>
 #include <RenderEngine/utilities/Macro.hpp>
 #include <RenderEngine/graphics/GPU.hpp>
+#include <RenderEngine/graphics/Format.hpp>
 #include <string>
 #include <memory>
 #include <optional>
@@ -13,12 +14,6 @@ namespace RenderEngine
     // An image is a collection of pixels stored on a gpu, with a width, a height, and a color format
     {
     public:
-        enum Format {GRAY=VK_FORMAT_R8_SRGB,
-                     RGB=VK_FORMAT_R8G8B8_SRGB,
-                     RGBA=VK_FORMAT_R8G8B8A8_SRGB,
-                     POINTER=VK_FORMAT_R32G32_UINT,
-                     DEPTH=0 // will be replaced with best supported depth format
-                     };
         enum AntiAliasing {X1=VK_SAMPLE_COUNT_1_BIT,
                            X2=VK_SAMPLE_COUNT_2_BIT,
                            X4=VK_SAMPLE_COUNT_4_BIT,
@@ -27,11 +22,11 @@ namespace RenderEngine
                            X64=VK_SAMPLE_COUNT_64_BIT};
     public:
         Image() = delete;
-        Image(const std::shared_ptr<GPU>& gpu, const std::string& file_path, std::optional<Image::Format> = std::optional<Image::Format>());
-        Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Image::Format format);
-        Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Image::Format format, Image::AntiAliasing sample_count, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlagBits memory_type, bool mip_mapping);
-        Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Image::Format format, const std::shared_ptr<VkImage>& vk_image);
-        // Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Image::Format format, const std::vector<unsigned char>& data);
+        Image(const std::shared_ptr<GPU>& gpu, const std::string& file_path, std::optional<Format> = std::optional<Format>());
+        Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Format format);
+        Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Format format, Image::AntiAliasing sample_count, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlagBits memory_type, bool mip_mapping);
+        Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Format format, const std::shared_ptr<VkImage>& vk_image);
+        // Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Format format, const std::vector<unsigned char>& data);
         ~Image();
     public:
         std::shared_ptr<GPU> gpu;

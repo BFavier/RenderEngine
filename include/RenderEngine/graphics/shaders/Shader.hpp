@@ -1,5 +1,6 @@
 #pragma once
 #include <RenderEngine/utilities/External.hpp>
+#include <RenderEngine/graphics/Format.hpp>
 #include <RenderEngine/graphics/shaders/Type.hpp>
 #include <RenderEngine/graphics/shaders/Vertex.hpp>
 #include <vector>
@@ -25,7 +26,7 @@ namespace RenderEngine
         Shader(const GPU* gpu,
                const std::vector<std::vector<std::pair<std::string, VkVertexInputBindingDescription>>>& vertex_buffer_bindings, // for each subpass, for each binding, the name and bytes-size of the vertex buffer
                const std::vector<std::vector<std::pair<std::string, VkVertexInputAttributeDescription>>>& vertex_buffer_attributes, // for each subpass, for each vertex input, it's description
-               const std::vector<std::pair<std::string, Type>>& attachments,  // Description of all attachments (VkImage objects) that are written to in fragment shader stage (excluding depth buffer)
+               const std::vector<std::pair<std::string, Format>>& attachments,  // Description of all attachments (VkImage objects) that are written to in fragment shader stage (excluding depth buffer)
                const std::vector<std::vector<std::string>>& input_attachments, // for each subpass, the description of all input attachments (outputs from another subpass)
                const std::vector<std::vector<std::string>>& output_attachments, // for each subpass the description of all output attachments (VkImage objects that are written to, excepted depth buffer)
                const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& descriptor_sets, // for each subpass, for each layout set, descriptor of all bindings (textures, Uniform Buffer Objects, ...)
@@ -37,7 +38,7 @@ namespace RenderEngine
         std::vector<VkPipeline> _pipelines;  // pipeline for each subpass
         std::vector<VkPipelineLayout> _pipeline_layouts; // pipeline layout for each subpass
         std::vector<std::vector<std::pair<std::string, VkDescriptorType>>> _bindings; // For each subpass, the list of all unique bindings names and types
-        std::vector<std::pair<std::string, Type>> _attachments; // The list of all unique color attachments names and types
+        std::vector<std::pair<std::string, Format>> _attachments; // The list of all unique color attachments names and types
     protected:
         const GPU* gpu = nullptr;
         std::vector<std::vector<std::pair<VkShaderStageFlagBits, VkShaderModule>>> _modules; // for each subpass, one or more stage modules

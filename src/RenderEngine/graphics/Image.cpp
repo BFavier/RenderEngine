@@ -3,20 +3,23 @@
 #include <stb/stb_image.h>
 using namespace RenderEngine;
 
-Image::Image(const std::shared_ptr<GPU>& _gpu, const std::string& image_path, std::optional<Image::Format> _format) : gpu(_gpu)
+Image::Image(const std::shared_ptr<GPU>& _gpu, const std::string& image_path, std::optional<Format> _format) : gpu(_gpu)
 {
     int i_width, i_height, n_channels, n_required_channels;
     if (_format.has_value())
     {
         switch (_format.value())
         {
-            case Image::Format::GRAY:
+            case Format::GRAY:
                 n_required_channels = 1;
                 break;
-            case Image::Format::RGB:
+            case Format::UV:
+                n_required_channels = 2;
+                break;
+            case Format::RGB:
                 n_required_channels = 3;
                 break;
-            case Image::Format::RGBA:
+            case Format::RGBA:
                 n_required_channels = 4;
                 break;
             default:
@@ -35,25 +38,25 @@ Image::Image(const std::shared_ptr<GPU>& _gpu, const std::string& image_path, st
     }
     else
     {
-        _format = Image::Format::RGBA;
+        _format = Format::RGBA;
     }
     allocate_vk_image();
     stbi_image_free(imgData);
 }
 
-Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Image::Format format) : gpu(_gpu), _width(width), _height(height), _format(format)
+Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Format format) : gpu(_gpu), _width(width), _height(height), _format(format)
 {
     allocate_vk_image();
     allocate_vk_image_view();
 }
 
-// Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Image::Format format, const std::vector<unsigned char>& data) : gpu(_gpu), _width(width), _height(height), _format(format)
+// Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Format format, const std::vector<unsigned char>& data) : gpu(_gpu), _width(width), _height(height), _format(format)
 // {
 //     allocate_vk_image();
 //     allocate_vk_image_view();
 // }
 
-Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Image::Format format, Image::AntiAliasing sample_count, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlagBits memory_type, bool mip_mapping) : gpu(_gpu), _width(width), _height(height), _format(format), _memory_type(memory_type)
+Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Format format, Image::AntiAliasing sample_count, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlagBits memory_type, bool mip_mapping) : gpu(_gpu), _width(width), _height(height), _format(format), _memory_type(memory_type)
 {
     gpu = _gpu;
     _width = width;
@@ -74,7 +77,7 @@ Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, 
     allocate_vk_image_view();
 }
 
-Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Image::Format format, const std::shared_ptr<VkImage>& vk_image) : gpu(_gpu), _width(width), _height(height), _format(format)
+Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Format format, const std::shared_ptr<VkImage>& vk_image) : gpu(_gpu), _width(width), _height(height), _format(format)
 {
     _vk_image = vk_image;
     allocate_vk_image_view();
@@ -94,7 +97,7 @@ uint32_t Image::height() const
     return _height;
 }
 
-Image::Format Image::format() const
+Format Image::format() const
 {
     return _format;
 }
