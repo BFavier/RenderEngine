@@ -16,9 +16,9 @@ namespace RenderEngine
         enum Format {GRAY=VK_FORMAT_R8_SRGB,
                      RGB=VK_FORMAT_R8G8B8_SRGB,
                      RGBA=VK_FORMAT_R8G8B8A8_SRGB,
-                     BGRA=VK_FORMAT_B8G8R8A8_SRGB, // for swap chain images only
                      POINTER=VK_FORMAT_R32G32_UINT,
-                     DEPTH=0};
+                     DEPTH=0 // will be replaced with best supported depth format
+                     };
         enum AntiAliasing {X1=VK_SAMPLE_COUNT_1_BIT,
                            X2=VK_SAMPLE_COUNT_2_BIT,
                            X4=VK_SAMPLE_COUNT_4_BIT,
@@ -29,7 +29,7 @@ namespace RenderEngine
         Image() = delete;
         Image(const std::shared_ptr<GPU>& gpu, const std::string& file_path, std::optional<Image::Format> = std::optional<Image::Format>());
         Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Image::Format format);
-        Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Image::Format format, Image::AntiAliasing sample_count, VkImageTiling tiling, VkImageUsageFlags usage, bool mip_mapping);
+        Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Image::Format format, Image::AntiAliasing sample_count, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlagBits memory_type, bool mip_mapping);
         Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Image::Format format, const std::shared_ptr<VkImage>& vk_image);
         // Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Image::Format format, const std::vector<unsigned char>& data);
         ~Image();
@@ -41,13 +41,16 @@ namespace RenderEngine
         uint32_t _width;
         uint32_t _height;
         Format _format;
+        VkDeviceMemory _memory;
         AntiAliasing _sample_count = X1;
         VkImageTiling _tiling = VK_IMAGE_TILING_OPTIMAL;
         VkImageUsageFlags _usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+        VkMemoryPropertyFlagBits _memory_type = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         uint32_t _mip_levels = 1;
     protected:
         void allocate_vk_image();
         void allocate_vk_image_view();
+        uint32_t _find_memory_type_index(uint32_t memory_type_bits, VkMemoryPropertyFlagBits _memory_type) const;
         // void upload_data(unsigned char* data);
     public:
         uint32_t width() const;

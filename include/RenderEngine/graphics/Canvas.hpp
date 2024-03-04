@@ -11,7 +11,7 @@ namespace RenderEngine
         public:
             Canvas() = delete;
             Canvas(const std::shared_ptr<GPU>& gpu,  uint32_t width, uint32_t height);
-            Canvas(const Image& image);
+            Canvas(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, const std::shared_ptr<VkImage>& vk_image);
             ~Canvas();
         public:
             std::shared_ptr<GPU> gpu = nullptr;
