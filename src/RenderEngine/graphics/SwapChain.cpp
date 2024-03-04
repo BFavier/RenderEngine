@@ -79,6 +79,22 @@ SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : g
         extent.width = std::clamp(extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
         extent.height = std::clamp(extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
     }
+    // check supported window alpha transparency
+    std::vector<VkCompositeAlphaFlagBitsKHR> candidates_alpha_compose = {VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR, VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR};
+    bool found_compatible = false;
+    VkCompositeAlphaFlagBitsKHR alpha_compose;
+    for (const VkCompositeAlphaFlagBitsKHR& compose : candidates_alpha_compose)
+    {
+        if ((capabilities.supportedCompositeAlpha & compose) == compose)
+        {
+            alpha_compose = compose;
+            found_compatible = true;
+        }
+    }
+    if (!found_compatible)
+    {
+        THROW_ERROR("Failed to find a supported VkCompositeAlphaFlagBitsKHR for window surface.")
+    }
     // create swap chain
     uint32_t image_count = std::min(capabilities.minImageCount + 1, capabilities.maxImageCount);
     VkSwapchainCreateInfoKHR swap_chain_infos{};
@@ -104,7 +120,7 @@ SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : g
         swap_chain_infos.pQueueFamilyIndices = nullptr;
     }
     swap_chain_infos.preTransform = capabilities.currentTransform;
-    swap_chain_infos.compositeAlpha = VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR; // VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR;
+    swap_chain_infos.compositeAlpha = alpha_compose;
     swap_chain_infos.presentMode = present_mode;
     swap_chain_infos.clipped = VK_TRUE;
     swap_chain_infos.oldSwapchain = VK_NULL_HANDLE;
