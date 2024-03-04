@@ -128,15 +128,15 @@ void Shader::_create_render_pass(const std::vector<std::vector<std::string>>& in
     }
     // Creating attachment dependencies
     std::vector<VkSubpassDependency> dependencies; // https://www.reddit.com/r/vulkan/comments/s80reu/subpass_dependencies_what_are_those_and_why_do_i/
-    // VkSubpassDependency dependency{};
-    // dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-	// dependency.dstSubpass = 0;
-	// dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;;
-	// dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;;
-	// dependency.srcAccessMask = VK_ACCESS_NONE;
-	// dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-	// dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-    // dependencies.push_back(dependency);
+    VkSubpassDependency dependency{};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = VK_ACCESS_NONE;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	dependency.dependencyFlags = 0;
+    dependencies.push_back(dependency);
     for (unsigned int i=0;i<input_attachments.size()-1;i++)
     {
         VkSubpassDependency dependency{}; // A dependency of an attachment between two subpasses

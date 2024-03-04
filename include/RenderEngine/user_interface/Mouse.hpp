@@ -51,10 +51,10 @@ namespace RenderEngine
     protected:
         unsigned int _x;
         unsigned int _y;
-        int _dx;
-        int _dy;
-        double _wheel_dx;
-        double _wheel_dy;
+        int _dx = 0;
+        int _dy = 0;
+        double _wheel_dx = 0;
+        double _wheel_dy = 0;
         const Window& _window;
         bool _mouse_hidden = false;
         std::map<const std::string, Button> _buttons;

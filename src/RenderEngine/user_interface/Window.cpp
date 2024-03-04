@@ -47,11 +47,22 @@ void Window::update()
     {
         _recreate_swapchain();
     }
-    //Polling events
+    // polling events
     _set_unchanged();
     glfwPollEvents();
-    //Drawing to screen
-
+    // presenting
+    uint32_t i;
+    vkAcquireNextImageKHR(gpu->_logical_device, _swap_chain->_swap_chain, UINT64_MAX, VK_NULL_HANDLE, VK_NULL_HANDLE, &i);
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = _swap_chain->canvas[i]._rendered_semaphore.get();
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = &_swap_chain->_swap_chain;
+    presentInfo.pImageIndices = &i;
+    presentInfo.pResults = nullptr; // Optional
+    vkQueuePresentKHR(std::get<1>(gpu->_present_queue.value()), &presentInfo);
+    // drawing to screen
     glfwSwapBuffers(_glfw_window);
 }
 
@@ -83,6 +94,8 @@ void Window::_initialize(const WindowSettings& settings)
     {
         THROW_ERROR("Failed to create the window");
     }
+    _window_width = width;
+    _window_height = height;
     //Link to the keyboard and mouse events
     glfwSetWindowUserPointer(_glfw_window, this);
     // Setup mouse events

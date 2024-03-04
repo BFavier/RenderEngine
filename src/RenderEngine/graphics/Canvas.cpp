@@ -229,6 +229,13 @@ void Canvas::render()
     {
         return;
     }
+    // End render pass
+    vkCmdEndRenderPass(*_draw_command_buffer);
+    // End command buffer
+    if (vkEndCommandBuffer(*_draw_command_buffer) != VK_SUCCESS)
+    {
+        THROW_ERROR("failed to record command buffer!");
+    }
     // submit graphic commands
     VkPipelineStageFlags wait_stages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submitInfo{};
