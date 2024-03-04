@@ -61,7 +61,7 @@ void Canvas::allocate_command_buffer(std::shared_ptr<VkCommandBuffer>& command_b
     allocInfo.commandPool = std::get<2>(gpu->_graphics_queue.value());
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = 1;
-    if (vkAllocateCommandBuffers(gpu->_logical_device, &allocInfo, command_buffer.get()) != VK_SUCCESS);
+    if (vkAllocateCommandBuffers(gpu->_logical_device, &allocInfo, command_buffer.get()) != VK_SUCCESS)
     {
         THROW_ERROR("failed to allocate command buffers!");
     }
@@ -125,6 +125,8 @@ void Canvas::_wait_completion()
 {
     if (_rendering)
     {
+        // reset dependencies
+        _dependencies.clear();
         // wait for previous rendering completion, and reset fence to unsignaled status
         vkWaitForFences(gpu->_logical_device, 1, _rendered_fence.get(), VK_TRUE, std::numeric_limits<uint64_t>::max());
         vkResetFences(gpu->_logical_device, 1, _rendered_fence.get());
