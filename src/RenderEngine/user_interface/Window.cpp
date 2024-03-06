@@ -41,20 +41,19 @@ Canvas& Window::next_frame()
 
 void Window::update()
 {
+    // polling events
+    _set_unchanged();
+    glfwPollEvents();
+    // recreating swapchain if needed
     if (_swap_chain == nullptr)
     {
         _recreate_swapchain();
     }
-    // polling events
-    _set_unchanged();
-    glfwPollEvents();
     // get the back frame and render if not done already 
     Canvas& next_frame = _swap_chain->get_next_frame();
     next_frame.render();
-    // present the back frame to screen
+    // present the next frame to screen
     _swap_chain->present_next_frame();
-    // drawing to screen
-    // glfwSwapBuffers(_glfw_window);
 }
 
 void Window::_initialize(const WindowSettings& settings)
