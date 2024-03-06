@@ -50,10 +50,11 @@ void Window::update()
     // polling events
     _set_unchanged();
     glfwPollEvents();
-    // presenting
+    // get the back frame and render if not done already 
     uint32_t i = _get_swapchain_index_next();
     Canvas& next_frame = _swap_chain->canvas[i];
     next_frame.render();
+    // present the back frame to screen
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = next_frame.is_rendering() ? 1 : 0;
@@ -160,6 +161,7 @@ void Window::_recreate_swapchain()
 
 void Window::_delete_swapchain()
 {
+    vkDeviceWaitIdle(gpu->_logical_device);
     delete _swap_chain;
     _swap_chain = nullptr;
 }

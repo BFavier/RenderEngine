@@ -137,7 +137,7 @@ void Shader::_create_render_pass(const std::vector<std::vector<std::string>>& in
     dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 	dependency.dependencyFlags = 0;
     dependencies.push_back(dependency);
-    for (unsigned int i=0;i<input_attachments.size()-1;i++)
+    for (int i=0;i<input_attachments.size()-1;i++)
     {
         VkSubpassDependency dependency{}; // A dependency of an attachment between two subpasses
         dependency.srcSubpass = i;

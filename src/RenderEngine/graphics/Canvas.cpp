@@ -4,7 +4,7 @@ using namespace RenderEngine;
 
 Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Image::AntiAliasing sample_count, bool texture_compatible) :
     gpu(_gpu),
-    image(_gpu, width, height, Format::RGBA, sample_count, texture_compatible),
+    color(_gpu, width, height, Format::RGBA, sample_count, texture_compatible),
     handles(_gpu, width, height, Format::POINTER, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
     depth_buffer(_gpu, width, height, Format::DEPTH, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 {
@@ -16,11 +16,11 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height
 }
 
 
-Canvas::Canvas(const std::shared_ptr<GPU>& gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height, Image::AntiAliasing sample_count, bool texture_compatible) :
-    gpu(gpu),
-    image(gpu, vk_image, width, height, Format::RGBA, sample_count, texture_compatible),
-    handles(gpu, width, height, Format::POINTER, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
-    depth_buffer(gpu, width, height, Format::DEPTH, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height, Image::AntiAliasing sample_count, bool texture_compatible) :
+    gpu(_gpu),
+    color(_gpu, vk_image, width, height, Format::RGBA, sample_count, texture_compatible),
+    handles(_gpu, width, height, Format::POINTER, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+    depth_buffer(_gpu, width, height, Format::DEPTH, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 {
     allocate_frame_buffer();
     allocate_command_buffer(_draw_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
@@ -37,14 +37,14 @@ Canvas::~Canvas()
 void Canvas::allocate_frame_buffer()
 {
     _frame_buffer.reset(new VkFramebuffer, [&](VkFramebuffer* frm_buffer) {Canvas::_deallocate_frame_buffer(gpu, frm_buffer);});
-    std::vector<VkImageView> attachments = {*image._vk_image_view, *depth_buffer._vk_image_view};
+    std::vector<VkImageView> attachments = {*color._vk_image_view, *depth_buffer._vk_image_view};
     VkFramebufferCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     info.renderPass = gpu->shader3d->_render_pass;
     info.attachmentCount = attachments.size();
     info.pAttachments = attachments.data();
-    info.width = image.width();
-    info.height = image.height();
+    info.width = color.width();
+    info.height = color.height();
     info.layers = 1;
     if (vkCreateFramebuffer(gpu->_logical_device, &info, nullptr, _frame_buffer.get()) != VK_SUCCESS)
     {
@@ -125,8 +125,6 @@ void Canvas::wait_completion()
 {
     if (_rendering)
     {
-        // reset dependencies
-        _dependencies.clear();
         // wait for previous rendering completion, and reset fence to unsignaled status
         vkWaitForFences(gpu->_logical_device, 1, _rendered_fence.get(), VK_TRUE, std::numeric_limits<uint64_t>::max());
         vkResetFences(gpu->_logical_device, 1, _rendered_fence.get());
@@ -141,6 +139,9 @@ void Canvas::wait_completion()
         {
             throw std::runtime_error("failed to begin recording command buffer!");
         }
+        // transition layouts
+        color._transition_to_layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, *_draw_command_buffer);
+        depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, *_draw_command_buffer);
         // begin render pass
         std::vector<VkClearValue> clear_values;
         for (unsigned int i=0; i<3;i++)
@@ -155,7 +156,7 @@ void Canvas::wait_completion()
         renderPassInfo.renderPass = gpu->shader3d->_render_pass;
         renderPassInfo.framebuffer = *_frame_buffer;
         renderPassInfo.renderArea.offset = {0, 0};
-        renderPassInfo.renderArea.extent = {image.width(), image.height()};
+        renderPassInfo.renderArea.extent = {color.width(), color.height()};
         renderPassInfo.clearValueCount = clear_values.size();
         renderPassInfo.pClearValues = clear_values.data();
         vkCmdBeginRenderPass(*_draw_command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -169,14 +170,14 @@ void Canvas::wait_completion()
         VkViewport viewport{};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
-        viewport.width = static_cast<float>(image.width());
-        viewport.height = static_cast<float>(image.height());
+        viewport.width = static_cast<float>(color.width());
+        viewport.height = static_cast<float>(color.height());
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport(*_draw_command_buffer, 0, 1, &viewport);
         VkRect2D scissor{};
         scissor.offset = {0, 0};
-        scissor.extent = {image.width(), image.height()};
+        scissor.extent = {color.width(), color.height()};
         vkCmdSetScissor(*_draw_command_buffer, 0, 1, &scissor);
         // reset the rendering flag
         _rendering = false;
@@ -187,6 +188,7 @@ void Canvas::wait_completion()
 void Canvas::draw()
 {
     wait_completion();
+    _recording = true;
     vkCmdDraw(*_draw_command_buffer, 3, 1, 0, 0);
 }
 
@@ -199,6 +201,7 @@ void Canvas::render()
         return;
     }
     // End render pass
+    _recording = false;
     vkCmdEndRenderPass(*_draw_command_buffer);
     // End command buffer
     if (vkEndCommandBuffer(*_draw_command_buffer) != VK_SUCCESS)
@@ -225,8 +228,15 @@ void Canvas::render()
     {
         THROW_ERROR("failed to submit draw command buffer!");
     }
+    // reset dependencies
+    _dependencies.clear();
     // set the rendering flag
     _rendering = true;
+}
+
+bool Canvas::is_recording() const
+{
+    return _recording;
 }
 
 bool Canvas::is_rendering() const

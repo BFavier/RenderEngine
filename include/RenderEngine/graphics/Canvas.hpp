@@ -8,6 +8,7 @@ namespace RenderEngine
     class Canvas
     // A canvas is an RGBA image that can be drawn onto.
     {
+        friend class Window;
         public:
             Canvas() = delete;
             Canvas(const std::shared_ptr<GPU>& gpu,  uint32_t width, uint32_t height,
@@ -17,12 +18,13 @@ namespace RenderEngine
             ~Canvas();
         public:
             std::shared_ptr<GPU> gpu = nullptr;
-            Image image;
+            Image color;
             Image handles;
             Image depth_buffer;
             std::shared_ptr<VkSemaphore> _rendered_semaphore = nullptr;  // Semaphore to order rendering dependencies on GPU
             std::set<VkSemaphore> _dependencies;  // Semaphore of dependencies that must be rendered before this Canvas
         protected:
+            bool _recording = false; // boolean that is set to true when CommandBuffers are beeing recorded for draw instructions
             bool _rendering = true; // boolean that is set to true when CommandBuffers are sent to GPU for rendering to proceed
             std::shared_ptr<VkFence> _rendered_fence = nullptr; // Fence that becomes 'signaled' once rendering ends on GPU (is initialized signaled)
             std::shared_ptr<VkFramebuffer> _frame_buffer = nullptr;
@@ -37,6 +39,7 @@ namespace RenderEngine
             void draw();  // Record objects to draw in the command buffer. Rendering only happens once the 'render' method is called.
             void render();  // Send the command buffers to GPU
             void wait_completion(); // blocks on CPU side until the rendering on GPU is complete
+            bool is_recording() const;  // returns whether the render function was called already
             bool is_rendering() const;  // returns whether the render function was called already
             static void _deallocate_frame_buffer(const std::shared_ptr<GPU>& gpu, VkFramebuffer* frame_buffer);
             static void _deallocate_command_buffer(const std::shared_ptr<GPU>& gpu, const VkCommandPool& pool, VkCommandBuffer* command_buffer);
