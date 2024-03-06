@@ -124,24 +124,24 @@ SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : g
     swap_chain_infos.presentMode = present_mode;
     swap_chain_infos.clipped = VK_TRUE;
     swap_chain_infos.oldSwapchain = VK_NULL_HANDLE;
-    if (vkCreateSwapchainKHR(gpu->_logical_device, &swap_chain_infos, nullptr, &_swap_chain) != VK_SUCCESS)
+    if (vkCreateSwapchainKHR(gpu->_logical_device, &swap_chain_infos, nullptr, &_vk_swap_chain) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create the swap chain");
     }
     // Getting the vkImages
-    vkGetSwapchainImagesKHR(gpu->_logical_device, _swap_chain, &image_count, nullptr); // just in case our requested image count was not respected, query it again
+    vkGetSwapchainImagesKHR(gpu->_logical_device, _vk_swap_chain, &image_count, nullptr); // just in case our requested image count was not respected, query it again
     std::vector<VkImage> vk_images(image_count, VK_NULL_HANDLE);
-    vkGetSwapchainImagesKHR(gpu->_logical_device, _swap_chain, &image_count, vk_images.data());
+    vkGetSwapchainImagesKHR(gpu->_logical_device, _vk_swap_chain, &image_count, vk_images.data());
     for (int i=0; i<image_count; i++)
     {
         std::shared_ptr<VkImage> vk_image(new VkImage); // Using the standard dealocator instead of Image::_deallocate_image because VkImage aquired from the swap chain should NOT be deleted using VkDestroyImage
         *vk_image = vk_images[i];
-        canvas.push_back(Canvas(gpu, extent.width, extent.height, vk_image));
+        canvas.push_back(Canvas(gpu, vk_image, extent.width, extent.height, window._window_sample_count, false));
     }
 }
 
 SwapChain::~SwapChain()
 {
     canvas.clear();
-    vkDestroySwapchainKHR(gpu->_logical_device, _swap_chain, nullptr);
+    vkDestroySwapchainKHR(gpu->_logical_device, _vk_swap_chain, nullptr);
 }

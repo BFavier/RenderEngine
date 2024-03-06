@@ -24,6 +24,6 @@ namespace RenderEngine
     public:
         std::shared_ptr<GPU> gpu;
         std::vector<Canvas> canvas;
-        VkSwapchainKHR _swap_chain;
+        VkSwapchainKHR _vk_swap_chain;
     };
 }

@@ -10,8 +10,10 @@ namespace RenderEngine
     {
         public:
             Canvas() = delete;
-            Canvas(const std::shared_ptr<GPU>& gpu,  uint32_t width, uint32_t height);
-            Canvas(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, const std::shared_ptr<VkImage>& vk_image);
+            Canvas(const std::shared_ptr<GPU>& gpu,  uint32_t width, uint32_t height,
+                   Image::AntiAliasing sample_count = Image::AntiAliasing::X1, bool texture_compatible = false);
+            Canvas(const std::shared_ptr<GPU>& gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height,
+                   Image::AntiAliasing sample_count = Image::AntiAliasing::X1, bool texture_compatible = false);
             ~Canvas();
         public:
             std::shared_ptr<GPU> gpu = nullptr;
@@ -27,7 +29,6 @@ namespace RenderEngine
             std::shared_ptr<VkCommandBuffer> _draw_command_buffer = nullptr;
             // std::shared_ptr<VkCommandBuffer> _fill_command_buffer = nullptr;
         protected:
-            void _wait_completion(); // blocks on CPU side until the rendering on GPU is complete, then reset command buffers
             void allocate_frame_buffer();
             void allocate_command_buffer(std::shared_ptr<VkCommandBuffer>& command_buffer, VkCommandPool pool);
             void allocate_fence();
@@ -35,7 +36,8 @@ namespace RenderEngine
         public:
             void draw();  // Record objects to draw in the command buffer. Rendering only happens once the 'render' method is called.
             void render();  // Send the command buffers to GPU
-            bool rendering();  // returns whther the render function was called already
+            void wait_completion(); // blocks on CPU side until the rendering on GPU is complete
+            bool is_rendering() const;  // returns whether the render function was called already
             static void _deallocate_frame_buffer(const std::shared_ptr<GPU>& gpu, VkFramebuffer* frame_buffer);
             static void _deallocate_command_buffer(const std::shared_ptr<GPU>& gpu, const VkCommandPool& pool, VkCommandBuffer* command_buffer);
             static void _deallocate_fence(const std::shared_ptr<GPU>& gpu, VkFence* fence);

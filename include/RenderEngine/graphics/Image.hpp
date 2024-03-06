@@ -22,10 +22,15 @@ namespace RenderEngine
                            X64=VK_SAMPLE_COUNT_64_BIT};
     public:
         Image() = delete;
-        Image(const std::shared_ptr<GPU>& gpu, const std::string& file_path, std::optional<Format> = std::optional<Format>());
-        Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Format format);
-        Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Format format, Image::AntiAliasing sample_count, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlagBits memory_type, bool mip_mapping);
-        Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Format format, const std::shared_ptr<VkImage>& vk_image);
+        // Load an image from file
+        Image(const std::shared_ptr<GPU>& gpu, const std::string& file_path,
+              std::optional<Format> format = {}, Image::AntiAliasing sample_count = Image::AntiAliasing::X1, bool texture_compatible = false, VkMemoryPropertyFlags memory_type = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        // create an image from dimensions and format
+        Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Format format,
+              Image::AntiAliasing sample_count = Image::AntiAliasing::X1, bool texture_compatible = false, VkMemoryPropertyFlags memory_type = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        // Create an image view from an existing image
+        Image(const std::shared_ptr<GPU>& gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height, Format format,
+              Image::AntiAliasing sample_count = Image::AntiAliasing::X1, bool texture_compatible = false);
         // Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, Format format, const std::vector<unsigned char>& data);
         ~Image();
     public:
@@ -38,15 +43,14 @@ namespace RenderEngine
         Format _format;
         VkImageLayout _layout;
         VkDeviceMemory _memory;
-        AntiAliasing _sample_count = X1;
-        VkImageTiling _tiling = VK_IMAGE_TILING_OPTIMAL;
-        VkImageUsageFlags _usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
-        VkMemoryPropertyFlagBits _memory_type = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        uint32_t _mip_levels = 1;
+        Image::AntiAliasing _sample_count;
+        bool _texture_compatible;
+        uint32_t _mip_levels;
     protected:
-        void allocate_vk_image();
-        void allocate_vk_image_view();
-        uint32_t _find_memory_type_index(uint32_t memory_type_bits, VkMemoryPropertyFlagBits _memory_type) const;
+        void _set_attributes(uint32_t width, uint32_t height, Format format, Image::AntiAliasing sample_count, bool texture_compatible);
+        void _allocate_vk_image(uint32_t width, uint32_t height, Format format, Image::AntiAliasing sample_count, bool texture_compatible, VkMemoryPropertyFlags memory_type);
+        void _allocate_vk_image_view();
+        uint32_t _find_memory_type_index(uint32_t memory_type_bits, VkMemoryPropertyFlags _memory_type) const;
         void _transition_to_layout(VkImageLayout new_layout, VkCommandBuffer command_buffer);
         // void upload_data(unsigned char* data);
     public:
@@ -54,6 +58,7 @@ namespace RenderEngine
         uint32_t height() const;
         Format format() const;
         AntiAliasing sample_count() const;
+        bool is_texture_compatible() const;
         static void _deallocate_image(const std::shared_ptr<GPU>& gpu, VkImage* vk_image);
         static void _deallocate_image_view(const std::shared_ptr<GPU>& gpu, VkImageView* vk_image_view);
     };

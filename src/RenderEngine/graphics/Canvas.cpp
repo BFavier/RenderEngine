@@ -2,11 +2,11 @@
 #include <RenderEngine/graphics/Canvas.hpp>
 using namespace RenderEngine;
 
-Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height) :
+Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Image::AntiAliasing sample_count, bool texture_compatible) :
     gpu(_gpu),
-    image(_gpu, width, height, Format::RGBA),
-    handles(_gpu, width, height, Format::POINTER, Image::AntiAliasing::X1, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, false),
-    depth_buffer(_gpu, width, height, Format::DEPTH, Image::AntiAliasing::X1, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, false)
+    image(_gpu, width, height, Format::RGBA, sample_count, texture_compatible),
+    handles(_gpu, width, height, Format::POINTER, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+    depth_buffer(_gpu, width, height, Format::DEPTH, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 {
     allocate_frame_buffer();
     allocate_command_buffer(_draw_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
@@ -16,11 +16,11 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height
 }
 
 
-Canvas::Canvas(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, const std::shared_ptr<VkImage>& vk_image) :
+Canvas::Canvas(const std::shared_ptr<GPU>& gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height, Image::AntiAliasing sample_count, bool texture_compatible) :
     gpu(gpu),
-    image(gpu, width, height, Format::RGBA, vk_image),
-    handles(gpu, width, height, Format::POINTER, Image::AntiAliasing::X1, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, false),
-    depth_buffer(gpu, width, height, Format::DEPTH, Image::AntiAliasing::X1, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, false)
+    image(gpu, vk_image, width, height, Format::RGBA, sample_count, texture_compatible),
+    handles(gpu, width, height, Format::POINTER, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+    depth_buffer(gpu, width, height, Format::DEPTH, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 {
     allocate_frame_buffer();
     allocate_command_buffer(_draw_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
@@ -121,7 +121,7 @@ void Canvas::_deallocate_semaphore(const std::shared_ptr<GPU>& gpu, VkSemaphore*
 }
 
 
-void Canvas::_wait_completion()
+void Canvas::wait_completion()
 {
     if (_rendering)
     {
@@ -186,7 +186,7 @@ void Canvas::_wait_completion()
 
 void Canvas::draw()
 {
-    _wait_completion();
+    wait_completion();
     vkCmdDraw(*_draw_command_buffer, 3, 1, 0, 0);
 }
 
@@ -229,7 +229,7 @@ void Canvas::render()
     _rendering = true;
 }
 
-bool Canvas::rendering()
+bool Canvas::is_rendering() const
 {
     return _rendering;
 }

@@ -56,10 +56,10 @@ void Window::update()
     next_frame.render();
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.waitSemaphoreCount = next_frame.rendering() ? 1 : 0;
-    presentInfo.pWaitSemaphores = next_frame.rendering() ? next_frame._rendered_semaphore.get() : nullptr;
+    presentInfo.waitSemaphoreCount = next_frame.is_rendering() ? 1 : 0;
+    presentInfo.pWaitSemaphores = next_frame.is_rendering() ? next_frame._rendered_semaphore.get() : nullptr;
     presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = &_swap_chain->_swap_chain;
+    presentInfo.pSwapchains = &_swap_chain->_vk_swap_chain;
     presentInfo.pImageIndices = &i;
     presentInfo.pResults = nullptr; // Optional
     vkQueuePresentKHR(std::get<1>(gpu->_present_queue.value()), &presentInfo);
@@ -91,6 +91,7 @@ void Window::_initialize(const WindowSettings& settings)
         glfwSetWindowSize(_glfw_window, width, height);
     }
     _window_vsync = settings.vsync;
+    _window_sample_count = settings.sample_count;
     _window_title = settings.title;
     _glfw_window = glfwCreateWindow(width, height, _window_title.c_str(), monitor, nullptr);
     if (_glfw_window == nullptr)
@@ -442,7 +443,7 @@ uint32_t Window::_get_swapchain_index_next()
     if (_swapchain_index_next < 0)
     {
         uint32_t i;
-        vkAcquireNextImageKHR(gpu->_logical_device, _swap_chain->_swap_chain, UINT64_MAX, *_swapchain_image_available, VK_NULL_HANDLE, &i);
+        vkAcquireNextImageKHR(gpu->_logical_device, _swap_chain->_vk_swap_chain, UINT64_MAX, *_swapchain_image_available, VK_NULL_HANDLE, &i);
         _swapchain_index_next = static_cast<int>(i);
     }
     return static_cast<uint32_t>(_swapchain_index_next);

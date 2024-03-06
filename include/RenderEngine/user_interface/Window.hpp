@@ -5,6 +5,7 @@
 #include <RenderEngine/user_interface/Keyboard.hpp>
 #include <RenderEngine/user_interface/Mouse.hpp>
 #include <RenderEngine/graphics/SwapChain.hpp>
+#include <RenderEngine/graphics/Image.hpp>
 
 namespace RenderEngine
 {
@@ -13,7 +14,7 @@ namespace RenderEngine
     {
 
     friend class Mouse;  // Mouse can access the _glfw_window attribute
-    friend class SwapChain; // SwapChain can access the _vk_surface and _glfw_window attributes
+    friend class SwapChain; // SwapChain can access the _vk_surface, _window_sample_count and _glfw_window attributes
     friend class GPU; // GPU can access the _vk_surface attribute
     friend class Internal; // RenderEngine::Internal can create dummy windows
     
@@ -108,6 +109,7 @@ namespace RenderEngine
         std::string _window_title;
         bool _window_full_screen = false;
         bool _window_vsync = false;
+        Image::AntiAliasing _window_sample_count = Image::AntiAliasing::X1;
         SwapChain* _swap_chain = nullptr;
         GLFWwindow* _glfw_window = nullptr;
         VkSurfaceKHR _vk_surface = VK_NULL_HANDLE;

@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <RenderEngine/graphics/Image.hpp>
 
 namespace RenderEngine
 {
@@ -20,12 +21,12 @@ namespace RenderEngine
         bool resizable = true;
         ///< If true the window has borders
         bool borders = true;
-        ///< If true the window is transparent (if the alpha channel of the displayed image is inferior to 1.)
+        ///< If true the window has transparency (not supported by vulkan drivers on most GPU, excepted for some AMD integrated GPU)
         bool transparent = false;
         ///< If true, the vsync of the window is enabled
         bool vsync = true;
         ///< Number of samples for the Multi Sample Anti Aliasing
-        unsigned int anti_aliasing = 1;
+        Image::AntiAliasing sample_count = Image::AntiAliasing::X1;
         ///< If true, the swap chain is created at window construction time, otherwise it is only initialized at next 'update' call.
         bool initialize_swapchain = true;
     };
