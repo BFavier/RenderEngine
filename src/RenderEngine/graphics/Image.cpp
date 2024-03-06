@@ -109,6 +109,7 @@ Image::AntiAliasing Image::sample_count() const
 
 void Image::allocate_vk_image()
 {
+    _layout = VK_IMAGE_LAYOUT_UNDEFINED;
     _vk_image.reset(new VkImage, std::bind(&Image::_deallocate_image, gpu, std::placeholders::_1));
     VkImageCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -124,7 +125,7 @@ void Image::allocate_vk_image()
     info.mipLevels = _mip_levels;
     info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     info.queueFamilyIndexCount = 0;
-    info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    info.initialLayout = _layout;
     if (vkCreateImage(gpu->_logical_device, &info, nullptr, _vk_image.get()) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create image");
@@ -190,6 +191,60 @@ void Image::_deallocate_image_view(const std::shared_ptr<GPU>& gpu, VkImageView*
 {
     vkDestroyImageView(gpu->_logical_device, *vk_image_view, nullptr);
     delete vk_image_view;
+}
+
+void Image::_transition_to_layout(VkImageLayout new_layout, VkCommandBuffer command_buffer)
+{
+    if (new_layout == _layout)
+    {
+        return;
+    }
+    VkImageMemoryBarrier barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout = _layout;
+    barrier.newLayout = new_layout;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;  // will be modified later in the function
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;  // will be modified later in the function
+    barrier.image = *_vk_image;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+    barrier.srcAccessMask = 0;  // will be modified later in the function
+    barrier.dstAccessMask = 0;  // will be modified later in the function
+    VkPipelineStageFlags source_stage;
+    VkPipelineStageFlags destination_stage;
+    if (_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.srcQueueFamilyIndex = std::get<0>(gpu->_graphics_queue.value());
+        barrier.dstQueueFamilyIndex = std::get<0>(gpu->_transfer_queue.value());
+        source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destination_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if (_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+    {
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        destination_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
+    else
+    {
+        THROW_ERROR("unsupported layout transition!");
+    }
+
+    vkCmdPipelineBarrier(
+        command_buffer,
+        source_stage, destination_stage,
+        VK_DEPENDENCY_BY_REGION_BIT,
+        0, nullptr,
+        0, nullptr,
+        1, &barrier
+    );
 }
 
 // void Image::upload_data(unsigned char* data)

@@ -36,6 +36,7 @@ namespace RenderEngine
         uint32_t _width;
         uint32_t _height;
         Format _format;
+        VkImageLayout _layout;
         VkDeviceMemory _memory;
         AntiAliasing _sample_count = X1;
         VkImageTiling _tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -46,6 +47,7 @@ namespace RenderEngine
         void allocate_vk_image();
         void allocate_vk_image_view();
         uint32_t _find_memory_type_index(uint32_t memory_type_bits, VkMemoryPropertyFlagBits _memory_type) const;
+        void _transition_to_layout(VkImageLayout new_layout, VkCommandBuffer command_buffer);
         // void upload_data(unsigned char* data);
     public:
         uint32_t width() const;
