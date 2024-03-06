@@ -154,17 +154,19 @@ void Image::_allocate_vk_image(uint32_t width, uint32_t height, Format format, I
         THROW_ERROR("failed to create image");
     }
     // bind memory
+    std::shared_ptr<GPU>& _gpu = gpu;
+    _vk_device_memory.reset(new VkDeviceMemory, [_gpu](VkDeviceMemory* mem) {Image::_free_image_memory(_gpu, mem);});
     VkMemoryRequirements mem_requirements;
     vkGetImageMemoryRequirements(gpu->_logical_device, *_vk_image, &mem_requirements);
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = mem_requirements.size;
     allocInfo.memoryTypeIndex = _find_memory_type_index(mem_requirements.memoryTypeBits, memory_type);
-    if (vkAllocateMemory(gpu->_logical_device, &allocInfo, nullptr, &_memory) != VK_SUCCESS)
+    if (vkAllocateMemory(gpu->_logical_device, &allocInfo, nullptr, _vk_device_memory.get()) != VK_SUCCESS)
     {
         THROW_ERROR("failed to allocate image memory!");
     }
-    vkBindImageMemory(gpu->_logical_device, *_vk_image, _memory, 0);
+    vkBindImageMemory(gpu->_logical_device, *_vk_image, *_vk_device_memory.get(), 0);
 }
 
 void Image::_allocate_vk_image_view()
@@ -214,6 +216,12 @@ void Image::_deallocate_image_view(const std::shared_ptr<GPU>& gpu, VkImageView*
 {
     vkDestroyImageView(gpu->_logical_device, *vk_image_view, nullptr);
     delete vk_image_view;
+}
+
+void Image::_free_image_memory(const std::shared_ptr<GPU>& gpu, VkDeviceMemory* vk_device_memory)
+{
+    vkFreeMemory(gpu->_logical_device, *vk_device_memory, nullptr);
+    *vk_device_memory = VK_NULL_HANDLE;
 }
 
 void Image::_transition_to_layout(VkImageLayout new_layout, VkCommandBuffer command_buffer)

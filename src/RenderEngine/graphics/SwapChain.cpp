@@ -152,6 +152,7 @@ SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : g
 
 SwapChain::~SwapChain()
 {
+    vkDeviceWaitIdle(gpu->_logical_device);
     while (frame_available_semaphores.size() > 0)
     {
         vkDestroySemaphore(gpu->_logical_device, frame_available_semaphores.front(), nullptr);

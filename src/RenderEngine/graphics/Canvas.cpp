@@ -31,12 +31,14 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>&
 
 Canvas::~Canvas()
 {
+    vkDeviceWaitIdle(gpu->_logical_device);
 }
 
 
 void Canvas::allocate_frame_buffer()
 {
-    _frame_buffer.reset(new VkFramebuffer, [&](VkFramebuffer* frm_buffer) {Canvas::_deallocate_frame_buffer(gpu, frm_buffer);});
+    std::shared_ptr<GPU>& _gpu = this->gpu;
+    _frame_buffer.reset(new VkFramebuffer, [_gpu](VkFramebuffer* frm_buffer) {Canvas::_deallocate_frame_buffer(_gpu, frm_buffer);});
     std::vector<VkImageView> attachments = {*color._vk_image_view, *depth_buffer._vk_image_view};
     VkFramebufferCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -55,7 +57,8 @@ void Canvas::allocate_frame_buffer()
 
 void Canvas::allocate_command_buffer(std::shared_ptr<VkCommandBuffer>& command_buffer, VkCommandPool pool)
 {
-    command_buffer.reset(new VkCommandBuffer, [&](VkCommandBuffer* cmd_buffer) {Canvas::_deallocate_command_buffer(gpu, pool, cmd_buffer);});
+    std::shared_ptr<GPU>& _gpu = this->gpu;
+    command_buffer.reset(new VkCommandBuffer, [_gpu, pool](VkCommandBuffer* cmd_buffer) {Canvas::_deallocate_command_buffer(_gpu, pool, cmd_buffer);});
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = std::get<2>(gpu->_graphics_queue.value());
@@ -70,7 +73,8 @@ void Canvas::allocate_command_buffer(std::shared_ptr<VkCommandBuffer>& command_b
 
 void Canvas::allocate_fence()
 {
-    _rendered_fence.reset(new VkFence, [&](VkFence* fnc) {Canvas::_deallocate_fence(gpu, fnc);});
+    std::shared_ptr<GPU>& _gpu = this->gpu;
+    _rendered_fence.reset(new VkFence, [_gpu](VkFence* fnc) {Canvas::_deallocate_fence(_gpu, fnc);});
     VkFenceCreateInfo fenceInfo{};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
@@ -83,7 +87,8 @@ void Canvas::allocate_fence()
 
 void Canvas::allocate_semaphore()
 {
-    _rendered_semaphore.reset(new VkSemaphore, [&](VkSemaphore* smp) {Canvas::_deallocate_semaphore(gpu, smp);});
+    std::shared_ptr<GPU>& _gpu = this->gpu;
+    _rendered_semaphore.reset(new VkSemaphore, [_gpu](VkSemaphore* smp) {Canvas::_deallocate_semaphore(_gpu, smp);});
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     if (vkCreateSemaphore(gpu->_logical_device, &semaphoreInfo, nullptr, _rendered_semaphore.get()) != VK_SUCCESS)
