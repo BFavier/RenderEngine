@@ -35,7 +35,9 @@ namespace RenderEngine
         Keyboard keyboard;
         Mouse mouse;
     public:
-        ///< returns the next Canvas to draw to from the swapchain.
+        ///< returns the current frame or nullptr if 'update' was never called.
+        Canvas* current_frame();
+        ///< returns the next frame that will be displayed at the next call of 'update'.
         Canvas& next_frame();
         ///< Update the window's display, and the window's inputs states (keyboard and mouse)
         void update();

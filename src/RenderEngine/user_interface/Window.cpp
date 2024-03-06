@@ -33,6 +33,12 @@ Window::~Window()
 }
 
 
+Canvas* Window::current_frame()
+{
+    return _swap_chain->get_current_frame();
+}
+
+
 Canvas& Window::next_frame()
 {
     return _swap_chain->get_next_frame();

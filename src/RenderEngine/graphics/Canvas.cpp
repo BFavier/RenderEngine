@@ -29,6 +29,7 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>&
     allocate_semaphore();
 }
 
+
 Canvas::~Canvas()
 {
     vkDeviceWaitIdle(gpu->_logical_device);
