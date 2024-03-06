@@ -142,14 +142,22 @@ void Canvas::_wait_completion()
             throw std::runtime_error("failed to begin recording command buffer!");
         }
         // begin render pass
+        std::vector<VkClearValue> clear_values;
+        for (unsigned int i=0; i<3;i++)
+        {
+            VkClearValue clear_value = {};
+            clear_value.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+            clear_value.depthStencil = {1.0f, 0};
+            clear_values.push_back(clear_value);
+        }
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = gpu->shader3d->_render_pass;
         renderPassInfo.framebuffer = *_frame_buffer;
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = {image.width(), image.height()};
-        renderPassInfo.clearValueCount = 0;
-        renderPassInfo.pClearValues = nullptr;
+        renderPassInfo.clearValueCount = clear_values.size();
+        renderPassInfo.pClearValues = clear_values.data();
         vkCmdBeginRenderPass(*_draw_command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         // bind the successive pipelines
         for (unsigned int i=0;i<gpu->shader3d->_pipelines.size();i++)
@@ -180,47 +188,6 @@ void Canvas::draw()
 {
     _wait_completion();
     vkCmdDraw(*_draw_command_buffer, 3, 1, 0, 0);
-    // vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
-    // vkResetFences(device, 1, &inFlightFence);
-
-    // uint32_t imageIndex;
-    // vkAcquireNextImageKHR(device, swapChain, UINT64_MAX, imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
-
-    // vkResetCommandBuffer(*_command_buffer, 0); // second argument can be a cominaison of VkCommandBufferResetFlagBits
-    // recordCommandBuffer(*_command_buffer, imageIndex);
-
-    // VkSubmitInfo submitInfo{};
-    // submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-    // VkSemaphore waitSemaphores[] = {imageAvailableSemaphore};
-    // VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    // submitInfo.waitSemaphoreCount = 1;
-    // submitInfo.pWaitSemaphores = waitSemaphores;
-    // submitInfo.pWaitDstStageMask = waitStages;
-
-    // submitInfo.commandBufferCount = 1;
-    // submitInfo.pCommandBuffers = _command_buffer.get();
-
-    // VkSemaphore signalSemaphores[] = {renderFinishedSemaphore};
-    // submitInfo.signalSemaphoreCount = 1;
-    // submitInfo.pSignalSemaphores = signalSemaphores;
-
-    // if (vkQueueSubmit(std::get<1>(gpu->_graphics_queue.value()), 1, &submitInfo, inFlightFence) != VK_SUCCESS)
-    // {
-    //     throw std::runtime_error("failed to submit draw command buffer!");
-    // }
-
-    // VkPresentInfoKHR presentInfo{};
-    // presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    // presentInfo.waitSemaphoreCount = 1;
-    // presentInfo.pWaitSemaphores = signalSemaphores;
-
-    // VkSwapchainKHR swapChains[] = {swapChain};
-    // presentInfo.swapchainCount = 1;
-    // presentInfo.pSwapchains = swapChains;
-    // presentInfo.pImageIndices = &imageIndex;
-
-    // vkQueuePresentKHR(presentQueue, &presentInfo);
 }
 
 
@@ -239,11 +206,16 @@ void Canvas::render()
         THROW_ERROR("failed to record command buffer!");
     }
     // submit graphic commands
+    std::vector<VkSemaphore> wait_semaphores;
+    for (const VkSemaphore& semaphore : _dependencies)
+    {
+        wait_semaphores.push_back(semaphore);
+    }
     VkPipelineStageFlags wait_stages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.waitSemaphoreCount = _dependencies.size();
-    submitInfo.pWaitSemaphores = _dependencies.data();
+    submitInfo.waitSemaphoreCount = wait_semaphores.size();
+    submitInfo.pWaitSemaphores = wait_semaphores.data();
     submitInfo.pWaitDstStageMask = &wait_stages;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = _draw_command_buffer.get();
@@ -255,4 +227,9 @@ void Canvas::render()
     }
     // set the rendering flag
     _rendering = true;
+}
+
+bool Canvas::rendering()
+{
+    return _rendering;
 }

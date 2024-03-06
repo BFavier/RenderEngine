@@ -35,9 +35,9 @@ Window::~Window()
 
 Canvas& Window::back_frame()
 {
-    uint32_t i;
-    vkAcquireNextImageKHR(gpu->_logical_device, _swap_chain->_swap_chain, UINT64_MAX, VK_NULL_HANDLE, VK_NULL_HANDLE, &i);
-    return _swap_chain->canvas[i];
+    Canvas& canvas = _swap_chain->canvas[_get_swapchain_index_next()];
+    canvas._dependencies.insert(*_swapchain_image_available);
+    return canvas;
 }
 
 
@@ -51,24 +51,27 @@ void Window::update()
     _set_unchanged();
     glfwPollEvents();
     // presenting
-    uint32_t i;
-    vkAcquireNextImageKHR(gpu->_logical_device, _swap_chain->_swap_chain, UINT64_MAX, VK_NULL_HANDLE, VK_NULL_HANDLE, &i);
+    uint32_t i = _get_swapchain_index_next();
+    Canvas& next_frame = _swap_chain->canvas[i];
+    next_frame.render();
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = _swap_chain->canvas[i]._rendered_semaphore.get();
+    presentInfo.waitSemaphoreCount = next_frame.rendering() ? 1 : 0;
+    presentInfo.pWaitSemaphores = next_frame.rendering() ? next_frame._rendered_semaphore.get() : nullptr;
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &_swap_chain->_swap_chain;
     presentInfo.pImageIndices = &i;
     presentInfo.pResults = nullptr; // Optional
     vkQueuePresentKHR(std::get<1>(gpu->_present_queue.value()), &presentInfo);
+    // updating indexes
+    _swapchain_index_current = _swapchain_index_next;
+    _swapchain_index_next = -1;
     // drawing to screen
     glfwSwapBuffers(_glfw_window);
 }
 
 void Window::_initialize(const WindowSettings& settings)
 {
-    Internal::initialize();
     //Create the GLFW window
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_VISIBLE, settings.visible);
@@ -150,6 +153,8 @@ void Window::_recreate_swapchain()
     {
         _swap_chain = new SwapChain(gpu, *this);
     }
+    // Allocate semaphore
+    _allocate_semaphore();
 }
 
 void Window::_delete_swapchain()
@@ -413,4 +418,32 @@ void Window::_keyboard_button_callback(GLFWwindow* window, int key, int scancode
         button.was_released = true;
     }
     h->keyboard._set_key(name, button);
+}
+
+void Window::_allocate_semaphore()
+{
+    _swapchain_image_available.reset(new VkSemaphore, [&](VkSemaphore* smp) {Canvas::_deallocate_semaphore(gpu, smp);});
+    VkSemaphoreCreateInfo semaphoreInfo{};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    if (vkCreateSemaphore(gpu->_logical_device, &semaphoreInfo, nullptr, _swapchain_image_available.get()) != VK_SUCCESS)
+    {
+        THROW_ERROR("failed to create VkSemaphore");
+    }
+}
+
+void Window::_deallocate_semaphore(const std::shared_ptr<GPU>& gpu, VkSemaphore* semaphore)
+{
+    vkDestroySemaphore(gpu->_logical_device, *semaphore, nullptr);
+    *semaphore = VK_NULL_HANDLE;
+}
+
+uint32_t Window::_get_swapchain_index_next()
+{
+    if (_swapchain_index_next < 0)
+    {
+        uint32_t i;
+        vkAcquireNextImageKHR(gpu->_logical_device, _swap_chain->_swap_chain, UINT64_MAX, *_swapchain_image_available, VK_NULL_HANDLE, &i);
+        _swapchain_index_next = static_cast<int>(i);
+    }
+    return static_cast<uint32_t>(_swapchain_index_next);
 }
