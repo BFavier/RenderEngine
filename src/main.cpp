@@ -39,7 +39,7 @@ int main()
                     std::cout << key.first << " key state changed to pressed=" << key.second.down << " (" << timer.dt() << ") " << std::endl;
                 }
             }
-            Canvas& frame = window.back_frame();
+            Canvas& frame = window.next_frame();
             frame.draw();
             window.update();
         }

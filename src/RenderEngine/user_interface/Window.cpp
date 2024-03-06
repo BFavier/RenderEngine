@@ -33,11 +33,9 @@ Window::~Window()
 }
 
 
-Canvas& Window::back_frame()
+Canvas& Window::next_frame()
 {
-    Canvas& canvas = _swap_chain->canvas[_get_swapchain_index_next()];
-    canvas._dependencies.insert(*_swapchain_image_available);
-    return canvas;
+    return _swap_chain->get_next_frame();
 }
 
 
@@ -51,24 +49,12 @@ void Window::update()
     _set_unchanged();
     glfwPollEvents();
     // get the back frame and render if not done already 
-    uint32_t i = _get_swapchain_index_next();
-    Canvas& next_frame = _swap_chain->canvas[i];
+    Canvas& next_frame = _swap_chain->get_next_frame();
     next_frame.render();
     // present the back frame to screen
-    VkPresentInfoKHR presentInfo{};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.waitSemaphoreCount = next_frame.is_rendering() ? 1 : 0;
-    presentInfo.pWaitSemaphores = next_frame.is_rendering() ? next_frame._rendered_semaphore.get() : nullptr;
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = &_swap_chain->_vk_swap_chain;
-    presentInfo.pImageIndices = &i;
-    presentInfo.pResults = nullptr; // Optional
-    vkQueuePresentKHR(std::get<1>(gpu->_present_queue.value()), &presentInfo);
-    // updating indexes
-    _swapchain_index_current = _swapchain_index_next;
-    _swapchain_index_next = -1;
+    _swap_chain->present_next_frame();
     // drawing to screen
-    glfwSwapBuffers(_glfw_window);
+    // glfwSwapBuffers(_glfw_window);
 }
 
 void Window::_initialize(const WindowSettings& settings)
@@ -155,8 +141,6 @@ void Window::_recreate_swapchain()
     {
         _swap_chain = new SwapChain(gpu, *this);
     }
-    // Allocate semaphore
-    _allocate_semaphore();
 }
 
 void Window::_delete_swapchain()
@@ -421,32 +405,4 @@ void Window::_keyboard_button_callback(GLFWwindow* window, int key, int scancode
         button.was_released = true;
     }
     h->keyboard._set_key(name, button);
-}
-
-void Window::_allocate_semaphore()
-{
-    _swapchain_image_available.reset(new VkSemaphore, [&](VkSemaphore* smp) {Canvas::_deallocate_semaphore(gpu, smp);});
-    VkSemaphoreCreateInfo semaphoreInfo{};
-    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    if (vkCreateSemaphore(gpu->_logical_device, &semaphoreInfo, nullptr, _swapchain_image_available.get()) != VK_SUCCESS)
-    {
-        THROW_ERROR("failed to create VkSemaphore");
-    }
-}
-
-void Window::_deallocate_semaphore(const std::shared_ptr<GPU>& gpu, VkSemaphore* semaphore)
-{
-    vkDestroySemaphore(gpu->_logical_device, *semaphore, nullptr);
-    *semaphore = VK_NULL_HANDLE;
-}
-
-uint32_t Window::_get_swapchain_index_next()
-{
-    if (_swapchain_index_next < 0)
-    {
-        uint32_t i;
-        vkAcquireNextImageKHR(gpu->_logical_device, _swap_chain->_vk_swap_chain, UINT64_MAX, *_swapchain_image_available, VK_NULL_HANDLE, &i);
-        _swapchain_index_next = static_cast<int>(i);
-    }
-    return static_cast<uint32_t>(_swapchain_index_next);
 }

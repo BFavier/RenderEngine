@@ -3,6 +3,7 @@
 #include <RenderEngine/utilities/Macro.hpp>
 #include <RenderEngine/graphics/Canvas.hpp>
 #include <vector>
+#include <queue>
 #include <algorithm>
 #include <memory>
 
@@ -23,7 +24,14 @@ namespace RenderEngine
         ~SwapChain();
     public:
         std::shared_ptr<GPU> gpu;
-        std::vector<Canvas> canvas;
+        std::vector<Canvas> frames;
+        std::queue<VkSemaphore> frame_available_semaphores;
         VkSwapchainKHR _vk_swap_chain;
+    public:
+        void present_next_frame(); // present the next frame to screen
+        Canvas& get_next_frame(); // Return the next swapchain index. Acquire it if it wasn't already.
+    protected:
+        int _frame_index_current = -1;
+        int _frame_index_next = -1;
     };
 }

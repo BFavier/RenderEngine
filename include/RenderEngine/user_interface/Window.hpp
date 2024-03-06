@@ -36,7 +36,7 @@ namespace RenderEngine
         Mouse mouse;
     public:
         ///< returns the next Canvas to draw to from the swapchain.
-        Canvas& back_frame();
+        Canvas& next_frame();
         ///< Update the window's display, and the window's inputs states (keyboard and mouse)
         void update();
         ///< Get the x position of the window in the screen
@@ -93,14 +93,11 @@ namespace RenderEngine
         static void _mouse_position_callback(GLFWwindow* window, double xpos, double ypos);
         static void _mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
         static void _keyboard_button_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-        static void _deallocate_semaphore(const std::shared_ptr<GPU>& gpu, VkSemaphore* semaphore);
     protected:
         void _initialize(const WindowSettings& settings);
         void _recreate_swapchain();
         void _delete_swapchain();
         void _set_unchanged();
-        void _allocate_semaphore();
-        uint32_t _get_swapchain_index_next(); // return the next swapchain index or acquire it if it wasn't already
     protected:
         int _x;
         int _y;
@@ -113,8 +110,5 @@ namespace RenderEngine
         SwapChain* _swap_chain = nullptr;
         GLFWwindow* _glfw_window = nullptr;
         VkSurfaceKHR _vk_surface = VK_NULL_HANDLE;
-        std::shared_ptr<VkSemaphore> _swapchain_image_available;
-        int _swapchain_index_current = -1;
-        int _swapchain_index_next = -1;
     };
 }
