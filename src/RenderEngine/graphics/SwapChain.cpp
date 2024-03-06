@@ -164,6 +164,14 @@ SwapChain::~SwapChain()
 
 void SwapChain::present_next_frame()
 {
+    // Make sure that the current frame is rendered before swapping to next frame,
+    // otherwise semaphores might be reused when they have not been signaled yet,
+    // which alerts validation layers and might create issues
+    if (_frame_index_current >= 0)
+    {
+        get_current_frame().wait_completion();
+    }
+    // present the next frame
     Canvas& next_frame = get_next_frame();
     uint32_t i = static_cast<uint32_t>(_frame_index_next);
     VkPresentInfoKHR presentInfo{};
@@ -176,8 +184,18 @@ void SwapChain::present_next_frame()
     presentInfo.pResults = nullptr; // Optional
     vkQueuePresentKHR(std::get<1>(gpu->_present_queue.value()), &presentInfo);
     // updating indexes
-    _frame_index_current = _frame_index_next = -1;
+    _frame_index_current = _frame_index_next;
     _frame_index_next = -1;
+}
+
+
+Canvas& SwapChain::get_current_frame()
+{
+    if (_frame_index_current < 0)
+    {
+        THROW_ERROR("Tried getting current frame but there is no current frame, because present_next_frame was never called.");
+    }
+    return frames[_frame_index_current];
 }
 
 
