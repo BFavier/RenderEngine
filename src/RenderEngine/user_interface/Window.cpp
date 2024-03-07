@@ -39,15 +39,26 @@ Canvas* Window::current_frame()
 }
 
 
-Canvas& Window::next_frame()
+Canvas* Window::next_frame()
 {
-    return _swap_chain->get_next_frame();
+    if (_swap_chain == nullptr)
+    {
+        return nullptr;
+    }
+    return &_swap_chain->get_next_frame();
 }
 
 
 void Window::update()
 {
-    // polling events
+    // get the back frame and render if not done already 
+    Canvas* frame = next_frame();
+    if (frame != nullptr)
+    {
+        frame->render();
+        _swap_chain->present_next_frame();
+    }
+    // polling events (might delete swap chain by window resizing callback function)
     _set_unchanged();
     glfwPollEvents();
     // recreating swapchain if needed
@@ -55,12 +66,8 @@ void Window::update()
     {
         _recreate_swapchain();
     }
-    // get the back frame and render if not done already 
-    Canvas& next_frame = _swap_chain->get_next_frame();
-    next_frame.render();
-    // present the next frame to screen
-    _swap_chain->present_next_frame();
 }
+
 
 void Window::_initialize(const WindowSettings& settings)
 {

@@ -165,6 +165,7 @@ SwapChain::~SwapChain()
 
 void SwapChain::present_next_frame()
 {
+    // TODO
     // Make sure that the current frame is rendered before swapping to next frame,
     // otherwise semaphores might be reused when they have not been signaled yet,
     // which alerts validation layers and might create issues

@@ -25,7 +25,7 @@ namespace RenderEngine
             std::set<VkSemaphore> _dependencies;  // Semaphore of dependencies that must be rendered before this Canvas
         protected:
             bool _recording = false; // boolean that is set to true when CommandBuffers are beeing recorded for draw instructions
-            bool _rendering = true; // boolean that is set to true when CommandBuffers are sent to GPU for rendering to proceed
+            bool _rendering = false; // boolean that is set to true when CommandBuffers have been sent to GPU for rendering to proceed
             std::shared_ptr<VkFence> _rendered_fence = nullptr; // Fence that becomes 'signaled' once rendering ends on GPU (is initialized signaled)
             std::shared_ptr<VkFramebuffer> _frame_buffer = nullptr;
             std::shared_ptr<VkCommandBuffer> _draw_command_buffer = nullptr;
@@ -35,10 +35,11 @@ namespace RenderEngine
             void allocate_command_buffer(std::shared_ptr<VkCommandBuffer>& command_buffer, VkCommandPool pool);
             void allocate_fence();
             void allocate_semaphore();
+            void _initialize_recording();
         public:
             void draw();  // Record objects to draw in the command buffer. Rendering only happens once the 'render' method is called.
-            void render();  // Send the command buffers to GPU
-            void wait_completion(); // blocks on CPU side until the rendering on GPU is complete
+            void render();  // Send the command buffers to GPU. Does nothing if the canvas is not in recording state, or already in rendering state.
+            void wait_completion();  // blocks on CPU side until the rendering on GPU is complete
             bool is_recording() const;  // returns whether the render function was called already
             bool is_rendering() const;  // returns whether the render function was called already
             static void _deallocate_frame_buffer(const std::shared_ptr<GPU>& gpu, VkFramebuffer* frame_buffer);

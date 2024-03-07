@@ -78,7 +78,7 @@ void Canvas::allocate_fence()
     _rendered_fence.reset(new VkFence, [_gpu](VkFence* fnc) {Canvas::_deallocate_fence(_gpu, fnc);});
     VkFenceCreateInfo fenceInfo{};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    fenceInfo.flags = 0;//VK_FENCE_CREATE_SIGNALED_BIT;
     if (vkCreateFence(gpu->_logical_device, &fenceInfo, nullptr, _rendered_fence.get()) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create VkFence");
@@ -127,6 +127,64 @@ void Canvas::_deallocate_semaphore(const std::shared_ptr<GPU>& gpu, VkSemaphore*
 }
 
 
+void Canvas::_initialize_recording()
+{
+    // reset command buffer
+    vkResetCommandBuffer(*_draw_command_buffer, 0);
+    // begin command buffer recording
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = 0; // Optional
+    beginInfo.pInheritanceInfo = nullptr; // Optional
+    if (vkBeginCommandBuffer(*_draw_command_buffer, &beginInfo) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to begin recording command buffer!");
+    }
+    // transition layouts
+    color._transition_to_layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, *_draw_command_buffer);
+    depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, *_draw_command_buffer);
+    // begin render pass
+    std::vector<VkClearValue> clear_values;
+    for (unsigned int i = 0; i < 3; i++)
+    {
+        VkClearValue clear_value = {};
+        clear_value.color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+        clear_value.depthStencil = { 1.0f, 0 };
+        clear_values.push_back(clear_value);
+    }
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = gpu->shader3d->_render_pass;
+    renderPassInfo.framebuffer = *_frame_buffer;
+    renderPassInfo.renderArea.offset = { 0, 0 };
+    renderPassInfo.renderArea.extent = { color.width(), color.height() };
+    renderPassInfo.clearValueCount = clear_values.size();
+    renderPassInfo.pClearValues = clear_values.data();
+    vkCmdBeginRenderPass(*_draw_command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    // bind the successive pipelines
+    for (unsigned int i = 0; i < gpu->shader3d->_pipelines.size(); i++)
+    {
+        vkCmdBindPipeline(*_draw_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipelines[i]);
+        //vkCmdBindDescriptorSets(*_draw_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipeline_layouts[i], 0, 1, &descriptorSets.scene, 0, nullptr);
+    }
+    // set viewport and scissor
+    VkViewport viewport{};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = static_cast<float>(color.width());
+    viewport.height = static_cast<float>(color.height());
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(*_draw_command_buffer, 0, 1, &viewport);
+    VkRect2D scissor{};
+    scissor.offset = { 0, 0 };
+    scissor.extent = { color.width(), color.height() };
+    vkCmdSetScissor(*_draw_command_buffer, 0, 1, &scissor);
+    // setup the recording flag
+    _recording = true;
+}
+
+
 void Canvas::wait_completion()
 {
     if (_rendering)
@@ -134,57 +192,6 @@ void Canvas::wait_completion()
         // wait for previous rendering completion, and reset fence to unsignaled status
         vkWaitForFences(gpu->_logical_device, 1, _rendered_fence.get(), VK_TRUE, std::numeric_limits<uint64_t>::max());
         vkResetFences(gpu->_logical_device, 1, _rendered_fence.get());
-        // reset command buffer
-        vkResetCommandBuffer(*_draw_command_buffer, 0);
-        // begin command buffer recording
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = 0; // Optional
-        beginInfo.pInheritanceInfo = nullptr; // Optional
-        if (vkBeginCommandBuffer(*_draw_command_buffer, &beginInfo) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to begin recording command buffer!");
-        }
-        // transition layouts
-        color._transition_to_layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, *_draw_command_buffer);
-        depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, *_draw_command_buffer);
-        // begin render pass
-        std::vector<VkClearValue> clear_values;
-        for (unsigned int i=0; i<3;i++)
-        {
-            VkClearValue clear_value = {};
-            clear_value.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
-            clear_value.depthStencil = {1.0f, 0};
-            clear_values.push_back(clear_value);
-        }
-        VkRenderPassBeginInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = gpu->shader3d->_render_pass;
-        renderPassInfo.framebuffer = *_frame_buffer;
-        renderPassInfo.renderArea.offset = {0, 0};
-        renderPassInfo.renderArea.extent = {color.width(), color.height()};
-        renderPassInfo.clearValueCount = clear_values.size();
-        renderPassInfo.pClearValues = clear_values.data();
-        vkCmdBeginRenderPass(*_draw_command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-        // bind the successive pipelines
-        for (unsigned int i=0;i<gpu->shader3d->_pipelines.size();i++)
-        {
-            vkCmdBindPipeline(*_draw_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipelines[i]);
-            //vkCmdBindDescriptorSets(*_draw_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipeline_layouts[i], 0, 1, &descriptorSets.scene, 0, nullptr);
-        }
-        // set viewport and scissor
-        VkViewport viewport{};
-        viewport.x = 0.0f;
-        viewport.y = 0.0f;
-        viewport.width = static_cast<float>(color.width());
-        viewport.height = static_cast<float>(color.height());
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-        vkCmdSetViewport(*_draw_command_buffer, 0, 1, &viewport);
-        VkRect2D scissor{};
-        scissor.offset = {0, 0};
-        scissor.extent = {color.width(), color.height()};
-        vkCmdSetScissor(*_draw_command_buffer, 0, 1, &scissor);
         // reset the rendering flag
         _rendering = false;
     }
@@ -193,21 +200,31 @@ void Canvas::wait_completion()
 
 void Canvas::draw()
 {
+    // wait until eventual previous rendering ends
     wait_completion();
-    _recording = true;
+    if (!_recording)
+    {
+        _initialize_recording();
+    }
+    // send a command to command buffer
     vkCmdDraw(*_draw_command_buffer, 3, 1, 0, 0);
 }
 
 
 void Canvas::render()
 {
-    // nothing new to render
+    // if nothing new to render, exit
     if (_rendering)
     {
         return;
     }
-    // End render pass
+    if (!_recording)
+    {
+        return;
+    }
+    // unset the recording flag
     _recording = false;
+    // End render pass
     vkCmdEndRenderPass(*_draw_command_buffer);
     // End command buffer
     if (vkEndCommandBuffer(*_draw_command_buffer) != VK_SUCCESS)
