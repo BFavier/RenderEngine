@@ -20,6 +20,7 @@ LAYOUT_REGEX = re.compile(r"layout *\((?:(?:input_attachment_index *= *(\d+))|(?
 
 CONSTRUCTOR_SRC = """#include <RenderEngine/graphics/shaders/{shader_name}.hpp>
 #include <RenderEngine/graphics/Format.hpp>
+#include <RenderEngine/graphics/shaders/Vertex.hpp>
 using namespace RenderEngine;
 
 std::vector<std::vector<std::pair<std::string, VkVertexInputBindingDescription>>> vertex_buffer_bindings = {vertex_buffer_bindings};
@@ -171,10 +172,10 @@ def constructor(shader_path: pathlib.Path):
                            for descriptor in subpass["descriptors"]) for subpass in layouts)
     # For each subpass the vertex attributes
     bindings = [{vi["binding"]: vi["name"].split("_")[0] for vi in subpass["vertex_inputs"]} for subpass in layouts]
-    vertex_buffer_bindings = _nested([(name, (binding, f"sizeof({name})".encode(), "VK_VERTEX_INPUT_RATE_VERTEX".encode() if name == "Vertex" else "VK_VERTEX_INPUT_RATE_INSTANCE".encode()))
+    vertex_buffer_bindings = _nested([(name, (binding, f"sizeof({name.title()})".encode(), "VK_VERTEX_INPUT_RATE_VERTEX".encode() if name == "vertex" else "VK_VERTEX_INPUT_RATE_INSTANCE".encode()))
                                       for binding, name in sorted(subpass.items())]
                                      for subpass in bindings)
-    vertex_buffer_attributes = _nested([(vi["name"].split("_")[-1], (vi["location"], vi["binding"], f"static_cast<VkFormat>(Type::{vi['type'].upper()})".encode(), f"offsetof({vi['name'].split('_')[0]}, {vi['name'].split('_')[-1]})".encode()))
+    vertex_buffer_attributes = _nested([(vi["name"].split("_")[-1], (vi["location"], vi["binding"], f"static_cast<VkFormat>(Type::{vi['type'].upper()})".encode(), f"offsetof({vi['name'].split('_')[0].title()}, {vi['name'].split('_')[-1]})".encode()))
                                         for vi in subpass["vertex_inputs"]]
                                        for subpass in layouts)
     # shader stage bytecodes
