@@ -23,16 +23,15 @@ CONSTRUCTOR_SRC = """#include <RenderEngine/graphics/shaders/{shader_name}.hpp>
 #include <RenderEngine/graphics/shaders/Vertex.hpp>
 using namespace RenderEngine;
 
-std::vector<std::vector<std::pair<std::string, VkVertexInputBindingDescription>>> vertex_buffer_bindings = {vertex_buffer_bindings};
-std::vector<std::vector<std::pair<std::string, VkVertexInputAttributeDescription>>> vertex_buffer_attributes = {vertex_buffer_attributes};
-std::vector<std::pair<std::string, ImageFormat>> attachments = {attachments};
-std::vector<std::vector<std::string>> input_attachments = {input_attachments};
-std::vector<std::vector<std::string>> output_attachments = {output_attachments};
-std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>> descriptor_sets = {descriptor_sets};
-std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode = {stages_bytecode};
 
-
-{shader_name}::{shader_name}(const GPU* gpu) : Shader(gpu, vertex_buffer_bindings, vertex_buffer_attributes, attachments, input_attachments, output_attachments, descriptor_sets, stages_bytecode)
+{shader_name}::{shader_name}(const GPU* gpu) : Shader(gpu,
+    {vertex_buffer_bindings}, 
+    {vertex_buffer_attributes},
+    {attachments},
+    {input_attachments},
+    {output_attachments},
+    {descriptor_sets},
+    {stages_bytecode})
 {{
 }}
 
