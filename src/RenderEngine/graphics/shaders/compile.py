@@ -13,19 +13,19 @@ UNIFORM_TYPES = {"sampler": "VK_DESCRIPTOR_TYPE_SAMPLER",
                  "sampler2D": "VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER",
                  "subpassInput": "VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT",
                  "UniformBufferObject": "VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER"}
-FRAMEBUFFER_FORMATS = ["ERROR", "Format::GRAY", "Format::UV", "Format::RGB", "Format::RGBA"]
+FRAMEBUFFER_FORMATS = ["ERROR", "ImageFormat::GRAY", "ImageFormat::UV", "ImageFormat::RGB", "ImageFormat::RGBA"]
 BUFFER_TYPE = "VK_DESCRIPTOR_TYPE_STORAGE_BUFFER"
 LAYOUT_REGEX = re.compile(r"layout *\((?:(?:input_attachment_index *= *(\d+))|(?:set *= *(\d+))|(?:binding *= *(\d+))|(?:offset *= *(\d+))|(?:location *= *(\d+))|(?:std\d+)|(?:, *))+\) *(in|out|uniform|buffer) +(\w+)(?:\s*{[^}]+})? *(\w+)?(?:\[(\d+)\])?;")
 
 
 CONSTRUCTOR_SRC = """#include <RenderEngine/graphics/shaders/{shader_name}.hpp>
-#include <RenderEngine/graphics/Format.hpp>
+#include <RenderEngine/graphics/ImageFormat.hpp>
 #include <RenderEngine/graphics/shaders/Vertex.hpp>
 using namespace RenderEngine;
 
 std::vector<std::vector<std::pair<std::string, VkVertexInputBindingDescription>>> vertex_buffer_bindings = {vertex_buffer_bindings};
 std::vector<std::vector<std::pair<std::string, VkVertexInputAttributeDescription>>> vertex_buffer_attributes = {vertex_buffer_attributes};
-std::vector<std::pair<std::string, Format>> attachments = {attachments};
+std::vector<std::pair<std::string, ImageFormat>> attachments = {attachments};
 std::vector<std::vector<std::string>> input_attachments = {input_attachments};
 std::vector<std::vector<std::string>> output_attachments = {output_attachments};
 std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>> descriptor_sets = {descriptor_sets};

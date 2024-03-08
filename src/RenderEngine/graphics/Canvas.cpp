@@ -4,9 +4,9 @@ using namespace RenderEngine;
 
 Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Image::AntiAliasing sample_count, bool texture_compatible) :
     gpu(_gpu),
-    color(_gpu, width, height, Format::RGBA, sample_count, texture_compatible),
-    handles(_gpu, width, height, Format::POINTER, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
-    depth_buffer(_gpu, width, height, Format::DEPTH, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+    color(_gpu, width, height, ImageFormat::RGBA, sample_count, texture_compatible),
+    handles(_gpu, width, height, ImageFormat::POINTER, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+    depth_buffer(_gpu, width, height, ImageFormat::DEPTH, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 {
     allocate_frame_buffer();
     allocate_command_buffer(_draw_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
@@ -18,9 +18,9 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height
 
 Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height, Image::AntiAliasing sample_count, bool texture_compatible) :
     gpu(_gpu),
-    color(_gpu, vk_image, width, height, Format::RGBA, sample_count, texture_compatible),
-    handles(_gpu, width, height, Format::POINTER, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
-    depth_buffer(_gpu, width, height, Format::DEPTH, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+    color(_gpu, vk_image, width, height, ImageFormat::RGBA, sample_count, texture_compatible),
+    handles(_gpu, width, height, ImageFormat::POINTER, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+    depth_buffer(_gpu, width, height, ImageFormat::DEPTH, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 {
     allocate_frame_buffer();
     allocate_command_buffer(_draw_command_buffer, std::get<2>(gpu->_graphics_queue.value()));

@@ -12,8 +12,11 @@ add_executable(${PROJECT_NAME}
     src/RenderEngine/graphics/Canvas.cpp
     src/RenderEngine/graphics/GPU.cpp
     src/RenderEngine/graphics/Image.cpp
-    src/RenderEngine/graphics/shaders/Shader.cpp
     src/RenderEngine/graphics/SwapChain.cpp
+    src/RenderEngine/graphics/shaders/Shader.cpp
+    src/RenderEngine/graphics/shaders/DemoShader.cpp
+    src/RenderEngine/graphics/shaders/Shader3D.cpp
+    src/RenderEngine/graphics/model/Mesh.cpp
     src/RenderEngine/user_interface/Window.cpp
     src/RenderEngine/user_interface/Keyboard.cpp
     src/RenderEngine/user_interface/Mouse.cpp

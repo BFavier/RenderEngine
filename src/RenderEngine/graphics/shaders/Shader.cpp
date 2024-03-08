@@ -7,7 +7,7 @@ using namespace RenderEngine;
 Shader::Shader(const GPU* _gpu,
                const std::vector<std::vector<std::pair<std::string, VkVertexInputBindingDescription>>>& vertex_buffer_bindings,
                const std::vector<std::vector<std::pair<std::string, VkVertexInputAttributeDescription>>>& vertex_buffer_attributes,
-               const std::vector<std::pair<std::string, Format>>& attachments,
+               const std::vector<std::pair<std::string, ImageFormat>>& attachments,
                const std::vector<std::vector<std::string>>& input_attachments,
                const std::vector<std::vector<std::string>>& output_attachments,
                const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& descriptor_sets,
@@ -61,7 +61,7 @@ void Shader::_create_render_pass(const std::vector<std::vector<std::string>>& in
     std::vector<VkAttachmentDescription> attachments;
     {
         // Color attachments
-        for (const std::pair<std::string, Format>& att : _attachments)
+        for (const std::pair<std::string, ImageFormat>& att : _attachments)
         {
             VkAttachmentDescription attachment{};
             attachment.format = static_cast<VkFormat>(att.second);
@@ -115,7 +115,7 @@ void Shader::_create_render_pass(const std::vector<std::vector<std::string>>& in
         // Reserved attachments
         {
             std::vector<uint32_t> reserve;
-            for (const std::pair<std::string, Format>& att : _attachments)
+            for (const std::pair<std::string, ImageFormat>& att : _attachments)
             {
                 if (std::find(input_attachments[i].begin(), input_attachments[i].end(), att.first) == input_attachments[i].end()
                     && std::find(output_attachments[i].begin(), output_attachments[i].end(), att.first) == output_attachments[i].end())
@@ -313,7 +313,7 @@ void Shader::_create_pipelines(const std::vector<std::vector<std::pair<std::stri
         depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
         // Setting color blending
         std::vector<VkPipelineColorBlendAttachmentState> color_blending_attachments;
-        for (const std::pair<std::string, Format>& att : _attachments)
+        for (const std::pair<std::string, ImageFormat>& att : _attachments)
         {
             // There is always only one framebuffer to render to
             VkPipelineColorBlendAttachmentState color_blending_attachment{};

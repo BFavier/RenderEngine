@@ -19,4 +19,19 @@ namespace RenderEngine
               DVEC2=VK_FORMAT_R64G64_SFLOAT,
               DVEC3=VK_FORMAT_R64G64B64_SFLOAT,
               DVEC4=VK_FORMAT_R64G64B64A64_SFLOAT};
+    
+    struct vec3
+    {
+        float x;
+        float y;
+        float z;
+    };
+
+    struct vec4
+    {
+        float r;
+        float g;
+        float b;
+        float a;
+    };
 }

@@ -3,7 +3,7 @@
 #include <stb/stb_image.h>
 using namespace RenderEngine;
 
-Image::Image(const std::shared_ptr<GPU>& _gpu, const std::string& file_path, std::optional<Format> format,
+Image::Image(const std::shared_ptr<GPU>& _gpu, const std::string& file_path, std::optional<ImageFormat> format,
              Image::AntiAliasing sample_count, bool texture_compatible, VkMemoryPropertyFlags memory_type) : gpu(_gpu)
 {
     int i_width, i_height, n_channels, n_required_channels;
@@ -11,16 +11,16 @@ Image::Image(const std::shared_ptr<GPU>& _gpu, const std::string& file_path, std
     {
         switch (format.value())
         {
-            case Format::GRAY:
+            case ImageFormat::GRAY:
                 n_required_channels = 1;
                 break;
-            case Format::UV:
+            case ImageFormat::UV:
                 n_required_channels = 2;
                 break;
-            case Format::RGB:
+            case ImageFormat::RGB:
                 n_required_channels = 3;
                 break;
-            case Format::RGBA:
+            case ImageFormat::RGBA:
                 n_required_channels = 4;
                 break;
             default:
@@ -36,15 +36,15 @@ Image::Image(const std::shared_ptr<GPU>& _gpu, const std::string& file_path, std
     {
         if (n_channels == 4)
         {
-            format = Format::RGBA;
+            format = ImageFormat::RGBA;
         }
         else if (n_channels == 3)
         {
-            format = Format::RGB;
+            format = ImageFormat::RGB;
         }
         else if (n_channels == 1)
         {
-            format = Format::GRAY;
+            format = ImageFormat::GRAY;
         }
         else
         {
@@ -57,13 +57,13 @@ Image::Image(const std::shared_ptr<GPU>& _gpu, const std::string& file_path, std
     stbi_image_free(imgData);
 }
 
-Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Format format, AntiAliasing sample_count, bool texture_compatible, VkMemoryPropertyFlags memory_type) : gpu(_gpu)
+Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, ImageFormat format, AntiAliasing sample_count, bool texture_compatible, VkMemoryPropertyFlags memory_type) : gpu(_gpu)
 {
     _allocate_vk_image(width, height, format, sample_count, texture_compatible, memory_type);
     _allocate_vk_image_view();
 }
 
-Image::Image(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height, Format format, AntiAliasing sample_count, bool texture_compatible) : gpu(_gpu)
+Image::Image(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height, ImageFormat format, AntiAliasing sample_count, bool texture_compatible) : gpu(_gpu)
 {
     _set_attributes(width, height, format, sample_count, texture_compatible);
     _vk_image = vk_image;
@@ -84,7 +84,7 @@ uint32_t Image::height() const
     return _height;
 }
 
-Format Image::format() const
+ImageFormat Image::format() const
 {
     return _format;
 }
@@ -99,7 +99,7 @@ bool Image::is_texture_compatible() const
     return _texture_compatible;
 }
 
-void Image::_set_attributes(uint32_t width, uint32_t height, Format format, Image::AntiAliasing sample_count, bool texture_compatible)
+void Image::_set_attributes(uint32_t width, uint32_t height, ImageFormat format, Image::AntiAliasing sample_count, bool texture_compatible)
 {
     _width = width;
     _height = height;
@@ -117,12 +117,12 @@ void Image::_set_attributes(uint32_t width, uint32_t height, Format format, Imag
     _layout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
-void Image::_allocate_vk_image(uint32_t width, uint32_t height, Format format, Image::AntiAliasing sample_count, bool texture_compatible, VkMemoryPropertyFlags memory_type)
+void Image::_allocate_vk_image(uint32_t width, uint32_t height, ImageFormat format, Image::AntiAliasing sample_count, bool texture_compatible, VkMemoryPropertyFlags memory_type)
 {
     _set_attributes(width, height, format, sample_count, texture_compatible);
     _vk_image.reset(new VkImage, std::bind(&Image::_deallocate_image, gpu, std::placeholders::_1));
     VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    if (_format == Format::DEPTH)
+    if (_format == ImageFormat::DEPTH)
     {
         usage = usage | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     }
@@ -137,7 +137,7 @@ void Image::_allocate_vk_image(uint32_t width, uint32_t height, Format format, I
     VkImageCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     info.imageType = VK_IMAGE_TYPE_2D;
-    info.format = static_cast<VkFormat>(_format == Format::DEPTH ? gpu->depth_format().second : _format);
+    info.format = static_cast<VkFormat>(_format == ImageFormat::DEPTH ? gpu->depth_format().second : _format);
     info.extent.width = _width;
     info.extent.height = _height;
     info.extent.depth = 1; // 2D images only
@@ -199,7 +199,7 @@ void Image::_allocate_vk_image_view()
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     info.image = *_vk_image;
     info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    info.format = static_cast<VkFormat>(_format == Format::DEPTH ? gpu->depth_format().second : _format);
+    info.format = static_cast<VkFormat>(_format == ImageFormat::DEPTH ? gpu->depth_format().second : _format);
     info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
     info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
     info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -340,7 +340,7 @@ void Image::_fill_layout_attributes(VkImageLayout layout, uint32_t& queue_family
 VkImageAspectFlags Image::_get_aspect_mask() const
 {
     VkImageAspectFlags aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
-    if (_format == Format::DEPTH)
+    if (_format == ImageFormat::DEPTH)
     {
         VkFormat depth_format = gpu->depth_format().second;
         if (depth_format == VK_FORMAT_D32_SFLOAT_S8_UINT || depth_format == VK_FORMAT_D24_UNORM_S8_UINT)

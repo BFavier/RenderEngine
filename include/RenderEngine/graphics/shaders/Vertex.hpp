@@ -1,12 +1,12 @@
 #pragma once
-#include <array>
+#include <RenderEngine/graphics/shaders/Type.hpp>
 
 namespace RenderEngine
 {
     struct Vertex
     {
-        float position[3];  // x, y, z
-        float normal[3];  // nx, ny, nz
-        float color[4];  // r, g, b, a
+        vec3 position;  // x, y, z
+        vec3 normal;  // nx, ny, nz
+        vec4 color;  // r, g, b, a
     };
 }

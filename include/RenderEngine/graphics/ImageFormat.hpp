@@ -3,7 +3,7 @@
 
 namespace RenderEngine
 {
-    enum Format {GRAY=VK_FORMAT_R8_SRGB,
+    enum ImageFormat {GRAY=VK_FORMAT_R8_SRGB,
                 UV=VK_FORMAT_R8G8_SRGB,
                 RGB=VK_FORMAT_R8G8B8_SRGB,
                 RGBA=VK_FORMAT_R8G8B8A8_SRGB,

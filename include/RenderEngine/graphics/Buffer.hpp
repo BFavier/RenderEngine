@@ -10,17 +10,19 @@ namespace RenderEngine
     {
     public:
         Buffer() = delete;
-        Buffer(const GPU& gpu, VkDeviceSize size);
+        Buffer(const std::shared_ptr<GPU>& gpu, size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
         ~Buffer();
     public:
-        const GPU& gpu;
-        VkDeviceSize size;
-        VkBuffer _buffer = VK_NULL_HANDLE;
-        VkDeviceMemory _buffer_memory = VK_NULL_HANDLE;
+        const std::shared_ptr<GPU>& gpu;
+        size_t size;
+        std::shared_ptr<VkBuffer> _vk_buffer = nullptr;
+        std::shared_ptr<VkDeviceMemory> _vk_memory = nullptr;
     public:
-        void upload(const unsigned char* data, size_t length, size_t offset = 0);
-        void download(unsigned char* data, size_t length, size_t offset) const;
+        void upload(const void* data, size_t length, size_t offset = 0);
+        void download(void* data, size_t length, size_t offset) const;
     protected:
-        uint32_t find_memory_type(VkPhysicalDevice physical_device, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+        uint32_t _find_memory_type(VkPhysicalDevice physical_device, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+        void _allocate_buffer(VkBufferUsageFlags usage);
+        void _allocate_memory(VkMemoryPropertyFlags properties);
     };
 }
