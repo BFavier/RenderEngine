@@ -43,7 +43,7 @@ uint32_t Buffer::_find_memory_type(VkPhysicalDevice physical_device, uint32_t ty
 void Buffer::_allocate_buffer(VkBufferUsageFlags usage)
 {
     const std::shared_ptr<GPU>& _gpu = gpu;
-    _vk_buffer.reset(new VkBuffer, [_gpu](VkBuffer* vk_buffer){vkDestroyBuffer(_gpu->_logical_device, *vk_buffer, nullptr);vk_buffer = nullptr;});
+    _vk_buffer.reset(new VkBuffer, [_gpu](VkBuffer* vk_buffer){vkDeviceWaitIdle(_gpu->_logical_device);vkDestroyBuffer(_gpu->_logical_device, *vk_buffer, nullptr);vk_buffer = nullptr;});
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = size;
@@ -60,7 +60,7 @@ void Buffer::_allocate_memory(VkMemoryPropertyFlags properties)
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(gpu->_logical_device, *_vk_buffer, &memRequirements);
     const std::shared_ptr<GPU>& _gpu = gpu;
-    _vk_memory.reset(new VkDeviceMemory, [_gpu](VkDeviceMemory* memory){vkFreeMemory(_gpu->_logical_device, *memory, nullptr);*memory=nullptr;});
+    _vk_memory.reset(new VkDeviceMemory, [_gpu](VkDeviceMemory* memory){vkDeviceWaitIdle(_gpu->_logical_device);vkFreeMemory(_gpu->_logical_device, *memory, nullptr);*memory=nullptr;});
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
@@ -69,4 +69,5 @@ void Buffer::_allocate_memory(VkMemoryPropertyFlags properties)
     {
         THROW_ERROR("failed to allocate buffer memory!");
     }
+    vkBindBufferMemory(gpu->_logical_device, *_vk_buffer, *_vk_memory, 0);
 }

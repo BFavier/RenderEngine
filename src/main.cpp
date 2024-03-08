@@ -15,6 +15,7 @@ int main()
         Mouse& mouse = window.mouse;
         Keyboard& keyboard = window.keyboard;
         Timer timer;
+        Mesh cube = Mesh::cube(gpu, 0.5);
         while(!window.closing())
         {
             if ((mouse.dx() != 0) || (mouse.dy() != 0))
@@ -42,7 +43,7 @@ int main()
             Canvas* frame = window.next_frame();
             if (frame != nullptr)
             {
-                frame->draw();
+                frame->draw(cube);
             }
             window.update();
         }

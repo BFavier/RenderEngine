@@ -92,12 +92,14 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
         _present_queue = _query_queue_handle(present_family, selected_families_count);
     }
     // initialize shader
-    shader3d = new DemoShader(this);
+    shader3d = new Shader3D(this);
+    shader_draw_image = new DemoShader(this);
 }
 
 GPU::~GPU()
 {
     delete shader3d;
+    delete shader_draw_image;
     bool graphics_queue_is_present_queue = (_graphics_queue == _present_queue);
     if (_graphics_queue.has_value())
     {

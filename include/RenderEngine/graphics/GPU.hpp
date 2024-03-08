@@ -5,6 +5,7 @@
 #include <string>
 #include <optional>
 #include <RenderEngine/utilities/External.hpp>
+#include <RenderEngine/graphics/shaders/Shader3D.hpp>
 #include <RenderEngine/graphics/shaders/DemoShader.hpp>
 
 namespace RenderEngine
@@ -56,7 +57,8 @@ namespace RenderEngine
         std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _present_queue;
         std::set<std::string> _enabled_extensions;
         VkDevice _logical_device = VK_NULL_HANDLE;
-        DemoShader* shader3d = nullptr;
+        Shader3D* shader3d = nullptr;
+        DemoShader* shader_draw_image = nullptr;
     protected:
         // returns the index of the queue family selected for 'queue_type' purpose. Modifies the 'selected_families_count'.
         std::optional<uint32_t> _select_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,  // all available queue families

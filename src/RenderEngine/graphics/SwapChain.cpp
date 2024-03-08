@@ -172,7 +172,7 @@ void SwapChain::present_next_frame()
     Canvas* current_frame = get_current_frame();
     if (current_frame != nullptr)
     {
-        current_frame->wait_completion();
+        current_frame->_wait_completion();
     }
     // present the next frame
     Canvas& next_frame = get_next_frame();

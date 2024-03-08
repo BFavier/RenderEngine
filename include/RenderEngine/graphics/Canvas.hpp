@@ -5,6 +5,8 @@
 
 namespace RenderEngine
 {
+    class Mesh;
+
     class Canvas
     // A canvas is an RGBA image that can be drawn onto.
     {
@@ -37,11 +39,11 @@ namespace RenderEngine
             void allocate_semaphore();
             void _initialize_recording();
         public:
-            void draw();  // Record objects to draw in the command buffer. Rendering only happens once the 'render' method is called.
+            void draw(const Mesh& mesh);  // Record objects to draw in the command buffer. Rendering only happens once the 'render' method is called.
             void render();  // Send the command buffers to GPU. Does nothing if the canvas is not in recording state, or already in rendering state.
-            void wait_completion();  // blocks on CPU side until the rendering on GPU is complete
             bool is_recording() const;  // returns whether the render function was called already
             bool is_rendering() const;  // returns whether the render function was called already
+            void _wait_completion();  // blocks on CPU side until the rendering on GPU is complete
             static void _deallocate_frame_buffer(const std::shared_ptr<GPU>& gpu, VkFramebuffer* frame_buffer);
             static void _deallocate_command_buffer(const std::shared_ptr<GPU>& gpu, const VkCommandPool& pool, VkCommandBuffer* command_buffer);
             static void _deallocate_fence(const std::shared_ptr<GPU>& gpu, VkFence* fence);

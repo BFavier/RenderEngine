@@ -1,5 +1,6 @@
 #include <RenderEngine/render_engine.hpp>
 #include <RenderEngine/graphics/Canvas.hpp>
+#include <RenderEngine/graphics/model/Mesh.hpp>
 using namespace RenderEngine;
 
 Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Image::AntiAliasing sample_count, bool texture_compatible) :
@@ -185,7 +186,7 @@ void Canvas::_initialize_recording()
 }
 
 
-void Canvas::wait_completion()
+void Canvas::_wait_completion()
 {
     if (_rendering)
     {
@@ -198,16 +199,20 @@ void Canvas::wait_completion()
 }
 
 
-void Canvas::draw()
+void Canvas::draw(const Mesh& mesh)
 {
     // wait until eventual previous rendering ends
-    wait_completion();
+    _wait_completion();
     if (!_recording)
     {
         _initialize_recording();
     }
+    // draw
+    std::vector<VkBuffer> vertex_buffers = {*mesh._vk_buffer};
+    std::vector<VkDeviceSize> offsets(vertex_buffers.size(), 0);
+    vkCmdBindVertexBuffers(*_draw_command_buffer, 0, vertex_buffers.size(), vertex_buffers.data(), offsets.data());
     // send a command to command buffer
-    vkCmdDraw(*_draw_command_buffer, 3, 1, 0, 0);
+    vkCmdDraw(*_draw_command_buffer, mesh.size/sizeof(Vertex), 1, 0, 0);
 }
 
 

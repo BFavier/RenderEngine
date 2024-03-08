@@ -15,6 +15,6 @@ namespace RenderEngine
         Mesh(const std::shared_ptr<GPU>& gpu, const std::vector<Face>& faces);
         ~Mesh();
     public:
-        static Mesh cube(vec3 center, float radius);
+        static Mesh cube(const std::shared_ptr<GPU>& gpu, float radius);
     };    
 }
