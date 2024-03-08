@@ -3,19 +3,17 @@
 #include <RenderEngine/utilities/Macro.hpp>
 #include <RenderEngine/graphics/GPU.hpp>
 #include <RenderEngine/graphics/model/Face.hpp>
+#include <RenderEngine/graphics/Buffer.hpp>
 
 
 namespace RenderEngine
 {
-    class Mesh
+    class Mesh : public Buffer
     {
     public:
         Mesh() = delete;
-        Mesh(const std::shared_ptr<GPU>& gpu, const std::vector<Face>& faces, std::array<float, 4> color);
+        Mesh(const std::shared_ptr<GPU>& gpu, const std::vector<Face>& faces);
         ~Mesh();
-    public:
-        const std::shared_ptr<GPU>& gpu;
-        std::shared_ptr<VkBuffer> _vk_buffer = nullptr;
     public:
         static Mesh cube(vec3 center, float radius);
     };    
