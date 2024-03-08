@@ -167,6 +167,29 @@ void Image::_allocate_vk_image(uint32_t width, uint32_t height, Format format, I
         THROW_ERROR("failed to allocate image memory!");
     }
     vkBindImageMemory(gpu->_logical_device, *_vk_image, *_vk_device_memory.get(), 0);
+    // create sampler
+    _vk_sampler.reset(new VkSampler, [_gpu](VkSampler* sampler){_deallocate_sampler(_gpu, sampler);});
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerInfo.anisotropyEnable = gpu->_device_features.samplerAnisotropy;
+    samplerInfo.maxAnisotropy = gpu->_device_properties.limits.maxSamplerAnisotropy;
+    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    samplerInfo.unnormalizedCoordinates = VK_FALSE;
+    samplerInfo.compareEnable = VK_FALSE;
+    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.mipLodBias = 0.0f;
+    samplerInfo.minLod = 0.0f;
+    samplerInfo.maxLod = 0.0f;
+    if (vkCreateSampler(gpu->_logical_device, &samplerInfo, nullptr, _vk_sampler.get()) != VK_SUCCESS)
+    {
+        THROW_ERROR("failed to create texture sampler!");
+    }
 }
 
 void Image::_allocate_vk_image_view()
@@ -222,6 +245,12 @@ void Image::_free_image_memory(const std::shared_ptr<GPU>& gpu, VkDeviceMemory* 
 {
     vkFreeMemory(gpu->_logical_device, *vk_device_memory, nullptr);
     *vk_device_memory = VK_NULL_HANDLE;
+}
+
+void Image::_deallocate_sampler(const std::shared_ptr<GPU>& gpu, VkSampler* vk_sampler)
+{
+    vkDestroySampler(gpu->_logical_device, *vk_sampler, nullptr);;
+    *vk_sampler = nullptr;
 }
 
 void Image::_transition_to_layout(VkImageLayout new_layout, VkCommandBuffer command_buffer)

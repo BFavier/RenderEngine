@@ -40,6 +40,7 @@ namespace RenderEngine
         std::shared_ptr<VkImage> _vk_image = nullptr;
         std::shared_ptr<VkImageView> _vk_image_view = nullptr;
         std::shared_ptr<VkDeviceMemory> _vk_device_memory = nullptr;
+        std::shared_ptr<VkSampler> _vk_sampler = nullptr;
     protected:
         uint32_t _width;
         uint32_t _height;
@@ -66,5 +67,6 @@ namespace RenderEngine
         static void _deallocate_image(const std::shared_ptr<GPU>& gpu, VkImage* vk_image);
         static void _deallocate_image_view(const std::shared_ptr<GPU>& gpu, VkImageView* vk_image_view);
         static void _free_image_memory(const std::shared_ptr<GPU>& gpu, VkDeviceMemory* vk_device_memory);
+        static void _deallocate_sampler(const std::shared_ptr<GPU>& gpu, VkSampler* sampler);
     };
 }

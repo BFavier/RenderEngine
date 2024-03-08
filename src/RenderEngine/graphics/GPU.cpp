@@ -12,7 +12,7 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
     _physical_device = device;
     // List properties and features
     vkGetPhysicalDeviceProperties(device, &_device_properties);
-    //vkGetPhysicalDeviceFeatures(device, &_device_features);
+    vkGetPhysicalDeviceFeatures(_physical_device, &_device_features);
     vkGetPhysicalDeviceMemoryProperties(device, &_device_memory);
     // List the queue families
     uint32_t queue_family_count = 0;
@@ -176,7 +176,6 @@ GPU::Type GPU::type() const
 {
     return static_cast<GPU::Type>(_device_properties.deviceType);
 }
-
 
 std::optional<uint32_t> GPU::_select_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,
                                                   VkQueueFlagBits queue_type,

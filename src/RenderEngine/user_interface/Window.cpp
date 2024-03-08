@@ -51,7 +51,7 @@ Canvas* Window::next_frame()
 
 void Window::update()
 {
-    // get the back frame and render if not done already 
+    // get the back frame and present it
     Canvas* frame = next_frame();
     if (frame != nullptr)
     {
