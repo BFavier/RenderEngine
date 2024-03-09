@@ -55,7 +55,7 @@ namespace RenderEngine
         void _allocate_vk_image_view();
         uint32_t _find_memory_type_index(uint32_t memory_type_bits, VkMemoryPropertyFlags _memory_type) const;
         void _transition_to_layout(VkImageLayout new_layout, VkCommandBuffer command_buffer);
-        void _fill_layout_attributes(VkImageLayout new_layout, uint32_t& queue_family_index, VkAccessFlags& acces_mask, VkPipelineStageFlags& stage);
+        void _fill_layout_attributes(VkImageLayout new_layout, uint32_t& queue_family_index, VkAccessFlags& acces_mask, VkPipelineStageFlags& stage) const;
         VkImageAspectFlags _get_aspect_mask() const;
         // void upload_data(unsigned char* data);
     public:

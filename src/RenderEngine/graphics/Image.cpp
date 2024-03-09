@@ -14,9 +14,6 @@ Image::Image(const std::shared_ptr<GPU>& _gpu, const std::string& file_path, std
             case ImageFormat::GRAY:
                 n_required_channels = 1;
                 break;
-            case ImageFormat::UV:
-                n_required_channels = 2;
-                break;
             case ImageFormat::RGB:
                 n_required_channels = 3;
                 break;
@@ -292,7 +289,7 @@ void Image::_transition_to_layout(VkImageLayout new_layout, VkCommandBuffer comm
     );
 }
 
-void Image::_fill_layout_attributes(VkImageLayout layout, uint32_t& queue_family_index, VkAccessFlags& acces_mask, VkPipelineStageFlags& stage)
+void Image::_fill_layout_attributes(VkImageLayout layout, uint32_t& queue_family_index, VkAccessFlags& acces_mask, VkPipelineStageFlags& stage) const
 {
     if (layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
     {
