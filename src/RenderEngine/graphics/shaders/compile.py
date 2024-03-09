@@ -31,6 +31,7 @@ using namespace RenderEngine;
     {input_attachments},
     {output_attachments},
     {descriptor_sets},
+    {push_constants},
     {stages_bytecode})
 {{
 }}
@@ -186,6 +187,7 @@ def constructor(shader_path: pathlib.Path):
                                   attachments=attachments,
                                   input_attachments=input_attachments,
                                   output_attachments=output_attachments,
+                                  push_constants="{{}}",
                                   descriptor_sets=descriptors,
                                   stages_bytecode=stages_bytecode)
     with open(shader_path.with_suffix(".cpp"), "w", encoding="utf-8") as f:

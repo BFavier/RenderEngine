@@ -30,6 +30,7 @@ namespace RenderEngine
                const std::vector<std::vector<std::string>>& input_attachments, // for each subpass, the description of all input attachments (outputs from another subpass)
                const std::vector<std::vector<std::string>>& output_attachments, // for each subpass the description of all output attachments (VkImage objects that are written to, excepted depth buffer)
                const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& descriptor_sets, // for each subpass, for each layout set, descriptor of all bindings (textures, Uniform Buffer Objects, ...)
+               const std::vector<std::vector<VkPushConstantRange>>& push_constants, // for each subpass, definition of all push constants.
                const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode // for each subpass, for each shader stage, the bytecode of the compiled spirv file
                );
         ~Shader();
@@ -49,6 +50,7 @@ namespace RenderEngine
         void _create_pipelines(const std::vector<std::vector<std::pair<std::string, VkVertexInputBindingDescription>>>& vertex_buffer_bindings,
                                const std::vector<std::vector<std::pair<std::string, VkVertexInputAttributeDescription>>>& vertex_buffer_attributes,
                                const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& descriptors_sets,
+                               const std::vector<std::vector<VkPushConstantRange>>& push_constants,
                                const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode);
         VkShaderModule _code_to_module(const std::vector<unsigned char>& code);
     };
