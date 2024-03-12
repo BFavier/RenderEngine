@@ -19,34 +19,23 @@ namespace RenderEngine
               DVEC2=VK_FORMAT_R64G64_SFLOAT,
               DVEC3=VK_FORMAT_R64G64B64_SFLOAT,
               DVEC4=VK_FORMAT_R64G64B64A64_SFLOAT};
-    
+
+    #pragma pack(push, 1)
+
     struct vec3
     {
-        float x, y, z;
-
-        vec3 operator+(const vec3& other) const
-        {
-            return {x + other.x, y + other.y, z + other.z};
-        }
-
-        vec3 operator*(float factor) const
-        {
-            return {x*factor, y*factor, z*factor};
-        }
+        float x;
+        float y;
+        float z;
     };
 
     struct vec4
     {
-        float r, g, b, a;
-
-        vec4 operator+(const vec4& other) const
-        {
-            return {r + other.r, g + other.g, b + other.b, a + other.a};
-        }
-
-        vec4 operator*(float factor) const
-        {
-            return {r*factor, g*factor, b*factor, a*factor};
-        }
+        float r;
+        float g;
+        float b;
+        float a;
     };
+
+    #pragma pack(pop)
 }
