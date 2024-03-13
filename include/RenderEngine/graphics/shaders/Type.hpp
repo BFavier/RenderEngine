@@ -42,14 +42,17 @@ namespace RenderEngine
         float i1j1;
         float i1j2;
         float i1j3;
+        float pad1;
 
         float i2j1;
         float i2j2;
         float i2j3;
+        float pad2;
 
         float i3j1;
         float i3j2;
         float i3j3;
+        float pad3;
     };
 
     #pragma pack(pop)

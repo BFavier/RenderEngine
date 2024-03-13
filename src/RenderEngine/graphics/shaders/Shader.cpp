@@ -11,9 +11,9 @@ Shader::Shader(const GPU* _gpu,
                const std::vector<std::vector<std::string>>& input_attachments,
                const std::vector<std::vector<std::string>>& output_attachments,
                const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& descriptor_sets,
-               const std::vector<std::vector<VkPushConstantRange>>& push_constants,
+               const std::vector<std::vector<std::pair<std::string, VkPushConstantRange>>>& push_constants,
                const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode
-               ) : gpu(_gpu), _attachments(attachments)
+               ) : gpu(_gpu), _attachments(attachments), _push_constants(push_constants)
 {
     _create_render_pass(input_attachments, output_attachments);
     _create_pipelines(vertex_buffer_bindings, vertex_buffer_attributes, descriptor_sets, push_constants, stages_bytecode);
@@ -185,7 +185,7 @@ void Shader::_create_render_pass(const std::vector<std::vector<std::string>>& in
 void Shader::_create_pipelines(const std::vector<std::vector<std::pair<std::string, VkVertexInputBindingDescription>>>& vertex_buffer_bindings,
                                const std::vector<std::vector<std::pair<std::string, VkVertexInputAttributeDescription>>>& vertex_buffer_attributes,
                                const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& descriptors_sets,
-                               const std::vector<std::vector<VkPushConstantRange>>& push_constants,
+                               const std::vector<std::vector<std::pair<std::string, VkPushConstantRange>>>& push_constants,
                                const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode)
 {
     // Create descriptor set layouts
@@ -218,12 +218,17 @@ void Shader::_create_pipelines(const std::vector<std::vector<std::pair<std::stri
     _pipeline_layouts.resize(stages_bytecode.size());
     for (unsigned int i=0;i<stages_bytecode.size();i++)
     {
+        std::vector<VkPushConstantRange> psuh_constant_ranges;
+        for (size_t j=0;j<push_constants[i].size();j++)
+        {
+            psuh_constant_ranges.push_back(push_constants[i][j].second);
+        }
         VkPipelineLayoutCreateInfo pipeline_layout_info{};
         pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipeline_layout_info.setLayoutCount = _descriptor_set_layouts[i].size();
         pipeline_layout_info.pSetLayouts = _descriptor_set_layouts[i].data();
-        pipeline_layout_info.pushConstantRangeCount = push_constants[i].size(); // Optional, more info on push constants here https://vkguide.dev/docs/chapter-3/push_constants/
-        pipeline_layout_info.pPushConstantRanges = push_constants[i].data(); // Optional
+        pipeline_layout_info.pushConstantRangeCount = psuh_constant_ranges.size();
+        pipeline_layout_info.pPushConstantRanges = psuh_constant_ranges.data();
         if (vkCreatePipelineLayout(gpu->_logical_device, &pipeline_layout_info, nullptr, &_pipeline_layouts[i]) != VK_SUCCESS)
         {
             THROW_ERROR("failed to create pipeline layout!");

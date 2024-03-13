@@ -1,6 +1,7 @@
 #include <RenderEngine/render_engine.hpp>
 #include <RenderEngine/graphics/Canvas.hpp>
 #include <RenderEngine/graphics/model/Mesh.hpp>
+#include <RenderEngine/graphics/shaders/PushConstants.hpp>
 using namespace RenderEngine;
 
 Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, Image::AntiAliasing sample_count, bool texture_compatible) :
@@ -199,7 +200,7 @@ void Canvas::_wait_completion()
 }
 
 
-void Canvas::draw(const Mesh& mesh)
+void Canvas::draw(const Mesh& mesh, const Matrix& mesh_rotation)
 {
     // wait until eventual previous rendering ends
     _wait_completion();
@@ -211,6 +212,9 @@ void Canvas::draw(const Mesh& mesh)
     std::vector<VkBuffer> vertex_buffers = {*mesh._vk_buffer};
     std::vector<VkDeviceSize> offsets(vertex_buffers.size(), 0);
     vkCmdBindVertexBuffers(*_draw_command_buffer, 0, vertex_buffers.size(), vertex_buffers.data(), offsets.data());
+    VkPushConstantRange range = gpu->shader3d->_push_constants[0][0].second;
+    PushConstants constants = {mesh_rotation.to_mat3()};
+    vkCmdPushConstants(*_draw_command_buffer, gpu->shader3d->_pipeline_layouts[0], range.stageFlags, range.offset, range.size, &constants);
     // send a command to command buffer
     vkCmdDraw(*_draw_command_buffer, mesh.size/sizeof(Vertex), 1, 0, 0);
 }

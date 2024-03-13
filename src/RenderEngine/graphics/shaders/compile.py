@@ -13,14 +13,15 @@ UNIFORM_TYPES = {"sampler": "VK_DESCRIPTOR_TYPE_SAMPLER",
                  "sampler2D": "VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER",
                  "subpassInput": "VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT",
                  "UniformBufferObject": "VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER"}
-FRAMEBUFFER_FORMATS = ["ERROR", "ImageFormat::GRAY", "ImageFormat::UV", "ImageFormat::RGB", "ImageFormat::RGBA"]
+FRAMEBUFFER_FORMATS = ["ERROR", "ImageFormat::GRAY", "ERROR", "ImageFormat::RGB", "ImageFormat::RGBA"]
 BUFFER_TYPE = "VK_DESCRIPTOR_TYPE_STORAGE_BUFFER"
-LAYOUT_REGEX = re.compile(r"layout *\((?:(?:input_attachment_index *= *(\d+))|(?:set *= *(\d+))|(?:binding *= *(\d+))|(?:offset *= *(\d+))|(?:location *= *(\d+))|(?:std\d+)|(?:, *))+\) *(in|out|uniform|buffer) +(\w+)(?:\s*{[^}]+})? *(\w+)?(?:\[(\d+)\])?;")
+LAYOUT_REGEX = re.compile(r"layout *\((?:(push_constant)|(?:input_attachment_index *= *(\d+))|(?:set *= *(\d+))|(?:binding *= *(\d+))|(?:offset *= *(\d+))|(?:location *= *(\d+))|(?:std\d+)|(?:, *))+\) *(in|out|uniform|buffer) +(\w+)(?:\s*{[^}]+})? *(\w+)?(?:\[(\d+)\])?;")
 
 
 CONSTRUCTOR_SRC = """#include <RenderEngine/graphics/shaders/{shader_name}.hpp>
 #include <RenderEngine/graphics/ImageFormat.hpp>
 #include <RenderEngine/graphics/shaders/Vertex.hpp>
+#include <RenderEngine/graphics/shaders/PushConstants.hpp>
 using namespace RenderEngine;
 
 
@@ -107,11 +108,14 @@ def _get_subpasses_layout(subpasses: dict) -> list[dict]:
         vertex_inputs = []
         input_attachments = []
         output_attachments = []
+        push_constants = []
         for extension, stage in STAGES.items():
             src = stages_code.get(extension, {"source": ""})["source"]
             matches = LAYOUT_REGEX.findall(src)
-            for (input_index, _set, binding, offset, location, storage, _type, name, count) in matches:
-                if binding != "" and storage in ("uniform", "buffer"):
+            for (push_constant, input_index, _set, binding, offset, location, storage, _type, name, count) in matches:
+                if push_constant != "":
+                    push_constants.append({"type": _type, "stage": stage, "offset": offset or "0"})
+                elif binding != "" and storage in ("uniform", "buffer"):
                     descriptors.append({"set": _set or "0", "binding": binding, "name": name, "count": count or "1", "stage": stage,
                                         "type": UNIFORM_TYPES[_type] if storage == "uniform" else BUFFER_TYPE})
                     if _type == "subpassInput":
@@ -121,7 +125,7 @@ def _get_subpasses_layout(subpasses: dict) -> list[dict]:
                     output_attachments.append({"name": name, "type": _type})
                 if stage == "VK_SHADER_STAGE_VERTEX_BIT" and storage == "in":
                     vertex_inputs.append({"name": name, "location": location, "binding": binding or "0", "type": _type, "offset": offset})
-        subpasses_layouts.append({"descriptors": descriptors, "vertex_inputs": vertex_inputs, "input_attachments": input_attachments, "output_attachments": output_attachments})
+        subpasses_layouts.append({"descriptors": descriptors, "vertex_inputs": vertex_inputs, "input_attachments": input_attachments, "output_attachments": output_attachments, "push_constants": push_constants})
     return subpasses_layouts
 
 
@@ -178,6 +182,8 @@ def constructor(shader_path: pathlib.Path):
     vertex_buffer_attributes = _nested([(vi["name"].split("_")[-1], (vi["location"], vi["binding"], f"static_cast<VkFormat>(Type::{vi['type'].upper()})".encode(), f"offsetof({vi['name'].split('_')[0].title()}, {vi['name'].split('_')[-1]})".encode()))
                                         for vi in subpass["vertex_inputs"]]
                                        for subpass in layouts)
+    # for each subpass the push constants
+    push_constants = _nested([(pc["type"], (pc["stage"].encode(), int(pc["offset"]), f"sizeof({pc['type']})".encode())) for pc in subpass["push_constants"]] for subpass in layouts)
     # shader stage bytecodes
     stages_bytecode = _nested([(STAGES[k].encode(), list(v["bytes"])) for k, v in subpass.items()] for subpass_name, subpass in subpasses.items())
     # assembling and writing
@@ -187,7 +193,7 @@ def constructor(shader_path: pathlib.Path):
                                   attachments=attachments,
                                   input_attachments=input_attachments,
                                   output_attachments=output_attachments,
-                                  push_constants="{{}}",
+                                  push_constants=push_constants,
                                   descriptor_sets=descriptors,
                                   stages_bytecode=stages_bytecode)
     with open(shader_path.with_suffix(".cpp"), "w", encoding="utf-8") as f:

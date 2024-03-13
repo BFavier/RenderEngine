@@ -61,12 +61,15 @@ mat3 Matrix::to_mat3() const
     return {static_cast<float>(scalars[0][0]),
             static_cast<float>(scalars[0][1]),
             static_cast<float>(scalars[0][2]),
+            0.f,
             static_cast<float>(scalars[1][0]),
             static_cast<float>(scalars[1][1]),
             static_cast<float>(scalars[1][2]),
+            0.f,
             static_cast<float>(scalars[2][0]),
             static_cast<float>(scalars[2][1]),
-            static_cast<float>(scalars[2][2])};
+            static_cast<float>(scalars[2][2]),
+            0.f};
 }
 
 Matrix Matrix::operator*(const Matrix& other) const

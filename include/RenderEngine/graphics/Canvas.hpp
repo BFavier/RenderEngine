@@ -1,6 +1,7 @@
 #pragma once
 #include <RenderEngine/utilities/External.hpp>
 #include <RenderEngine/graphics/Image.hpp>
+#include <RenderEngine/geometry/Matrix.hpp>
 
 
 namespace RenderEngine
@@ -39,7 +40,7 @@ namespace RenderEngine
             void allocate_semaphore();
             void _initialize_recording();
         public:
-            void draw(const Mesh& mesh);  // Record objects to draw in the command buffer. Rendering only happens once the 'render' method is called.
+            void draw(const Mesh& mesh, const Matrix& mesh_rotation);  // Record objects to draw in the command buffer. Rendering only happens once the 'render' method is called.
             void render();  // Send the command buffers to GPU. Does nothing if the canvas is not in recording state, or already in rendering state.
             bool is_recording() const;  // returns whether the render function was called already
             bool is_rendering() const;  // returns whether the render function was called already
