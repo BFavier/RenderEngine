@@ -20,7 +20,7 @@ namespace RenderEngine
               DVEC3=VK_FORMAT_R64G64B64_SFLOAT,
               DVEC4=VK_FORMAT_R64G64B64A64_SFLOAT};
 
-    #pragma pack(push, 1)
+    #pragma pack(push, 1)  // removes padding in binary representation from structs defined below
 
     struct vec3
     {
@@ -35,6 +35,21 @@ namespace RenderEngine
         float g;
         float b;
         float a;
+    };
+
+    struct mat3
+    {
+        float i1j1;
+        float i1j2;
+        float i1j3;
+
+        float i2j1;
+        float i2j2;
+        float i2j3;
+
+        float i3j1;
+        float i3j2;
+        float i3j3;
     };
 
     #pragma pack(pop)
