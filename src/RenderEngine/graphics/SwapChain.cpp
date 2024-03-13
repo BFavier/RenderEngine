@@ -105,7 +105,7 @@ SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : g
     swap_chain_infos.imageColorSpace = surface_format.colorSpace;
     swap_chain_infos.imageExtent = extent;
     swap_chain_infos.imageArrayLayers = 1;
-    swap_chain_infos.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    swap_chain_infos.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL | VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     if (gpu->_graphics_queue != gpu->_present_queue)
     {
         std::vector<uint32_t> family_indices = {std::get<0>(gpu->_graphics_queue.value()), std::get<0>(gpu->_present_queue.value())};
@@ -172,7 +172,7 @@ void SwapChain::present_next_frame()
     Canvas* current_frame = get_current_frame();
     if (current_frame != nullptr)
     {
-        current_frame->_wait_completion();
+        current_frame->wait_completion();
     }
     // present the next frame
     Canvas& next_frame = get_next_frame();

@@ -17,8 +17,8 @@ int main()
         Timer timer;
         Mesh cube = Mesh::cube(gpu, 0.5);
         Quaternion mesh_rotation;
+        Quaternion drag_drop_rotation;
         std::pair<double, double> drag_position = {0., 0.};
-        std::pair<double, double> drop_position = {0., 0.};
         while(!window.closing())
         {
             if ((mouse.dx() != 0) || (mouse.dy() != 0))
@@ -43,20 +43,25 @@ int main()
                     std::cout << key.first << " key state changed to pressed=" << key.second.down << " (" << timer.dt() << ") " << std::endl;
                 }
             }
-            if (mouse.buttons().at("LEFT CLICK").was_pressed)
+            if (mouse.buttons().at("LEFT CLICK").down)
             {
-                drag_position = {mouse.x_rel(), mouse.y_rel()};
+                if (mouse.buttons().at("LEFT CLICK").was_pressed)
+                {
+                    drag_position = {mouse.x_rel(), mouse.y_rel()};
+                }
+                drag_drop_rotation = Quaternion((drag_position.first - mouse.x_rel())*180, { 0.0, -1.0, 0.0 })
+                                   * Quaternion((drag_position.second - mouse.y_rel())*180, { 1.0, 0.0, 0.0 });
             }
             else if (mouse.buttons().at("LEFT CLICK").was_released)
             {
-                drop_position = {mouse.x_rel(), mouse.y_rel()};
-                mesh_rotation = Quaternion((drag_position.first - drop_position.first)*180, { 0.0, -1.0, 0.0 }) * mesh_rotation;
-                mesh_rotation = Quaternion((drag_position.second - drop_position.second)*180, { 1.0, 0.0, 0.0 }) * mesh_rotation;
+                mesh_rotation = drag_drop_rotation * mesh_rotation;
+                drag_drop_rotation = Quaternion();
             }
             Canvas* frame = window.next_frame();
             if (frame != nullptr)
             {
-                frame->draw(cube, mesh_rotation);
+                frame->clear(10, 0, 30, 255);
+                frame->draw(cube, drag_drop_rotation * mesh_rotation);
             }
             window.update();
         }

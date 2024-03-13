@@ -34,7 +34,7 @@ Mesh Mesh::cube(const std::shared_ptr<GPU>& gpu, float L)
                                
                                Face({{{-l, -l, -l}, {-l, l, l}, {-l, -l, l}}}, {0., 1., 1., 1.}),
                                Face({{{-l, -l, -l}, {-l, l, -l}, {-l, l, l}}}, {0., 1., 1., 1.}),
-                               Face({{{l, -l, l}, {l, -l, l}, {l, l, l}}}, {0., 1., 0., 1.}),
+                               Face({{{l, -l, -l}, {l, -l, l}, {l, l, l}}}, {0., 1., 0., 1.}),
                                Face({{{l, -l, -l}, {l, l, l}, {l, l, -l}}}, {0., 1., 0., 1.})};
     Mesh mesh(gpu, faces);
     return mesh;
