@@ -44,7 +44,6 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
     // Select the best matching queue families for each application
     std::map<uint32_t, uint32_t> selected_families_count; // number of purpose each queue is selected for
     std::optional<uint32_t> graphics_family = _select_queue_family(queue_families, VK_QUEUE_GRAPHICS_BIT, selected_families_count);
-    std::optional<uint32_t> transfer_family = _select_queue_family(queue_families, VK_QUEUE_TRANSFER_BIT, selected_families_count);
     std::optional<uint32_t> compute_family = _select_queue_family(queue_families, VK_QUEUE_COMPUTE_BIT, selected_families_count);
     bool graphics_queue_is_present_queue = false;
     std::optional<uint32_t> present_family;
@@ -81,7 +80,6 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
     }
     // retrieve the queues handle
     _graphics_queue = _query_queue_handle(graphics_family, selected_families_count);
-    _transfer_queue = _query_queue_handle(transfer_family, selected_families_count);
     _compute_queue = _query_queue_handle(compute_family, selected_families_count);
     if (graphics_queue_is_present_queue)
     {
@@ -108,10 +106,6 @@ GPU::~GPU()
     if (_compute_queue.has_value())
     {
         vkDestroyCommandPool(_logical_device, std::get<2>(_compute_queue.value()), nullptr);
-    }
-    if (_transfer_queue.has_value())
-    {
-        vkDestroyCommandPool(_logical_device, std::get<2>(_transfer_queue.value()), nullptr);
     }
     if (_present_queue.has_value() && !graphics_queue_is_present_queue)
     {
@@ -183,7 +177,7 @@ std::optional<uint32_t> GPU::_select_queue_family(std::vector<VkQueueFamilyPrope
                                                   VkQueueFlagBits queue_type,
                                                   std::map<uint32_t, uint32_t>& selected_families_count) const
 {
-    std::vector<VkQueueFlagBits> functionalities = {VK_QUEUE_GRAPHICS_BIT, VK_QUEUE_COMPUTE_BIT, VK_QUEUE_TRANSFER_BIT};
+    std::vector<VkQueueFlagBits> functionalities = {VK_QUEUE_GRAPHICS_BIT, VK_QUEUE_COMPUTE_BIT};
     // filter families that handle the operation type
     std::map<uint32_t, VkQueueFamilyProperties> valid_families;
     for (uint32_t i=0; i<queue_families.size(); i++)

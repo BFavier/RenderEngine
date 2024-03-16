@@ -34,6 +34,10 @@ namespace RenderEngine
         int dx() const;
         //< returns mouse vertical displacement in the window since previous update
         int dy() const;
+        //< returns mouse relative horizontal displacement (0. to 1.) in the window since previous update
+        double dx_rel() const;
+        //< returns mouse relative vertical displacement (0. to 1.) in the window since previous update
+        double dy_rel() const;
         //< returns the mouse wheel horizontal displacement
         double wheel_dx() const;
         //< returns the mouse wheel vertical displacement

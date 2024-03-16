@@ -44,6 +44,16 @@ int Mouse::dy() const
     return _dy;
 }
 
+double Mouse::dx_rel() const
+{
+    return static_cast<double>(dx()) / std::max(1U, _window.width() - 1);
+}
+
+double Mouse::dy_rel() const
+{
+    return static_cast<double>(dy()) / std::max(1U, _window.height() - 1);
+}
+
 double Mouse::x_rel() const
 {
     return static_cast<double>(x()) / std::max(1U, _window.width() - 1);

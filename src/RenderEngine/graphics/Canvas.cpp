@@ -11,12 +11,9 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height
     depth_buffer(_gpu, width, height, ImageFormat::DEPTH, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 {
     allocate_frame_buffer();
-    allocate_command_buffer(_draw_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
-    // allocate_command_buffer(_transfer_command_buffer, std::get<2>(gpu->_transfer_queue.value()));
+    allocate_command_buffer(_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
     allocate_fence(_rendered_fence);
-    // allocate_fence(_transfered_fence);
     allocate_semaphore(_rendered_semaphore);
-    // allocate_semaphore(_transfered_semaphore);
 }
 
 
@@ -27,12 +24,9 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>&
     depth_buffer(_gpu, width, height, ImageFormat::DEPTH, Image::AntiAliasing::X1, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 {
     allocate_frame_buffer();
-    allocate_command_buffer(_draw_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
-    // allocate_command_buffer(_transfer_command_buffer, std::get<2>(gpu->_transfer_queue.value()));
+    allocate_command_buffer(_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
     allocate_fence(_rendered_fence);
-    // allocate_fence(_transfered_fence);
     allocate_semaphore(_rendered_semaphore);
-    // allocate_semaphore(_transfered_semaphore);
 }
 
 
@@ -136,21 +130,21 @@ void Canvas::_deallocate_semaphore(const std::shared_ptr<GPU>& gpu, VkSemaphore*
 void Canvas::_initialize_recording()
 {
     // reset command buffer
-    vkResetCommandBuffer(*_draw_command_buffer, 0);
+    vkResetCommandBuffer(*_command_buffer, 0);
     // begin command buffer recording
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = 0; // Optional
     beginInfo.pInheritanceInfo = nullptr; // Optional
-    if (vkBeginCommandBuffer(*_draw_command_buffer, &beginInfo) != VK_SUCCESS)
+    if (vkBeginCommandBuffer(*_command_buffer, &beginInfo) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
     // bind the successive pipelines
     for (unsigned int i = 0; i < gpu->shader3d->_pipelines.size(); i++)
     {
-        vkCmdBindPipeline(*_draw_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipelines[i]);
-        //vkCmdBindDescriptorSets(*_draw_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipeline_layouts[i], 0, 1, &descriptorSets.scene, 0, nullptr);
+        vkCmdBindPipeline(*_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipelines[i]);
+        //vkCmdBindDescriptorSets(*_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipeline_layouts[i], 0, 1, &descriptorSets.scene, 0, nullptr);
     }
     // set viewport and scissor
     VkViewport viewport{};
@@ -160,11 +154,11 @@ void Canvas::_initialize_recording()
     viewport.height = static_cast<float>(color.height());
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(*_draw_command_buffer, 0, 1, &viewport);
+    vkCmdSetViewport(*_command_buffer, 0, 1, &viewport);
     VkRect2D scissor{};
     scissor.offset = { 0, 0 };
     scissor.extent = { color.width(), color.height() };
-    vkCmdSetScissor(*_draw_command_buffer, 0, 1, &scissor);
+    vkCmdSetScissor(*_command_buffer, 0, 1, &scissor);
     // setup the recording flag
     _recording = true;
 }
@@ -194,16 +188,16 @@ void Canvas::clear(unsigned char R, unsigned char G, unsigned char B, unsigned c
     // end eventual render pass
     _end_render_pass();
     // transition layout
-    color._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, *_draw_command_buffer);
-    depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, *_draw_command_buffer);
+    color._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, *_command_buffer);
+    depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, *_command_buffer);
     // Clear color image
     VkClearColorValue clear_color = {{R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f}};
     VkImageSubresourceRange color_range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, color._mip_levels, 0, 1};
-    vkCmdClearColorImage(*_draw_command_buffer, *color._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &color_range);
+    vkCmdClearColorImage(*_command_buffer, *color._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &color_range);
     // Clear depth buffer
     VkClearDepthStencilValue clear_depth = {0.f, 0};
     VkImageSubresourceRange depth_range = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, color._mip_levels, 0, 1};
-    vkCmdClearDepthStencilImage(*_draw_command_buffer, *depth_buffer._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1, &depth_range);
+    vkCmdClearDepthStencilImage(*_command_buffer, *depth_buffer._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1, &depth_range);
 }
 
 
@@ -218,19 +212,19 @@ void Canvas::draw(const Mesh& mesh, const Matrix& mesh_rotation)
         _initialize_recording();
     }
     // transition layouts
-    color._transition_to_layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, *_draw_command_buffer);
-    depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, *_draw_command_buffer);
+    color._transition_to_layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, *_command_buffer);
+    depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, *_command_buffer);
     // start render pass
     _start_render_pass();
     // draw
     std::vector<VkBuffer> vertex_buffers = {*mesh._vk_buffer};
     std::vector<VkDeviceSize> offsets(vertex_buffers.size(), 0);
-    vkCmdBindVertexBuffers(*_draw_command_buffer, 0, vertex_buffers.size(), vertex_buffers.data(), offsets.data());
+    vkCmdBindVertexBuffers(*_command_buffer, 0, vertex_buffers.size(), vertex_buffers.data(), offsets.data());
     VkPushConstantRange range = gpu->shader3d->_push_constants[0][0].second;
     PushConstants constants = {{0., 0., 0.5}, {1., 1., 1.}, mesh_rotation.to_mat3()};
-    vkCmdPushConstants(*_draw_command_buffer, gpu->shader3d->_pipeline_layouts[0], range.stageFlags, range.offset, range.size, &constants);
+    vkCmdPushConstants(*_command_buffer, gpu->shader3d->_pipeline_layouts[0], range.stageFlags, range.offset, range.size, &constants);
     // send a command to command buffer
-    vkCmdDraw(*_draw_command_buffer, mesh.size/sizeof(Vertex), 1, 0, 0);
+    vkCmdDraw(*_command_buffer, mesh.size/sizeof(Vertex), 1, 0, 0);
 }
 
 
@@ -255,7 +249,7 @@ void Canvas::_start_render_pass()
         renderPassInfo.renderArea.extent = { color.width(), color.height() };
         renderPassInfo.clearValueCount = clear_values.size();
         renderPassInfo.pClearValues = clear_values.data();
-        vkCmdBeginRenderPass(*_draw_command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(*_command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
         // Set the flag
         _in_render_pass = true;
     }
@@ -266,7 +260,7 @@ void Canvas::_end_render_pass()
 {
     if (_in_render_pass)
     {
-        vkCmdEndRenderPass(*_draw_command_buffer);
+        vkCmdEndRenderPass(*_command_buffer);
         _in_render_pass = false;
     }
 }
@@ -292,7 +286,7 @@ void Canvas::render()
     // End render pass
     _end_render_pass();
     // End command buffer
-    if (vkEndCommandBuffer(*_draw_command_buffer) != VK_SUCCESS)
+    if (vkEndCommandBuffer(*_command_buffer) != VK_SUCCESS)
     {
         THROW_ERROR("failed to record command buffer!");
     }
@@ -304,7 +298,7 @@ void Canvas::render()
     submitInfo.pWaitSemaphores = wait_semaphores.data();
     submitInfo.pWaitDstStageMask = &wait_stages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = _draw_command_buffer.get();
+    submitInfo.pCommandBuffers = _command_buffer.get();
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = _rendered_semaphore.get();
     if (vkQueueSubmit(std::get<1>(gpu->_graphics_queue.value()), 1, &submitInfo, *_rendered_fence) != VK_SUCCESS)

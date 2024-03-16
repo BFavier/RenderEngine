@@ -260,8 +260,8 @@ void Image::_transition_to_layout(VkImageLayout new_layout, VkCommandBuffer comm
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     barrier.oldLayout = _layout;
     barrier.newLayout = new_layout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;  // will be modified later in the function
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;  // will be modified later in the function
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.image = *_vk_image;
     barrier.subresourceRange.aspectMask = _get_aspect_mask();
     barrier.subresourceRange.baseMipLevel = 0;
@@ -274,11 +274,6 @@ void Image::_transition_to_layout(VkImageLayout new_layout, VkCommandBuffer comm
     VkPipelineStageFlags destination_stage;
     _fill_layout_attributes(_layout, barrier.srcQueueFamilyIndex, barrier.srcAccessMask, source_stage);
     _fill_layout_attributes(_layout, barrier.dstQueueFamilyIndex, barrier.dstAccessMask, destination_stage);
-    if (barrier.srcQueueFamilyIndex == barrier.dstQueueFamilyIndex)
-    {
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    }
     vkCmdPipelineBarrier(
         command_buffer,
         source_stage, destination_stage,
@@ -293,37 +288,31 @@ void Image::_fill_layout_attributes(VkImageLayout layout, uint32_t& queue_family
 {
     if (layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
     {
-        queue_family_index = std::get<0>(gpu->_graphics_queue.value());
         acces_mask = VK_ACCESS_SHADER_WRITE_BIT;
         stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     }
     else if(layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
     {
-        queue_family_index = std::get<0>(gpu->_graphics_queue.value());
         acces_mask = VK_ACCESS_SHADER_READ_BIT;
         stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     }
     else if (layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
     {
-        queue_family_index = std::get<0>(gpu->_transfer_queue.value());
         acces_mask = VK_ACCESS_TRANSFER_READ_BIT;
         stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     }
     else if (layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
     {
-        queue_family_index = std::get<0>(gpu->_transfer_queue.value());
         acces_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
         stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     }
     else if (layout == VK_IMAGE_LAYOUT_UNDEFINED)
     {
-        queue_family_index = 0;
         acces_mask = 0;
         stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     }
     else if (layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
     {
-        queue_family_index = std::get<0>(gpu->_graphics_queue.value());
         acces_mask = VK_ACCESS_SHADER_WRITE_BIT;
         stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     }

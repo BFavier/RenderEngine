@@ -27,16 +27,12 @@ namespace RenderEngine
             std::shared_ptr<VkSemaphore> _rendered_semaphore = nullptr;  // Semaphore to order rendering dependencies on GPU
             std::set<VkSemaphore> _dependencies;  // Semaphore of dependencies that must be rendered before this Canvas
         protected:
-            // bool _transfering = false; // boolean that is set to true when data is beeing transfered to images
             bool _in_render_pass = false;
             bool _recording = false; // boolean that is set to true when CommandBuffers are beeing recorded for draw instructions
             bool _rendering = false; // boolean that is set to true when CommandBuffers have been sent to GPU for rendering to proceed
-            // std::shared_ptr<VkSemaphore> _transfered_semaphore = nullptr;  // Semaphore to order clearing beffore draw on GPU
             std::shared_ptr<VkFence> _rendered_fence = nullptr; // Fence that becomes 'signaled' once rendering ends on GPU
-            // std::shared_ptr<VkFence> _transfered_fence = nullptr; // Fence that becomes 'signaled' once transfers has ended on GPU
             std::shared_ptr<VkFramebuffer> _frame_buffer = nullptr;
-            std::shared_ptr<VkCommandBuffer> _draw_command_buffer = nullptr;
-            // std::shared_ptr<VkCommandBuffer> _transfer_command_buffer = nullptr;
+            std::shared_ptr<VkCommandBuffer> _command_buffer = nullptr;
         protected:
             void allocate_frame_buffer();
             void allocate_command_buffer(std::shared_ptr<VkCommandBuffer>& command_buffer, VkCommandPool pool);
