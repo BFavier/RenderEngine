@@ -90,7 +90,7 @@ Quaternion Quaternion::conjugate() const
     return Quaternion(w, -x, -y, -z);
 }
 
-Quaternion Quaternion::inverted() const
+Quaternion Quaternion::inverse() const
 {
     double squared_norm = std::pow(w, 2) + std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2);
     return conjugate()/squared_norm;
@@ -161,7 +161,7 @@ Quaternion Quaternion::operator*(const Quaternion& other) const
 
 Vector Quaternion::operator*(const Vector& vector) const
 {
-    Quaternion result(*this * Quaternion(0., vector.x, vector.y, vector.z) * inverted());
+    Quaternion result(*this * Quaternion(0., vector.x, vector.y, vector.z) * inverse());
     return Vector(result.x, result.y, result.z);
 }
 

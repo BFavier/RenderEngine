@@ -205,7 +205,7 @@ void Shader::_create_pipelines(const std::vector<std::vector<std::pair<std::stri
             }
             VkDescriptorSetLayoutCreateInfo desc_set_info{};
             desc_set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-            desc_set_info.flags = 0;
+            desc_set_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
             desc_set_info.bindingCount = bindings_desc.size();
             desc_set_info.pBindings = bindings_desc.data();
             if (vkCreateDescriptorSetLayout(gpu->_logical_device, &desc_set_info, nullptr, &_descriptor_set_layouts[i][j]) != VK_SUCCESS)

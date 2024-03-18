@@ -6,6 +6,9 @@
 #include <algorithm>
 #include <memory>
 
+// function pointer definition. This function is an extension and must be loaded with vkGetInstanceProcAddr at library loading time
+extern void (*vkCmdPushDescriptorSet)(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t set, uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pDescriptorWrites);
+
 namespace RenderEngine
 {
     class GPU;
@@ -16,8 +19,9 @@ namespace RenderEngine
         Internal() = delete;
     public:
         //Initialize the used libraries
-        static void initialize(const std::vector<std::string>& validation_layers={},
-                               const std::vector<std::string>& extensions={VK_EXT_DEBUG_UTILS_EXTENSION_NAME});
+        static void initialize(const std::vector<std::string>& validation_layers={}, // For debug, add "VK_LAYER_KHRONOS_validation" to enable validation layer (slower than if they are disabled)
+                               const std::vector<std::string>& instance_extensions={VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME},
+                               const std::vector<std::string>& device_extensions={VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME});
         static void terminate();
         static std::vector<std::string> get_available_validation_layers();
         static std::vector<std::string> get_available_vulkan_extensions();

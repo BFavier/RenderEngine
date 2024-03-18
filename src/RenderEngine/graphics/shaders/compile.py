@@ -11,8 +11,7 @@ STAGES = {".vert": "VK_SHADER_STAGE_VERTEX_BIT",
           ".comp": "VK_SHADER_STAGE_COMPUTE_BIT"}
 UNIFORM_TYPES = {"sampler": "VK_DESCRIPTOR_TYPE_SAMPLER",
                  "sampler2D": "VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER",
-                 "subpassInput": "VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT",
-                 "UniformBufferObject": "VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER"}
+                 "subpassInput": "VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT"}
 FRAMEBUFFER_FORMATS = ["ERROR", "ImageFormat::GRAY", "ERROR", "ImageFormat::RGB", "ImageFormat::RGBA"]
 BUFFER_TYPE = "VK_DESCRIPTOR_TYPE_STORAGE_BUFFER"
 LAYOUT_REGEX = re.compile(r"layout *\((?:(push_constant)|(?:input_attachment_index *= *(\d+))|(?:set *= *(\d+))|(?:binding *= *(\d+))|(?:offset *= *(\d+))|(?:location *= *(\d+))|(?:std\d+)|(?:, *))+\) *(in|out|uniform|buffer) +(\w+)(?:\s*{[^}]+})? *(\w+)?(?:\[(\d+)\])?;")
@@ -21,7 +20,7 @@ LAYOUT_REGEX = re.compile(r"layout *\((?:(push_constant)|(?:input_attachment_ind
 CONSTRUCTOR_SRC = """#include <RenderEngine/graphics/shaders/{shader_name}.hpp>
 #include <RenderEngine/graphics/ImageFormat.hpp>
 #include <RenderEngine/graphics/shaders/Vertex.hpp>
-#include <RenderEngine/graphics/shaders/PushConstants.hpp>
+#include <RenderEngine/graphics/shaders/Types.hpp>
 using namespace RenderEngine;
 
 
@@ -117,7 +116,7 @@ def _get_subpasses_layout(subpasses: dict) -> list[dict]:
                     push_constants.append({"type": _type, "stage": stage, "offset": offset or "0"})
                 elif binding != "" and storage in ("uniform", "buffer"):
                     descriptors.append({"set": _set or "0", "binding": binding, "name": name, "count": count or "1", "stage": stage,
-                                        "type": UNIFORM_TYPES[_type] if storage == "uniform" else BUFFER_TYPE})
+                                        "type": UNIFORM_TYPES.get(_type, "VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER") if storage == "uniform" else BUFFER_TYPE})
                     if _type == "subpassInput":
                         assert stage == "VK_SHADER_STAGE_FRAGMENT_BIT"
                         input_attachments.append({"name": name, "input_index": input_index})

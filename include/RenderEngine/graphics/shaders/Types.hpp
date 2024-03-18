@@ -22,6 +22,12 @@ namespace RenderEngine
 
     #pragma pack(push, 1)  // removes padding in binary representation from structs defined below
 
+    struct vec2
+    {
+        float x;
+        float y;
+    };
+
     struct vec3
     {
         float x;
@@ -53,6 +59,21 @@ namespace RenderEngine
         float i3j2;
         float i3j3;
         float pad3;
+    };
+
+    struct MeshParameters
+    {
+        vec4 mesh_position;
+        vec4 mesh_scale;
+        mat3 mesh_rotation;
+    };
+
+    struct CameraParameters
+    {
+        vec4 camera_position;
+        mat3 world_to_camera;
+        vec2 camera_screen_dim;
+        float focal_length;
     };
 
     #pragma pack(pop)

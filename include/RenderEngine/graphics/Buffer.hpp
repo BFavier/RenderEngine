@@ -10,19 +10,23 @@ namespace RenderEngine
     {
     public:
         Buffer() = delete;
-        Buffer(const std::shared_ptr<GPU>& gpu, size_t size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
+        Buffer(const std::shared_ptr<GPU>& gpu, size_t bytes_size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory_properties);
         ~Buffer();
     public:
         const std::shared_ptr<GPU>& gpu;
-        size_t size;
         std::shared_ptr<VkBuffer> _vk_buffer = nullptr;
         std::shared_ptr<VkDeviceMemory> _vk_memory = nullptr;
     public:
-        void upload(const void* data, size_t length, size_t offset = 0);
-        void download(void* data, size_t length, size_t offset) const;
+        size_t bytes_size() const;
+        void upload(const void* data) const;
+        void download(void* data) const;
     protected:
-        uint32_t _find_memory_type(VkPhysicalDevice physical_device, uint32_t typeFilter, VkMemoryPropertyFlags properties);
+        void* _data = nullptr;
+        size_t _bytes_size = 0;
+        VkMemoryPropertyFlags _memory_properties = 0;
+    protected:
+        uint32_t _find_memory_type(VkPhysicalDevice physical_device, uint32_t typeFilter, VkMemoryPropertyFlags memory_properties);
         void _allocate_buffer(VkBufferUsageFlags usage);
-        void _allocate_memory(VkMemoryPropertyFlags properties);
+        void _allocate_memory(VkMemoryPropertyFlags memory_properties);
     };
 }

@@ -34,7 +34,7 @@ namespace RenderEngine
     public:
         ~GPU();
     protected: // only the class RenderEngine::Internal can create GPUs
-        GPU(VkPhysicalDevice device, const Window& window, const std::vector<const char*>& validation_layer_names, const std::vector<std::string>& extensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME});
+        GPU(VkPhysicalDevice device, const Window& window, const std::vector<const char*>& validation_layer_names, const std::vector<std::string>& extensions);
     public:
         // Device name
         std::string device_name() const;

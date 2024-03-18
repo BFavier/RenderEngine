@@ -18,9 +18,11 @@ add_executable(${PROJECT_NAME}
     src/RenderEngine/graphics/shaders/DemoShader.cpp
     src/RenderEngine/graphics/shaders/Shader3D.cpp
     src/RenderEngine/graphics/model/Mesh.cpp
+    src/RenderEngine/graphics/Camera.cpp
     src/RenderEngine/geometry/Matrix.cpp
     src/RenderEngine/geometry/Quaternion.cpp
     src/RenderEngine/geometry/Vector.cpp
+    src/RenderEngine/geometry/Referential.cpp
     src/RenderEngine/user_interface/Window.cpp
     src/RenderEngine/user_interface/Keyboard.cpp
     src/RenderEngine/user_interface/Mouse.cpp

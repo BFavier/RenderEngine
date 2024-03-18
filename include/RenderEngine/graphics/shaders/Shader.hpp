@@ -1,7 +1,7 @@
 #pragma once
 #include <RenderEngine/utilities/External.hpp>
 #include <RenderEngine/graphics/ImageFormat.hpp>
-#include <RenderEngine/graphics/shaders/Type.hpp>
+#include <RenderEngine/graphics/shaders/Types.hpp>
 #include <RenderEngine/graphics/shaders/Vertex.hpp>
 #include <vector>
 #include <memory>

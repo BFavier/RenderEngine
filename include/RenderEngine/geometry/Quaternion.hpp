@@ -29,8 +29,8 @@ namespace RenderEngine
         Quaternion normed() const;
         ///< Returns the conjugate quaternion
         Quaternion conjugate() const;
-        ///< Returns the inverted quaternion
-        Quaternion inverted() const;
+        ///< Returns the inverse quaternion
+        Quaternion inverse() const;
         ///< Returns true if the two quaternions are close enough to be considered equals
         static bool equal(const Quaternion& q1, const Quaternion& q2, double tolerance=1.0E-6);
         ///< Dot product of two quaternions

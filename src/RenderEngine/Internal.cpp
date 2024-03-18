@@ -5,13 +5,15 @@
 
 using namespace RenderEngine;
 
+void (*vkCmdPushDescriptorSet)(VkCommandBuffer commandBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t set, uint32_t descriptorWriteCount, const VkWriteDescriptorSet* pDescriptorWrites);
 bool Internal::_initialized = false;
 VkInstance Internal::_vk_instance;
 VkDebugUtilsMessengerEXT Internal::_debug_messenger;
 std::vector<std::shared_ptr<GPU>> Internal::GPUs;
 
 void Internal::initialize(const std::vector<std::string>& validation_layers,
-                          const std::vector<std::string>& extensions)
+                          const std::vector<std::string>& instance_extensions,
+                          const std::vector<std::string>& device_extensions)
 {
     if (_initialized)
     {
@@ -45,7 +47,7 @@ void Internal::initialize(const std::vector<std::string>& validation_layers,
     }
     // list extensions to activate (in addition to the ones requested by user, some are required by glfw)
     std::vector<const char*> _extensions;
-    for (const std::string& ext : extensions)
+    for (const std::string& ext : instance_extensions)
     {
         _extensions.push_back(ext.c_str());
     }
@@ -96,7 +98,13 @@ void Internal::initialize(const std::vector<std::string>& validation_layers,
     Window dummy_window(settings);
     for(VkPhysicalDevice& device : devices)
     {
-        GPUs.emplace_back(new GPU(device, dummy_window, validation_layer_names));
+        GPUs.emplace_back(new GPU(device, dummy_window, validation_layer_names, device_extensions));
+    }
+    // Load extension functions
+    vkCmdPushDescriptorSet = reinterpret_cast<PFN_vkCmdPushDescriptorSetKHR>(vkGetInstanceProcAddr(_vk_instance, "vkCmdPushDescriptorSetKHR"));
+    if (vkCmdPushDescriptorSet == nullptr)
+    {
+        THROW_ERROR("Failed to load extension function ")
     }
 }
 
