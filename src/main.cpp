@@ -15,9 +15,11 @@ int main()
         Keyboard& keyboard = window.keyboard;
         Timer timer;
         Mesh cube = Mesh::cube(gpu, 0.5);
-        Referential yaw(nullptr, {0., 0., 0.}, {45.0, {0., 1., 0.}});
-        Referential pitch(&yaw, {0., 0., 0.}, {});
-        Camera camera(gpu, 0.16, 0.09, 90.0, &pitch, {0., 0., -1.});
+        // Face face({{ {0.f, 0.5f, 0.f }, { -0.5, -0.5, 0. }, { 0.5, -0.5, 0. } }}, { 1.0, 0., 0., 1.0 });
+        // Mesh cube(gpu, { face });
+        Referential yaw(nullptr, {0., 0., -1.}, {0.0, {0., 1., 0.}});
+        Referential pitch(&yaw,  {0., 0., 0.}, {0.0, {1., 0., 0.}});
+        Camera camera(gpu, 0.16, 0.09, 90.0, &pitch);
         while(!window.closing())
         {
             double dt = timer.dt();
