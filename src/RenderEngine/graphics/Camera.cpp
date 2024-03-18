@@ -28,7 +28,7 @@ VkDescriptorBufferInfo Camera::get_projection() const
     std::pair<Vector, Quaternion> coordinates = absolute_coordinates();
     CameraParameters params{};
     params.camera_position = {static_cast<float>(coordinates.first.x), static_cast<float>(coordinates.first.y), static_cast<float>(coordinates.first.z), 0.f};
-    params.world_to_camera = Matrix(coordinates.second.inverse()).to_mat3();
+    params.world_to_camera = Matrix(coordinates.second).to_mat3();
     params.focal_length = focal_length();
     params.camera_screen_dim = {width, height};
     _parameters.upload(&params);
