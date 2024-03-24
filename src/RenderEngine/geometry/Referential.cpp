@@ -75,7 +75,7 @@ std::pair<Vector, Quaternion> Referential::absolute_coordinates() const
     while (parent != nullptr)
     {
         abs_position = (parent->orientation.inverse() * abs_position) + parent->position;
-        abs_orientation = abs_orientation * parent->orientation;
+        abs_orientation = parent->orientation * abs_orientation;
         parent = parent->parent;
     }
     return {abs_position, abs_orientation};
