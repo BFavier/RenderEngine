@@ -40,6 +40,11 @@ vec3 Vector::to_vec3() const
     return {static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)};
 }
 
+vec4 Vector::to_vec4() const
+{
+    return {static_cast<float>(x), static_cast<float>(y), static_cast<float>(z), 0.f};
+}
+
 double Vector::norm() const
 {
     return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2));

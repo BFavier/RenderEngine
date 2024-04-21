@@ -14,6 +14,7 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height
     _allocate_command_buffer(_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
     _allocate_fence(_rendered_fence);
     _allocate_semaphore(_rendered_semaphore);
+    _allocate_camera_view(_camera_view);
 }
 
 
@@ -27,6 +28,7 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>&
     _allocate_command_buffer(_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
     _allocate_fence(_rendered_fence);
     _allocate_semaphore(_rendered_semaphore);
+    _allocate_camera_view(_camera_view);
 }
 
 
@@ -99,6 +101,15 @@ void Canvas::_allocate_semaphore(std::shared_ptr<VkSemaphore>& semaphore)
 }
 
 
+void Canvas::_allocate_camera_view(std::shared_ptr<Buffer>& camera_view)
+{
+    camera_view.reset(new Buffer(gpu, sizeof(CameraParameters),
+                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+
+}
+
+
 // void Canvas::_allocate_descriptor_sets(std::array<std::shared_ptr<VkDescriptorSet>, 1>& descriptor_sets)
 // {
 //     for (unsigned int i=0;i<_descriptor_sets.size();i++)
@@ -161,7 +172,6 @@ void Canvas::_initialize_recording()
     for (unsigned int i = 0; i < gpu->shader3d->_pipelines.size(); i++)
     {
         vkCmdBindPipeline(*_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipelines[i]);
-        //vkCmdBindDescriptorSets(*_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipeline_layouts[i], 0, 1, &descriptorSets.scene, 0, nullptr);
     }
     // set viewport and scissor
     VkViewport viewport{};
@@ -202,8 +212,10 @@ void Canvas::clear(unsigned char R, unsigned char G, unsigned char B, unsigned c
     {
         _initialize_recording();
     }
-    // end eventual render pass
-    _end_render_pass();
+    if (_recording_render_pass)
+    {
+        _end_render_pass_recording();
+    }
     // transition layout
     color._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, *_command_buffer);
     depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, *_command_buffer);
@@ -215,10 +227,14 @@ void Canvas::clear(unsigned char R, unsigned char G, unsigned char B, unsigned c
     VkClearDepthStencilValue clear_depth = {0.f, 0};
     VkImageSubresourceRange depth_range = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, color._mip_levels, 0, 1};
     vkCmdClearDepthStencilImage(*_command_buffer, *depth_buffer._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1, &depth_range);
+    // start render pass
+    if (!_recording)
+    {
+        _initialize_recording();
+    }
 }
 
-
-void Canvas::bind_camera(const Camera& camera)
+void Canvas::set_view(const Camera& camera)
 {
     if (_rendering)
     {
@@ -228,7 +244,21 @@ void Canvas::bind_camera(const Camera& camera)
     {
         _initialize_recording();
     }
-    VkDescriptorBufferInfo camera_parameters = camera.get_projection();
+    if (_recording_render_pass)
+    {
+        _end_render_pass_recording();
+    }
+    // Read camera view
+    std::tuple<Vector, Quaternion, double> camera_coordinates = camera.absolute_coordinates();
+    CameraParameters params{};
+    params.camera_position = std::get<0>(camera_coordinates).to_vec4();
+    params.world_to_camera = Matrix(std::get<1>(camera_coordinates)).to_mat3();
+    params.camera_scale = static_cast<float>(std::get<2>(camera_coordinates));
+    params.focal_length = camera.focal_length();
+    params.camera_aperture_size = {camera.aperture_width, camera.aperture_height};
+    _camera_view->upload(&params);
+    // Push camera view to device
+    VkDescriptorBufferInfo camera_parameters = {*(_camera_view->_vk_buffer), 0, VK_WHOLE_SIZE};
     VkWriteDescriptorSet uniform_buffer{};
     uniform_buffer.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     uniform_buffer.dstBinding = 0;
@@ -237,16 +267,10 @@ void Canvas::bind_camera(const Camera& camera)
 	uniform_buffer.pBufferInfo = &camera_parameters;
     std::vector<VkWriteDescriptorSet> descriptors = {uniform_buffer};
     vkCmdPushDescriptorSet(*_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipeline_layouts[0], 0, descriptors.size(), descriptors.data());
-    _bound_camera = true;
 }
 
-
-void Canvas::draw(const Mesh& mesh, const Vector& mesh_positon, const Quaternion& mesh_rotation)
+void Canvas::draw(const Mesh& mesh, const Vector& mesh_position, const Quaternion& mesh_rotation, const double& mesh_scaling)
 {
-    if (!_bound_camera)
-    {
-        THROW_ERROR("For each render pass, a camera must be bound with the 'bind_camera' method before drawing 3D meshes.");
-    }
     if (_rendering)
     {
         wait_completion();
@@ -255,59 +279,20 @@ void Canvas::draw(const Mesh& mesh, const Vector& mesh_positon, const Quaternion
     {
         _initialize_recording();
     }
-    // transition layouts
-    color._transition_to_layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, *_command_buffer);
-    depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, *_command_buffer);
-    // start render pass
-    _start_render_pass();
+    if (!_recording_render_pass)
+    {
+        _start_render_pass_recording();
+    }
     // set mesh vertices
     std::vector<VkBuffer> vertex_buffers = {*mesh._vk_buffer};
     std::vector<VkDeviceSize> offsets(vertex_buffers.size(), 0);
     vkCmdBindVertexBuffers(*_command_buffer, 0, vertex_buffers.size(), vertex_buffers.data(), offsets.data());
     // set mesh scale/position/rotation
     VkPushConstantRange mesh_range = gpu->shader3d->_push_constants[0][0].second;
-    MeshParameters mesh_parameters = {{0., 0., 0.5}, {1., 1., 1.}, Matrix(mesh_rotation).to_mat3()};
+    MeshParameters mesh_parameters = {mesh_position.to_vec4(), Matrix(mesh_rotation.inverse()).to_mat3(), static_cast<float>(mesh_scaling)};
     vkCmdPushConstants(*_command_buffer, gpu->shader3d->_pipeline_layouts[0], mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &mesh_parameters);
     // send a command to command buffer
     vkCmdDraw(*_command_buffer, mesh.bytes_size()/sizeof(Vertex), 1, 0, 0);
-}
-
-
-void Canvas::_start_render_pass()
-{
-    if (!_in_render_pass)
-    {
-        // begin render pass
-        std::vector<VkClearValue> clear_values;
-        for (unsigned int i = 0; i < 3; i++)
-        {
-            VkClearValue clear_value = {};
-            clear_value.color = { {0.0f, 0.0f, 0.0f, 1.0f} };
-            clear_value.depthStencil = { 1.0f, 0 };
-            clear_values.push_back(clear_value);
-        }
-        VkRenderPassBeginInfo renderPassInfo{};
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = gpu->shader3d->_render_pass;
-        renderPassInfo.framebuffer = *_frame_buffer;
-        renderPassInfo.renderArea.offset = { 0, 0 };
-        renderPassInfo.renderArea.extent = { color.width(), color.height() };
-        renderPassInfo.clearValueCount = clear_values.size();
-        renderPassInfo.pClearValues = clear_values.data();
-        vkCmdBeginRenderPass(*_command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-        // Set the flag
-        _in_render_pass = true;
-    }
-}
-
-
-void Canvas::_end_render_pass()
-{
-    if (_in_render_pass)
-    {
-        vkCmdEndRenderPass(*_command_buffer);
-        _in_render_pass = false;
-    }
 }
 
 
@@ -329,7 +314,10 @@ void Canvas::render()
         wait_semaphores.push_back(semaphore);
     }
     // End render pass
-    _end_render_pass();
+    if (_recording_render_pass)
+    {
+        _end_render_pass_recording();
+    }
     // End command buffer
     if (vkEndCommandBuffer(*_command_buffer) != VK_SUCCESS)
     {
@@ -353,7 +341,6 @@ void Canvas::render()
     // set the rendering flag
     _recording = false;
     _rendering = true;
-    _bound_camera = false;
     // reset dependencies
     _dependencies.clear();
 }
@@ -366,4 +353,38 @@ bool Canvas::is_recording() const
 bool Canvas::is_rendering() const
 {
     return _rendering;
+}
+
+void Canvas::_start_render_pass_recording()
+{
+    // transition layouts
+    color._transition_to_layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, *_command_buffer);
+    depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, *_command_buffer);
+    // begin render pass
+    std::vector<VkClearValue> clear_values;
+    for (unsigned int i = 0; i < 3; i++)
+    {
+        VkClearValue clear_value = {};
+        clear_value.color = { {0.0f, 0.0f, 0.0f, 1.0f} };
+        clear_value.depthStencil = { 1.0f, 0 };
+        clear_values.push_back(clear_value);
+    }
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = gpu->shader3d->_render_pass;
+    renderPassInfo.framebuffer = *_frame_buffer;
+    renderPassInfo.renderArea.offset = { 0, 0 };
+    renderPassInfo.renderArea.extent = { color.width(), color.height() };
+    renderPassInfo.clearValueCount = clear_values.size();
+    renderPassInfo.pClearValues = clear_values.data();
+    vkCmdBeginRenderPass(*_command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    // Set the flag
+    _recording_render_pass = true;
+}
+
+
+void Canvas::_end_render_pass_recording()
+{
+    vkCmdEndRenderPass(*_command_buffer);
+    _recording_render_pass = false;
 }

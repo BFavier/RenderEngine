@@ -64,16 +64,17 @@ namespace RenderEngine
     struct MeshParameters
     {
         vec4 mesh_position;
-        vec4 mesh_scale;
         mat3 mesh_rotation;
+        float mesh_scale;
     };
 
     struct CameraParameters
     {
         vec4 camera_position;
         mat3 world_to_camera;
-        vec2 camera_screen_dim;
+        vec2 camera_aperture_size;
         float focal_length;
+        float camera_scale;
     };
 
     #pragma pack(pop)

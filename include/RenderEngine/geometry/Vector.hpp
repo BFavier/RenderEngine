@@ -18,6 +18,8 @@ namespace RenderEngine
         ~Vector();
         ///< Convert to a vec3
         vec3 to_vec3() const;
+        ///< Convert to a vec4 (with a trailing 0)
+        vec4 to_vec4() const;
         //!< Returns the norm of a Vector
         double norm() const;
         ///< Return the vector with unit norm (or the null vector)

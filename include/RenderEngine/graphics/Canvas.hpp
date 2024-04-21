@@ -30,28 +30,29 @@ namespace RenderEngine
             std::shared_ptr<VkSemaphore> _rendered_semaphore = nullptr;  // Semaphore to order rendering dependencies on GPU
             std::set<VkSemaphore> _dependencies;  // Semaphore of dependencies that must be rendered before this Canvas
         protected:
-            bool _in_render_pass = false;
-            bool _bound_camera = false; // boolean that is set to true when a camera was bound in the current render pass
-            bool _recording = false; // boolean that is set to true when CommandBuffers are beeing recorded for draw instructions
-            bool _rendering = false; // boolean that is set to true when CommandBuffers have been sent to GPU for rendering to proceed
+            bool _recording = false; // boolean that is set to true when commands are beeing recorded on cpu
+            bool _rendering = false; // boolean that is set to true when commands have been sent to GPU for rendering, and wait_completion has not been called yet.
+            bool _recording_render_pass = false; // boolean whether the command buffer is recording a render pass. Some commands can be issued only when recording a render pass (draw calls, ...). Others must only be issued outside of a render pass (clearing, copies, layout transitions ...)
             std::shared_ptr<VkFence> _rendered_fence = nullptr; // Fence that becomes 'signaled' once rendering ends on GPU
             std::shared_ptr<VkFramebuffer> _frame_buffer = nullptr;
             std::shared_ptr<VkCommandBuffer> _command_buffer = nullptr;
+            std::shared_ptr<Buffer> _camera_view = nullptr;
         protected:
             void _allocate_frame_buffer();
             void _allocate_command_buffer(std::shared_ptr<VkCommandBuffer>& command_buffer, VkCommandPool pool);
             void _allocate_fence(std::shared_ptr<VkFence>& fence);
             void _allocate_semaphore(std::shared_ptr<VkSemaphore>& semaphore);
+            void _allocate_camera_view(std::shared_ptr<Buffer>& camera_view);
             void _initialize_recording();
-            void _start_render_pass();
-            void _end_render_pass();
+            void _start_render_pass_recording();
+            void _end_render_pass_recording();
         public:
             // Clear the color image to the given color. Also clear other images (depth buffer, ...)
             void clear(unsigned char R, unsigned char G, unsigned char B, unsigned char A);
-            // Binds the current state of the given camera as projection. This must be called before each 3D mesh draw, for each render pass (must be called again after a 'render').
-            void bind_camera(const Camera& camera);
+            // Set the view for the 3D rendering to the current state of the given camera
+            void set_view(const Camera& camera);
             // Record objects to draw in the command buffer. Rendering only starts once the 'render' method is called.
-            void draw(const Mesh& mesh, const Vector& mesh_position, const Quaternion& mesh_rotation);
+            void draw(const Mesh& mesh, const Vector& mesh_position, const Quaternion& mesh_rotation, const double& mesh_scaling);
             // Send the command buffers to GPU. Does nothing if the canvas is not in recording state, or already in rendering state. This command is asynchrone, and completion is garanteed only once 'wait_completion' is called.
             void render();
             // blocks on CPU side until the rendering on GPU is complete

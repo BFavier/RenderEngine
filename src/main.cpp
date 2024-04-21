@@ -17,8 +17,8 @@ int main()
         Mesh cube = Mesh::cube(gpu, 0.5);
         // Face face({{ {0.f, 0.5f, 0.f }, { -0.5, -0.5, 0. }, { 0.5, -0.5, 0. } }}, { 1.0, 0., 0., 1.0 });
         // Mesh cube(gpu, { face });
-        Referential yaw(nullptr, {0., 0., -1.}, {0.0, {0., 1., 0.}});
-        Referential pitch(&yaw,  {0., 0., 0.}, {0.0, {1., 0., 0.}});
+        Referential yaw(nullptr, {0., 0., -1.}, {0.0, {0., 1., 0.}}, 1.0);
+        Referential pitch(&yaw,  {0., 0., 0.}, {0.0, {1., 0., 0.}}, 1.0);
         Camera camera(gpu, 0.16, 0.09, 90.0, &pitch);
         while(!window.closing())
         {
@@ -70,8 +70,8 @@ int main()
             if (frame != nullptr)
             {
                 frame->clear(10, 0, 30, 255);
-                frame->bind_camera(camera);
-                frame->draw(cube, {0., 0., 0.}, {});
+                frame->set_view(camera);
+                frame->draw(cube, {0., 0., 0.}, {}, 1.0);
             }
             window.update();
         }

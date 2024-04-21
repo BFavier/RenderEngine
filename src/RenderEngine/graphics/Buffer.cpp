@@ -77,10 +77,10 @@ void Buffer::_allocate_memory(VkMemoryPropertyFlags memory_properties)
 {
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(gpu->_logical_device, *_vk_buffer, &memRequirements);
-    const std::shared_ptr<GPU>& _gpu = gpu;
+    std::shared_ptr<GPU> _gpu = gpu;
     const std::shared_ptr <VkDeviceMemory>& vk_memory = _vk_memory;
     VkDeviceMemory* memory = new VkDeviceMemory();
-    _vk_memory.reset(memory, [&_gpu, &memory](VkDeviceMemory* memory) {vkDeviceWaitIdle(_gpu->_logical_device); vkUnmapMemory(_gpu->_logical_device, *memory); vkFreeMemory(_gpu->_logical_device, *memory, nullptr);});
+    _vk_memory.reset(memory, [_gpu, &memory](VkDeviceMemory* memory) {vkDeviceWaitIdle(_gpu->_logical_device); vkUnmapMemory(_gpu->_logical_device, *memory); vkFreeMemory(_gpu->_logical_device, *memory, nullptr);});
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
