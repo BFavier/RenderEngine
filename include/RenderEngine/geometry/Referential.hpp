@@ -10,15 +10,15 @@ namespace RenderEngine
     {
     public:
         Referential();
-        Referential(Referential* parent, const Vector& position, const Quaternion orientation, double scale);
+        Referential(const Vector& position={}, const Quaternion orientation={}, double scale=1.0, Referential* parent=nullptr);
         Referential(const Referential& other);
         ~Referential();
     public:
         // Copy referential coordinates
         Referential& operator=(const Referential& other);
-        // Detach this referential from any parent
+        // Detach this referential from any parent. Has no effect if the parent is already nullptr.
         void detach();
-        // Attach this referential to given parent
+        // Attach this referential to given parent. This methods starts by calling the 'detach' method.
         void attach(Referential& parent);
         // Converts this referential's coordinates/orientation/scale to absolute coordinates
         std::tuple<Vector, Quaternion, double> absolute_coordinates() const;

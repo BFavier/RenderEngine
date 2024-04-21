@@ -406,7 +406,7 @@ void Window::_keyboard_button_callback(GLFWwindow* window, int key, int scancode
     Window* h = static_cast<Window*>(glfwGetWindowUserPointer(window));
     std::string name = h->keyboard._get_key_name(key, scancode);
     Button button;
-    if (action == GLFW_PRESS)
+    if (action == GLFW_PRESS || action == GLFW_REPEAT)
     {
         button.down = true;
         button.was_pressed = true;
@@ -415,6 +415,10 @@ void Window::_keyboard_button_callback(GLFWwindow* window, int key, int scancode
     {
         button.down = false;
         button.was_released = true;
+    }
+    else
+    {
+        THROW_ERROR("Unexpected action code " + std::to_string(action));
     }
     h->keyboard._set_key(name, button);
 }

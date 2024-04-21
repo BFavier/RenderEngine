@@ -5,12 +5,7 @@ Referential::Referential()
 {
 }
 
-Referential::Referential(const Referential& other)
-{
-    *this = other;
-}
-
-Referential::Referential(Referential* _parent, const Vector& _position, const Quaternion _orientation, double _scale)
+Referential::Referential(const Vector& _position, const Quaternion _orientation, double _scale, Referential* _parent)
 {
     parent = _parent;
     if (_parent != nullptr)
@@ -20,6 +15,11 @@ Referential::Referential(Referential* _parent, const Vector& _position, const Qu
     position = _position;
     orientation = _orientation;
     scale = _scale;
+}
+
+Referential::Referential(const Referential& other)
+{
+    *this = other;
 }
 
 Referential::~Referential()
@@ -56,8 +56,8 @@ void Referential::detach()
     if (parent != nullptr)
     {
         parent->childrens.remove(this);
+        parent = nullptr;
     }
-    parent = nullptr;
 }
 
 void Referential::attach(Referential& _parent)

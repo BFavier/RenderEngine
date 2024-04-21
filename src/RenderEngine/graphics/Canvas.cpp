@@ -255,7 +255,7 @@ void Canvas::set_view(const Camera& camera)
     params.world_to_camera = Matrix(std::get<1>(camera_coordinates)).to_mat3();
     params.camera_scale = static_cast<float>(std::get<2>(camera_coordinates));
     params.focal_length = camera.focal_length();
-    params.camera_aperture_size = {camera.aperture_width, camera.aperture_height};
+    params.camera_aperture_size = {static_cast<float>(camera.aperture_width), static_cast<float>(camera.aperture_height)};
     _camera_view->upload(&params);
     // Push camera view to device
     VkDescriptorBufferInfo camera_parameters = {*(_camera_view->_vk_buffer), 0, VK_WHOLE_SIZE};

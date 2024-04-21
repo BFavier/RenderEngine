@@ -17,9 +17,8 @@ int main()
         Mesh cube = Mesh::cube(gpu, 0.5);
         // Face face({{ {0.f, 0.5f, 0.f }, { -0.5, -0.5, 0. }, { 0.5, -0.5, 0. } }}, { 1.0, 0., 0., 1.0 });
         // Mesh cube(gpu, { face });
-        Referential yaw(nullptr, {0., 0., -1.}, {0.0, {0., 1., 0.}}, 1.0);
-        Referential pitch(&yaw,  {0., 0., 0.}, {0.0, {1., 0., 0.}}, 1.0);
-        Camera camera(gpu, 0.16, 0.09, 90.0, &pitch);
+        Referential yaw(Vector(0., 0., -1.), Quaternion(), 1.0);  // yaw only rotates around the global Y axis
+        Camera camera(90.0, Vector(), Quaternion(), 1.0, &yaw); // the camera only pitches around yaw's X axis
         while(!window.closing())
         {
             double dt = timer.dt();
@@ -64,11 +63,12 @@ int main()
             if (mouse.buttons().at("LEFT CLICK").down)
             {
                 yaw.orientation = yaw.orientation * Quaternion(mouse.dx_rel()*180, { 0.0, 1.0, 0.0 });
-                pitch.orientation = pitch.orientation * Quaternion(mouse.dy_rel()*180, { -1.0, 0.0, 0.0 });
+                camera.orientation = camera.orientation * Quaternion(mouse.dy_rel()*180, { -1.0, 0.0, 0.0 });
             }
             Canvas* frame = window.next_frame();
             if (frame != nullptr)
             {
+                std::tie(camera.aperture_width, camera.aperture_height) = std::make_tuple(frame->color.width() * 0.001, frame->color.height() * 0.001);
                 frame->clear(10, 0, 30, 255);
                 frame->set_view(camera);
                 frame->draw(cube, {0., 0., 0.}, {}, 1.0);
