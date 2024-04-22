@@ -35,7 +35,7 @@ void main()
     // camera coords to screen coords
     vec2 xy_coords = vec2(position) * cp.focal_length / (cp.focal_length + abs(position.z)) * 2/cp.camera_aperture_size;
     // outputs
-    gl_Position = vec4(xy_coords, 1 - exp(-position.z), 1.0);
+    gl_Position = vec4(xy_coords, 1 - exp(-0.001*position.z), 1.0);
     frag_color = vertex_color;
 
     //debugPrintfEXT("camera position is %f %f %f\n", cp.camera_position.x, cp.camera_position.y, cp.camera_position.z);
