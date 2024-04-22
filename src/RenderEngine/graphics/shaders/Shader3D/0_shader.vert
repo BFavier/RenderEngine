@@ -33,7 +33,7 @@ void main()
     position = cp.world_to_camera * (position - vec3(cp.camera_position)) / cp.camera_scale;
     normal = normalize(cp.world_to_camera * normal);
     // camera coords to screen coords
-    vec2 xy_coords = vec2(position) * cp.focal_length / (cp.focal_length + position.z) * 2/cp.camera_aperture_size;
+    vec2 xy_coords = vec2(position) * cp.focal_length / (cp.focal_length + abs(position.z)) * 2/cp.camera_aperture_size;
     // outputs
     gl_Position = vec4(xy_coords, 1 - exp(-position.z), 1.0);
     frag_color = vertex_color;
@@ -41,5 +41,5 @@ void main()
     //debugPrintfEXT("camera position is %f %f %f\n", cp.camera_position.x, cp.camera_position.y, cp.camera_position.z);
     //debugPrintfEXT("camera screen dimension is %f %f, focal_length is %f\n", cp.camera_aperture_size.x, cp.camera_aperture_size.y, cp.focal_length);
     //debugPrintfEXT("camera: scale=%f, aperture size (x=%f, y=%f), focal length=%f\n", cp.camera_scale, cp.camera_aperture_size.x, cp.camera_aperture_size.y, cp.focal_length);
-    //debugPrintfEXT("fragment coordinates is (x=%f, y=%f, z=%f)\n", gl_Position.x, gl_Position.y, gl_Position.z);
+    //debugPrintfEXT("fragment coordinates is (x=%f, y=%f, z=%f) screen coordinates are (x=%f, y=%f, z=%f)\n", position.x, position.y, position.z, gl_Position.x, gl_Position.y, gl_Position.z);
 }
