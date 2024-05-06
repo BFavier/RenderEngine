@@ -1,9 +1,9 @@
 #pragma once
-#include <RenderEngine/graphics/shaders/Shader.hpp>
+#include <RenderEngine/graphics/shaders/ComputeShader.hpp>
 
 namespace RenderEngine
 {
-    class ShadowMapping : public Shader
+    class ShadowMapping : public ComputeShader
     {
     public:
         ShadowMapping() = delete;

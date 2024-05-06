@@ -242,7 +242,7 @@ void Shader::_create_pipelines(const std::vector<std::vector<std::pair<std::stri
         // Creating modules
         for (const std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>& pair : stages_bytecode[i])
         {
-            _modules[i].push_back(std::make_pair(pair.first, _code_to_module(pair.second)));
+            _modules[i].push_back(std::make_pair(pair.first, code_to_module(*gpu, pair.second)));
         }
         // Staging shader modules
         std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
@@ -370,14 +370,14 @@ void Shader::_create_pipelines(const std::vector<std::vector<std::pair<std::stri
 }
 
 
-VkShaderModule Shader::_code_to_module(const std::vector<unsigned char>& code)
+VkShaderModule Shader::code_to_module(const GPU& gpu, const std::vector<uint8_t>& code)
 {
     VkShaderModule shader_module;
     VkShaderModuleCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     info.codeSize = code.size();
     info.pCode = reinterpret_cast<const uint32_t*>(code.data());
-    if (vkCreateShaderModule(gpu->_logical_device, &info, nullptr, &shader_module) != VK_SUCCESS)
+    if (vkCreateShaderModule(gpu._logical_device, &info, nullptr, &shader_module) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create shader module");
     }

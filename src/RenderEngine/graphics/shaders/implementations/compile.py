@@ -20,7 +20,7 @@ BUFFER_TYPE = "VK_DESCRIPTOR_TYPE_STORAGE_BUFFER"
 LAYOUT_REGEX = re.compile(r"layout *\((?:(push_constant)|(?:input_attachment_index *= *(\d+))|(?:set *= *(\d+))|(?:binding *= *(\d+))|(?:offset *= *(\d+))|(?:location *= *(\d+))|(?:std\d+)|(?:, *))+\) +(in|out|uniform|buffer) +(?:(readonly |writeonly ))?(\w+)(?:\s*{[^}]+})? +(\w+)?(?:\[(\d+)\])?;")
 
 
-CONSTRUCTOR_SRC = """#include <RenderEngine/graphics/shaders/implementations/{shader_name}.hpp>
+SHADER_SRC = """#include <RenderEngine/graphics/shaders/implementations/{shader_name}.hpp>
 #include <RenderEngine/graphics/ImageFormat.hpp>
 #include <RenderEngine/graphics/shaders/Vertex.hpp>
 #include <RenderEngine/graphics/shaders/Types.hpp>
@@ -45,12 +45,50 @@ using namespace RenderEngine;
 }}
 """
 
-CLASS_HEADER = """#pragma once
+SHADER_HEADER = """#pragma once
 #include <RenderEngine/graphics/shaders/Shader.hpp>
 
 namespace RenderEngine
 {{
     class {shader_name} : public Shader
+    {{
+    public:
+        {shader_name}() = delete;
+        {shader_name}(const {shader_name}& other) = delete;
+        {shader_name}(const GPU* gpu);
+        ~{shader_name}();
+    }};
+}}
+"""
+
+
+COMPUTE_SHADER_SRC = """#include <RenderEngine/graphics/shaders/implementations/{shader_name}.hpp>
+#include <RenderEngine/graphics/ImageFormat.hpp>
+#include <RenderEngine/graphics/shaders/Vertex.hpp>
+#include <RenderEngine/graphics/shaders/Types.hpp>
+using namespace RenderEngine;
+
+
+{shader_name}::{shader_name}(const GPU* gpu) : ComputeShader(gpu,
+    {descriptor_sets}, 
+    {push_constants},
+    {bytecode})
+{{
+}}
+
+
+{shader_name}::~{shader_name}()
+{{
+}}
+"""
+
+
+COMPUTE_SHADER_HEADER = """#pragma once
+#include <RenderEngine/graphics/shaders/ComputeShader.hpp>
+
+namespace RenderEngine
+{{
+    class {shader_name} : public ComputeShader
     {{
     public:
         {shader_name}() = delete;
@@ -116,7 +154,7 @@ def _get_subpasses_layout(subpasses: dict) -> list[dict]:
             matches = LAYOUT_REGEX.findall(src)
             for (push_constant, input_index, _set, binding, offset, location, storage, memory_access, _type, name, count) in matches:
                 if push_constant != "":
-                    push_constants.append({"type": _type, "stage": stage, "offset": offset or "0"})
+                    push_constants.append({"type": _type, "stage": stage, "offset": offset or "0", "name": name})
                 elif binding != "" and storage in ("uniform", "buffer"):
                     default_type = "VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER" if storage == "uniform" else "VK_DESCRIPTOR_TYPE_STORAGE_BUFFER"
                     descriptors.append({"set": _set or "0", "binding": binding, "name": name or _type, "count": count or "1", "stage": stage,
@@ -139,7 +177,7 @@ def _nested(nested: Iterable) -> str:
     Example
     -------
     >>> _nested([('A', 'B'), [3, 4, 5, 6]])
-    "{{'A', 'B'}, {3, 4, 5, 6}}"
+    "{{\"A\", \"B\"}, {3, 4, 5, 6}}"
     """
     if isinstance(nested, str) and not nested.isdigit():
         return f"\"{nested}\""
@@ -149,14 +187,12 @@ def _nested(nested: Iterable) -> str:
         return f"{nested}"
     else:
         return "{" + ", ".join(_nested(x) for x in nested) + "}"
+    
 
-
-def constructor(shader_path: pathlib.Path):
+def save_shader(shader_path: pathlib.Path, subpasses: list, layouts: list):
     """
-    generate C++ constructor source code for the given shader
+    generate the C++ code for a renderpass shader
     """
-    subpasses = _get_subpasses_code(shader_path)
-    layouts = _get_subpasses_layout(subpasses)
     # order unique attachments :
     # input attachment are identified by a name and an index, so we have to make sure they at at the correct index in the list of unique attachments
     all_input_attachments = {att["name"]: int(att["input_index"]) for subpass in layouts for att in subpass["input_attachments"]}
@@ -190,7 +226,7 @@ def constructor(shader_path: pathlib.Path):
     # shader stage bytecodes
     stages_bytecode = _nested([(STAGES[k].encode(), list(v["bytes"])) for k, v in subpass.items()] for subpass_name, subpass in subpasses.items())
     # assembling and writing
-    code = CONSTRUCTOR_SRC.format(shader_name=shader_path.name,
+    code = SHADER_SRC.format(shader_name=shader_path.name,
                                   vertex_buffer_bindings=vertex_buffer_bindings,
                                   vertex_buffer_attributes=vertex_buffer_attributes,
                                   attachments=attachments,
@@ -202,10 +238,42 @@ def constructor(shader_path: pathlib.Path):
     with open(shader_path.with_suffix(".cpp"), "w", encoding="utf-8") as f:
         f.write(code)
     header_path = pathlib.Path(shader_path.as_posix().replace("/src/", "/include/")).with_suffix(".hpp")
-    header = CLASS_HEADER.format(shader_name=shader_path.name)
+    header = SHADER_HEADER.format(shader_name=shader_path.name)
     if not header_path.is_file() or True:
         with open(header_path, "w", encoding="utf-8") as f:
             f.write(header)
+
+
+def save_compute_shader(shader_path: pathlib.Path, code: dict, layout: dict):
+    """
+    generates the c++ code for a compute shader
+    """
+    descriptor_sets = sorted({desc["set"] for desc in layout["descriptors"]})
+    descriptors = _nested([[(desc["name"], (desc["binding"], desc["type"].encode(), desc["count"], desc["stage"].encode())) for desc in layout["descriptors"] if desc["set"] == dset] for dset in descriptor_sets])
+    push_constants = _nested((pc["name"], (pc["stage"].encode(), pc["offset"], f"sizeof({pc['type']})".encode())) for pc in layout["push_constants"])
+    bytecode = _nested([b for b in list(code["bytes"])])
+    code = COMPUTE_SHADER_SRC.format(shader_name=shader_path.name,
+                                     descriptor_sets=descriptors,
+                                     push_constants=push_constants,
+                                     bytecode=bytecode)
+    with open(shader_path.with_suffix(".cpp"), "w", encoding="utf-8") as f:
+        f.write(code)
+    header_path = pathlib.Path(shader_path.as_posix().replace("/src/", "/include/")).with_suffix(".hpp")
+    header = COMPUTE_SHADER_HEADER.format(shader_name=shader_path.name)
+    if not header_path.is_file() or True:
+        with open(header_path, "w", encoding="utf-8") as f:
+            f.write(header)
+
+def constructor(shader_path: pathlib.Path):
+    """
+    generate C++ constructor source code for the given shader
+    """
+    subpasses = _get_subpasses_code(shader_path)
+    layouts = _get_subpasses_layout(subpasses)
+    if len(subpasses) == 1 and ".comp" in next(iter(subpasses.values())).keys():
+        save_compute_shader(shader_path, next(iter(subpasses.values()))[".comp"], layouts[0])
+    else:
+        save_shader(shader_path, subpasses, layouts)
 
 
 def all_constructors():

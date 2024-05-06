@@ -1,3 +1,4 @@
+#include <RenderEngine/graphics/shaders/Shader.hpp>
 #include <RenderEngine/graphics/shaders/ComputeShader.hpp>
 #include <RenderEngine/graphics/GPU.hpp>
 using namespace RenderEngine;
@@ -5,9 +6,11 @@ using namespace RenderEngine;
 ComputeShader::ComputeShader(const GPU* gpu,
                const std::vector<std::map<std::string, VkDescriptorSetLayoutBinding>>& descriptor_sets, // for each layout set, descriptor of all bindings (textures, Uniform Buffer Objects, ...)
                const std::map<std::string, VkPushConstantRange>& push_constants, // definition of all push constants.
-               const std::pair<VkShaderStageFlagBits, std::vector<uint8_t>> stages_bytecode // the bytecode of the compiled spirv file
+               const std::vector<uint8_t> bytecode // the bytecode of the compiled spirv file
                )
 {
+    // create descriptor set layouts
+    std::vector<VkDescriptorSetLayout> descriptor_set_layouts;
     for (const std::map<std::string, VkDescriptorSetLayoutBinding>& descriptor_set : descriptor_sets)
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings;
@@ -24,28 +27,37 @@ ComputeShader::ComputeShader(const GPU* gpu,
         {
             THROW_ERROR("failed to create compute descriptor set layout!");
         }
-        _descriptor_set_layouts.push_back(descriptor_set_layout);
+        descriptor_set_layouts.push_back(descriptor_set_layout);
     }
+    // create push constant ranges
+    std::vector<VkPushConstantRange> push_constant_ranges;
     for (const std::pair<std::string, VkPushConstantRange>& descriptor_set : push_constants)
     {
-        _push_constants.push_back();
+        _push_constants[descriptor_set.first] = descriptor_set.second;
+        push_constant_ranges.push_back(descriptor_set.second);
     }
     // pipeline layout creation
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = _descriptor_set_layouts.size();
-    pipelineLayoutInfo.pSetLayouts = _descriptor_set_layouts.data();
-    pipelineLayoutInfo.pushConstantRangeCount = _push_constants.size();
-    pipelineLayoutInfo.pPushConstantRanges = _push_constants.data();
+    pipelineLayoutInfo.setLayoutCount = descriptor_set_layouts.size();
+    pipelineLayoutInfo.pSetLayouts = descriptor_set_layouts.data();
+    pipelineLayoutInfo.pushConstantRangeCount = push_constant_ranges.size();
+    pipelineLayoutInfo.pPushConstantRanges = push_constant_ranges.data();
     if (vkCreatePipelineLayout(gpu->_logical_device, &pipelineLayoutInfo, nullptr, &_pipeline_layout) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create compute pipeline layout!");
     }
+    // compute stage creation
+    VkPipelineShaderStageCreateInfo computeShaderStageInfo{};
+    computeShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    computeShaderStageInfo.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+    computeShaderStageInfo.module = Shader::code_to_module(*gpu, bytecode);
+    computeShaderStageInfo.pName = "main";
     // pipeline creation
     VkComputePipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     pipelineInfo.layout = _pipeline_layout;
-    pipelineInfo.stage = 0;
+    pipelineInfo.stage = computeShaderStageInfo;
     if (vkCreateComputePipelines(gpu->_logical_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &_pipeline) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create compute pipeline!");

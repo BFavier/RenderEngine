@@ -53,6 +53,7 @@ namespace RenderEngine
                                const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& descriptors_sets,
                                const std::vector<std::vector<std::pair<std::string, VkPushConstantRange>>>& push_constants,
                                const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode);
-        VkShaderModule _code_to_module(const std::vector<unsigned char>& code);
+    public:
+        static VkShaderModule code_to_module(const GPU& gpu, const std::vector<uint8_t>& code);
     };
 }
