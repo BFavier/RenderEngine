@@ -26,13 +26,13 @@ namespace RenderEngine
         Image() = delete;
         // Load an image from file
         Image(const std::shared_ptr<GPU>& gpu, const std::string& file_path,
-              std::optional<ImageFormat> format = {}, Image::AntiAliasing sample_count = Image::AntiAliasing::X1, bool texture_compatible = false, VkMemoryPropertyFlags memory_type = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+              std::optional<ImageFormat> format = {}, Image::AntiAliasing sample_count = Image::AntiAliasing::X1, bool texture_compatible = false, bool storage_compatible = false, VkMemoryPropertyFlags memory_type = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         // create an image from dimensions and format
         Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, ImageFormat format,
-              Image::AntiAliasing sample_count = Image::AntiAliasing::X1, bool texture_compatible = false, VkMemoryPropertyFlags memory_type = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+              Image::AntiAliasing sample_count = Image::AntiAliasing::X1, bool texture_compatible = false, bool storage_compatible = false, VkMemoryPropertyFlags memory_type = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
         // Create an image view from an existing image
         Image(const std::shared_ptr<GPU>& gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height, ImageFormat format,
-              Image::AntiAliasing sample_count = Image::AntiAliasing::X1, bool texture_compatible = false);
+              Image::AntiAliasing sample_count = Image::AntiAliasing::X1, bool texture_compatible = false, bool storage_compatible = false);
         // Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, ImageFormat format, const std::vector<unsigned char>& data);
         ~Image();
     public:
@@ -50,8 +50,8 @@ namespace RenderEngine
         bool _texture_compatible;
         uint32_t _mip_levels;
     protected:
-        void _set_attributes(uint32_t width, uint32_t height, ImageFormat format, Image::AntiAliasing sample_count, bool texture_compatible);
-        void _allocate_vk_image(uint32_t width, uint32_t height, ImageFormat format, Image::AntiAliasing sample_count, bool texture_compatible, VkMemoryPropertyFlags memory_type);
+        void _set_attributes(uint32_t width, uint32_t height, ImageFormat format, Image::AntiAliasing sample_count, bool texture_compatible, bool storage_compatible);
+        void _allocate_vk_image(uint32_t width, uint32_t height, ImageFormat format, Image::AntiAliasing sample_count, bool texture_compatible, bool storage_compatible, VkMemoryPropertyFlags memory_type);
         void _allocate_vk_image_view();
         uint32_t _find_memory_type_index(uint32_t memory_type_bits, VkMemoryPropertyFlags _memory_type) const;
         void _transition_to_layout(VkImageLayout new_layout, VkCommandBuffer command_buffer);

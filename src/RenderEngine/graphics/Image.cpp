@@ -4,7 +4,7 @@
 using namespace RenderEngine;
 
 Image::Image(const std::shared_ptr<GPU>& _gpu, const std::string& file_path, std::optional<ImageFormat> format,
-             Image::AntiAliasing sample_count, bool texture_compatible, VkMemoryPropertyFlags memory_type) : gpu(_gpu)
+             Image::AntiAliasing sample_count, bool texture_compatible, bool storage_compatible, VkMemoryPropertyFlags memory_type) : gpu(_gpu)
 {
     int i_width, i_height, n_channels, n_required_channels;
     if (format.has_value())
@@ -48,21 +48,21 @@ Image::Image(const std::shared_ptr<GPU>& _gpu, const std::string& file_path, std
             THROW_ERROR("Unexpected number of channels in image file")
         }
     }
-    _allocate_vk_image(i_width, i_height, format.value(), sample_count, texture_compatible, memory_type);
+    _allocate_vk_image(i_width, i_height, format.value(), sample_count, texture_compatible, storage_compatible, memory_type);
     _allocate_vk_image_view();
     // upload_data(...);
     stbi_image_free(imgData);
 }
 
-Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, ImageFormat format, AntiAliasing sample_count, bool texture_compatible, VkMemoryPropertyFlags memory_type) : gpu(_gpu)
+Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, ImageFormat format, AntiAliasing sample_count, bool texture_compatible, bool storage_compatible, VkMemoryPropertyFlags memory_type) : gpu(_gpu)
 {
-    _allocate_vk_image(width, height, format, sample_count, texture_compatible, memory_type);
+    _allocate_vk_image(width, height, format, sample_count, texture_compatible, storage_compatible, memory_type);
     _allocate_vk_image_view();
 }
 
-Image::Image(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height, ImageFormat format, AntiAliasing sample_count, bool texture_compatible) : gpu(_gpu)
+Image::Image(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height, ImageFormat format, AntiAliasing sample_count, bool texture_compatible, bool storage_compatible) : gpu(_gpu)
 {
-    _set_attributes(width, height, format, sample_count, texture_compatible);
+    _set_attributes(width, height, format, sample_count, texture_compatible, storage_compatible);
     _vk_image = vk_image;
     _allocate_vk_image_view();
 }
@@ -96,7 +96,7 @@ bool Image::is_texture_compatible() const
     return _texture_compatible;
 }
 
-void Image::_set_attributes(uint32_t width, uint32_t height, ImageFormat format, Image::AntiAliasing sample_count, bool texture_compatible)
+void Image::_set_attributes(uint32_t width, uint32_t height, ImageFormat format, Image::AntiAliasing sample_count, bool texture_compatible, bool storage_compatible)
 {
     _width = width;
     _height = height;
@@ -114,9 +114,9 @@ void Image::_set_attributes(uint32_t width, uint32_t height, ImageFormat format,
     _layout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
-void Image::_allocate_vk_image(uint32_t width, uint32_t height, ImageFormat format, Image::AntiAliasing sample_count, bool texture_compatible, VkMemoryPropertyFlags memory_type)
+void Image::_allocate_vk_image(uint32_t width, uint32_t height, ImageFormat format, Image::AntiAliasing sample_count, bool texture_compatible, bool storage_compatible, VkMemoryPropertyFlags memory_type)
 {
-    _set_attributes(width, height, format, sample_count, texture_compatible);
+    _set_attributes(width, height, format, sample_count, texture_compatible, storage_compatible);
     _vk_image.reset(new VkImage, std::bind(&Image::_deallocate_image, gpu, std::placeholders::_1));
     VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     if (_format == ImageFormat::DEPTH)
@@ -130,6 +130,10 @@ void Image::_allocate_vk_image(uint32_t width, uint32_t height, ImageFormat form
     if (texture_compatible)
     {
         usage = usage | VK_IMAGE_USAGE_SAMPLED_BIT;
+    }
+    if (storage_compatible)
+    {
+        usage = usage | VK_IMAGE_USAGE_STORAGE_BIT;
     }
     VkImageCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
