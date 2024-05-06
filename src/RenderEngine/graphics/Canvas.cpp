@@ -269,7 +269,7 @@ void Canvas::set_view(const Camera& camera)
     vkCmdPushDescriptorSet(*_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipeline_layouts[0], 0, descriptors.size(), descriptors.data());
 }
 
-void Canvas::draw(const Mesh& mesh, const Vector& mesh_position, const Quaternion& mesh_rotation, const double& mesh_scaling)
+void Canvas::draw(const Mesh& mesh, const Vector& mesh_position, const Quaternion& mesh_rotation, const double& mesh_scaling, bool cull_back_faces)
 {
     if (_rendering)
     {
@@ -282,6 +282,11 @@ void Canvas::draw(const Mesh& mesh, const Vector& mesh_position, const Quaternio
     if (!_recording_render_pass)
     {
         _start_render_pass_recording();
+    }
+    // set culling mode
+    if (gpu->dynamic_culling_supported())
+    {
+        vkCmdSetCullMode(*_command_buffer, cull_back_faces ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE);
     }
     // set mesh vertices
     std::vector<VkBuffer> vertex_buffers = {*mesh._vk_buffer};

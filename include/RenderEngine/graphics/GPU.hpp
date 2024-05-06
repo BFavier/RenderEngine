@@ -5,8 +5,8 @@
 #include <string>
 #include <optional>
 #include <RenderEngine/utilities/External.hpp>
-#include <RenderEngine/graphics/shaders/Shader3D.hpp>
-#include <RenderEngine/graphics/shaders/DemoShader.hpp>
+#include <RenderEngine/graphics/shaders/implementations/Shader3D.hpp>
+#include <RenderEngine/graphics/shaders/implementations/DemoShader.hpp>
 
 namespace RenderEngine
 {
@@ -46,6 +46,8 @@ namespace RenderEngine
         Type type() const;
         // Return the best supported depth format
         std::pair<VkImageTiling, VkFormat> depth_format() const;
+        // Return whether dynamicaly changing face culling is supported
+        bool dynamic_culling_supported() const;
     public:
         VkPhysicalDevice _physical_device = VK_NULL_HANDLE;
         VkPhysicalDeviceProperties _device_properties{};
@@ -73,5 +75,7 @@ namespace RenderEngine
         // query the queue handle of a previously created queue
         std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _query_queue_handle(const std::optional<uint32_t>& queue_family,
                                                                                         std::map<uint32_t, uint32_t>& selected_families_count) const;
+    protected:
+        bool _dynamic_culling_supported;
     };
 }

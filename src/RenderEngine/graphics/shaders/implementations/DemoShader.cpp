@@ -1,4 +1,4 @@
-#include <RenderEngine/graphics/shaders/DemoShader.hpp>
+#include <RenderEngine/graphics/shaders/implementations/DemoShader.hpp>
 #include <RenderEngine/graphics/ImageFormat.hpp>
 #include <RenderEngine/graphics/shaders/Vertex.hpp>
 #include <RenderEngine/graphics/shaders/Types.hpp>

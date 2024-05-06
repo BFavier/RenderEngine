@@ -32,7 +32,7 @@ void Internal::initialize(const std::vector<std::string>& validation_layers,
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "Internal";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_0;
+    appInfo.apiVersion = VK_API_VERSION_1_3;
     // verifies that requested validation layers are supported
     std::vector<std::string> available_validation_layers = get_available_validation_layers();
     std::vector<const char*> validation_layer_names;

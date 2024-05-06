@@ -256,7 +256,7 @@ void Shader::_create_pipelines(const std::vector<std::vector<std::pair<std::stri
             shader_stages.push_back(stage_info);
         }
         // Setting dynamic state
-        std::vector<VkDynamicState> dynamic_states = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+        std::vector<VkDynamicState> dynamic_states = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_CULL_MODE};
         VkPipelineDynamicStateCreateInfo dynamic_state{};
         dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
         dynamic_state.dynamicStateCount = dynamic_states.size();

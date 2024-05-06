@@ -71,7 +71,7 @@ int main()
                 std::tie(camera.aperture_width, camera.aperture_height) = std::make_tuple(frame->color.width() * 0.001, frame->color.height() * 0.001);
                 frame->clear(10, 0, 30, 255);
                 frame->set_view(camera);
-                frame->draw(cube, {0., 0., 0.}, {}, 1.0);
+                frame->draw(cube, {0., 0., 0.}, {}, 1.0, false);
             }
             window.update();
         }

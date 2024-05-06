@@ -41,6 +41,7 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
     }
     // Check if swap chain extension is supported
     bool swap_chain_supported = (_enabled_extensions.find(VK_KHR_SWAPCHAIN_EXTENSION_NAME) != _enabled_extensions.end());
+    _dynamic_culling_supported = (_enabled_extensions.find(VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME) != _enabled_extensions.end());
     // Select the best matching queue families for each application
     std::map<uint32_t, uint32_t> selected_families_count; // number of purpose each queue is selected for
     std::optional<uint32_t> graphics_family = _select_queue_family(queue_families, VK_QUEUE_GRAPHICS_BIT, selected_families_count);
@@ -64,7 +65,9 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
         info.pQueuePriorities = priorities.back().data();
         selected_families.push_back(info);
     }
-
+    VkPhysicalDeviceExtendedDynamicStateFeaturesEXT ext_dynamic_state {};
+    ext_dynamic_state.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT;
+    ext_dynamic_state.extendedDynamicState = true;
     VkDeviceCreateInfo device_info = {};
     device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_info.pQueueCreateInfos = selected_families.data();
@@ -74,6 +77,7 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
     device_info.enabledExtensionCount = enabled_extensions.size();
     device_info.enabledLayerCount = validation_layers.size();
     device_info.ppEnabledLayerNames = validation_layers.data();
+    device_info.pNext = _dynamic_culling_supported ? &ext_dynamic_state : nullptr;
     if (vkCreateDevice(_physical_device, &device_info, nullptr, &_logical_device) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create logical device");
@@ -259,6 +263,11 @@ std::pair<VkImageTiling, VkFormat> GPU::depth_format() const
         }
     }
     THROW_ERROR("Failed to find compatible depth format on GPU");
+}
+
+bool GPU::dynamic_culling_supported() const
+{
+    return _dynamic_culling_supported;
 }
 
 std::optional<uint32_t> GPU::_select_present_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,
