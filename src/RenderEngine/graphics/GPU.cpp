@@ -96,10 +96,12 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
     // initialize shader
     shader3d = new Shader3D(this);
     shader_draw_image = new DemoShader(this);
+    shadow_mapping = new ShadowMapping(this);
 }
 
 GPU::~GPU()
 {
+    delete shadow_mapping;
     delete shader3d;
     delete shader_draw_image;
     bool graphics_queue_is_present_queue = (_graphics_queue == _present_queue);

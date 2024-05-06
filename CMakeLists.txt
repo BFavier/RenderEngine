@@ -18,6 +18,7 @@ add_executable(${PROJECT_NAME}
     src/RenderEngine/graphics/shaders/ComputeShader.cpp
     src/RenderEngine/graphics/shaders/implementations/DemoShader.cpp
     src/RenderEngine/graphics/shaders/implementations/Shader3D.cpp
+    src/RenderEngine/graphics/shaders/implementations/ShadowMapping.cpp
     src/RenderEngine/graphics/model/Mesh.cpp
     src/RenderEngine/graphics/Camera.cpp
     src/RenderEngine/geometry/Matrix.cpp

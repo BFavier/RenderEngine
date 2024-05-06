@@ -127,7 +127,7 @@ def _get_subpasses_code(shader_path: pathlib.Path) -> dict:
             source: pathlib.Path = shader_path / (subpass+stage)
             spirv: pathlib.Path = shader_path / (subpass+stage+".spv")
             if not spirv.is_file() or (spirv.lstat().st_mtime < source.lstat().st_mtime):
-                subprocess.call([GLSLC, source, "-o", spirv])
+                sp = subprocess.run([GLSLC, source, "-o", spirv], capture_output=True)
                 print("Compiled:", spirv.relative_to(PATH))
             with open(source, "r", encoding="utf-8") as f:
                 src = f.read()

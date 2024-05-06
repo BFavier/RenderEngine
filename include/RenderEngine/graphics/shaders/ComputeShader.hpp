@@ -32,11 +32,12 @@ namespace RenderEngine
                );
         ~ComputeShader();
     public:
-        VkPipeline _pipeline;  // pipeline for each subpass
-        VkPipelineLayout _pipeline_layout; // pipeline layout for each subpass
+        VkPipeline _pipeline = VK_NULL_HANDLE;  // pipeline for each subpass
+        VkPipelineLayout _pipeline_layout = VK_NULL_HANDLE; // pipeline layout for each subpass
         std::map<std::string, VkPushConstantRange> _push_constants; // The list of (push constant name, description) pairs
     protected:
         const GPU* gpu = nullptr;
-        VkShaderModule _module; // the module
+        VkShaderModule _module = VK_NULL_HANDLE; // the module
+        std::vector<VkDescriptorSetLayout> _descriptor_set_layouts;
     };
 }
