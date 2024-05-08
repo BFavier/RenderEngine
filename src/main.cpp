@@ -72,6 +72,10 @@ int main()
                 frame->clear(10, 0, 30, 255);
                 frame->set_view(camera);
                 frame->draw(cube, {0., 0., 0.}, {}, 1.0, false);
+                // debug
+                frame->render();
+                frame->wait_completion();
+                frame->color.save_to_disk("test.png");
             }
             window.update();
         }

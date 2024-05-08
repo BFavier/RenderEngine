@@ -1,57 +1,19 @@
 #include <RenderEngine/graphics/Image.hpp>
-#define STB_IMAGE_IMPLEMENTATION  
-#include <stb/stb_image.h>
+#include <RenderEngine/utilities/Macro.hpp>
+#include <RenderEngine/utilities/External.hpp>
+#include <RenderEngine/utilities/Functions.hpp>
 using namespace RenderEngine;
 
-Image::Image(const std::shared_ptr<GPU>& _gpu, const std::string& file_path, std::optional<ImageFormat> format,
+Image::Image(const std::shared_ptr<GPU>& _gpu, const std::string& file_path, std::optional<ImageFormat> requested_format,
              Image::AntiAliasing sample_count, bool texture_compatible, bool storage_compatible, VkMemoryPropertyFlags memory_type) : gpu(_gpu)
 {
-    int i_width, i_height, n_channels, n_required_channels;
-    if (format.has_value())
-    {
-        switch (format.value())
-        {
-            case ImageFormat::GRAY:
-                n_required_channels = 1;
-                break;
-            case ImageFormat::RGB:
-                n_required_channels = 3;
-                break;
-            case ImageFormat::RGBA:
-                n_required_channels = 4;
-                break;
-            default:
-                n_required_channels = 0;
-        }
-    }
-    else
-    {
-        n_required_channels = 0;
-    }
-    unsigned char* imgData = stbi_load(file_path.c_str(), &i_width, &i_height, &n_channels, n_required_channels);
-    if (!format.has_value())
-    {
-        if (n_channels == 4)
-        {
-            format = ImageFormat::RGBA;
-        }
-        else if (n_channels == 3)
-        {
-            format = ImageFormat::RGB;
-        }
-        else if (n_channels == 1)
-        {
-            format = ImageFormat::GRAY;
-        }
-        else
-        {
-            THROW_ERROR("Unexpected number of channels in image file")
-        }
-    }
-    _allocate_vk_image(i_width, i_height, format.value(), sample_count, texture_compatible, storage_compatible, memory_type);
+    std::vector<uint8_t> pixels;
+    ImageFormat format;
+    uint32_t width, height, n_channels;
+    std::tie<std::vector<uint8_t>, uint32_t, uint32_t, ImageFormat>(pixels, width, height, format) = read_pixels_from_file(file_path, requested_format);
+    _allocate_vk_image(width, height, format, sample_count, texture_compatible, storage_compatible, memory_type);
     _allocate_vk_image_view();
     // upload_data(...);
-    stbi_image_free(imgData);
 }
 
 Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, ImageFormat format, AntiAliasing sample_count, bool texture_compatible, bool storage_compatible, VkMemoryPropertyFlags memory_type) : gpu(_gpu)
@@ -86,6 +48,16 @@ ImageFormat Image::format() const
     return _format;
 }
 
+uint32_t Image::channel_count() const
+{
+    return Image::format_channel_count(_format);
+}
+
+uint32_t Image::channel_bytes_size() const
+{
+    return Image::format_channel_bytessize(_format);
+}
+
 Image::AntiAliasing Image::sample_count() const
 {
     return _sample_count;
@@ -98,6 +70,8 @@ bool Image::is_texture_compatible() const
 
 void Image::_set_attributes(uint32_t width, uint32_t height, ImageFormat format, Image::AntiAliasing sample_count, bool texture_compatible, bool storage_compatible)
 {
+    uint8_t n_channels = Image::format_channel_count(format);
+    staging_buffer.reset(new Buffer(gpu, n_channels*width*height, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
     _width = width;
     _height = height;
     _format = format;
@@ -229,6 +203,116 @@ uint32_t Image::_find_memory_type_index(uint32_t memory_type_bits, VkMemoryPrope
     THROW_ERROR("failed to find suitable memory type!");
 }
 
+uint8_t Image::format_channel_count(const ImageFormat& format)
+{
+    if (format == ImageFormat::GRAY) {return 1;}
+    else if(format == ImageFormat::RGB) {return 3;}
+    else if (format == ImageFormat::RGBA) {return 4;}
+    else if (format == ImageFormat::POINTER) {return 1;}
+    else if (format == ImageFormat::FLOAT3) {return 3;}
+    else if (format == ImageFormat::FLOAT4) {return 4;}
+    else if (format == ImageFormat::DEPTH) {return 1;}
+    else {THROW_ERROR("Unknown format '" + std::to_string(format) + "'.");}
+}
+
+size_t Image::format_channel_bytessize(const ImageFormat& format)
+{
+    if (format == ImageFormat::GRAY) {return 1;}
+    else if(format == ImageFormat::RGB) {return 1;}
+    else if (format == ImageFormat::RGBA) {return 1;}
+    else if (format == ImageFormat::POINTER) {return sizeof(void*);}
+    else if (format == ImageFormat::FLOAT3) {return 4;}
+    else if (format == ImageFormat::FLOAT4) {return 4;}
+    else if (format == ImageFormat::DEPTH) {return 4;}
+    else {THROW_ERROR("Unknown format '" + std::to_string(format) + "'.");}
+}
+
+std::tuple<std::vector<uint8_t>, uint32_t, uint32_t, ImageFormat> Image::read_pixels_from_file(const std::string& file_path, const std::optional<ImageFormat>& read_format)
+{
+    ImageFormat format;
+    int i_width, i_height, n_channels, n_required_channels;
+    if (read_format.has_value())
+    {
+        format = read_format.value();
+        if (format != ImageFormat::GRAY && format != ImageFormat::RGB && format != ImageFormat::RGBA)
+        {
+            THROW_ERROR("Reading pixels format '" + std::to_string(format) + "' from an image file is not supported.");
+        }
+        n_required_channels = Image::format_channel_count(format);
+    }
+    else
+    {
+        n_required_channels = 0;
+    }
+    uint8_t* img_data = stbi_load(file_path.c_str(), &i_width, &i_height, &n_channels, n_required_channels);
+    if (!read_format.has_value())
+    {
+        std::string upper_file_path = Utilities::to_upper(file_path);
+        if (Utilities::ends_with(upper_file_path, ".HDR") && n_channels == 3) {format = ImageFormat::FLOAT3;}
+        else if (Utilities::ends_with(upper_file_path, ".HDR") && n_channels == 4) {format = ImageFormat::FLOAT4;}
+        else if (n_channels == 4) {format = ImageFormat::RGBA;}
+        else if (n_channels == 3) {format = ImageFormat::RGB;}
+        else if (n_channels == 1) {format = ImageFormat::GRAY;}
+        else {THROW_ERROR("Unexpected number of channels in image file");}
+    }
+    else
+    {
+        format = read_format.value();
+    }
+    uint32_t bytes_size = Image::format_channel_bytessize(format);
+    // creating the vector of data
+    std::vector<uint8_t> pixels(i_height*i_width*n_channels*bytes_size);
+    for (uint32_t i=0;i<i_height;i++)
+    {
+        for (uint32_t j=0;j<i_width;j++)
+        {
+            for (uint32_t k=0;k<n_channels;k++)
+            {
+                for (uint32_t l=0;l<bytes_size;l++)
+                {
+                    pixels.push_back(img_data[pixels.size()]);
+                }
+            }
+        }
+    }
+    stbi_image_free(img_data);
+    return std::make_tuple(pixels, static_cast<uint32_t>(i_width), static_cast<uint32_t>(i_height), format);
+}
+
+void Image::save_pixels_to_file(const std::string& file_path, const std::vector<uint32_t>& pixels, uint32_t& width, uint32_t& height, ImageFormat format)
+{
+    std::string upper_file_path = Utilities::to_upper(file_path);
+    int result;
+    unsigned int channels = Image::format_channel_count(format);
+    if (Utilities::ends_with(upper_file_path, ".PNG"))
+    {
+        result = stbi_write_png(file_path.c_str(), width, height, channels, pixels.data(), width * channels);
+    }
+    else if (Utilities::ends_with(upper_file_path, ".JPG") || Utilities::ends_with(upper_file_path, ".JPEG"))
+    {
+        result = stbi_write_jpg(file_path.c_str(), width, height, channels, pixels.data(), 100);
+    }
+    else if (Utilities::ends_with(upper_file_path, ".BMP"))
+    {
+        result = stbi_write_bmp(file_path.c_str(), width, height, channels, pixels.data());
+    }
+    else if (Utilities::ends_with(upper_file_path, ".TGA"))
+    {
+        result = stbi_write_tga(file_path.c_str(), width, height, channels, pixels.data());
+    }
+    else if (Utilities::ends_with(upper_file_path, ".HDR"))
+    {
+        result = stbi_write_hdr(file_path.c_str(), width, height, channels, reinterpret_cast<const float*>(pixels.data()));
+    }
+    else
+    {
+        THROW_ERROR("Unsupported image file extension");
+    }
+    if (result == 0)
+    {
+        THROW_ERROR("Failed to write image.");
+    }
+}
 
 void Image::_deallocate_image(const std::shared_ptr<GPU>& gpu, VkImage* vk_image)
 {
@@ -277,7 +361,7 @@ void Image::_transition_to_layout(VkImageLayout new_layout, VkCommandBuffer comm
     VkPipelineStageFlags source_stage;
     VkPipelineStageFlags destination_stage;
     _fill_layout_attributes(_layout, barrier.srcQueueFamilyIndex, barrier.srcAccessMask, source_stage);
-    _fill_layout_attributes(_layout, barrier.dstQueueFamilyIndex, barrier.dstAccessMask, destination_stage);
+    _fill_layout_attributes(new_layout, barrier.dstQueueFamilyIndex, barrier.dstAccessMask, destination_stage);
     vkCmdPipelineBarrier(
         command_buffer,
         source_stage, destination_stage,
@@ -326,7 +410,6 @@ void Image::_fill_layout_attributes(VkImageLayout layout, uint32_t& queue_family
     }
 }
 
-
 VkImageAspectFlags Image::_get_aspect_mask() const
 {
     VkImageAspectFlags aspect_mask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -345,26 +428,88 @@ VkImageAspectFlags Image::_get_aspect_mask() const
     return aspect_mask;
 }
 
-// void Image::upload_data(unsigned char* data)
-// {
-//     VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+VkCommandBuffer Image::_begin_single_time_commands()
+{
+    if (!_current_queue.has_value())
+    {
+        _current_queue = gpu->_graphics_queue.value();
+    }
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = std::get<2>(_current_queue.value());
+    allocInfo.commandBufferCount = 1;
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(gpu->_logical_device, &allocInfo, &commandBuffer);
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+    return commandBuffer;
+}
 
-//     VkBufferImageCopy region{};
-//     region.bufferOffset = 0;
-//     region.bufferRowLength = 0;
-//     region.bufferImageHeight = 0;
-//     region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-//     region.imageSubresource.mipLevel = 0;
-//     region.imageSubresource.baseArrayLayer = 0;
-//     region.imageSubresource.layerCount = 1;
-//     region.imageOffset = {0, 0, 0};
-//     region.imageExtent = {
-//         width,
-//         height,
-//         1
-//     };
+void Image::_end_single_time_commands(VkCommandBuffer commandBuffer)
+{
+    if (!_current_queue.has_value())
+    {
+        _current_queue = gpu->_graphics_queue.value();
+    }
+    vkEndCommandBuffer(commandBuffer);
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+    vkQueueSubmit(std::get<1>(_current_queue.value()), 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(std::get<1>(_current_queue.value()));
+    vkFreeCommandBuffers(gpu->_logical_device, std::get<2>(_current_queue.value()), 1, &commandBuffer);
+}
 
-//     vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+void Image::save_to_disk(const std::string& file_path)
+{
+    std::vector<uint32_t> pixels = download_data();
+    Image::save_pixels_to_file(file_path, pixels, _width, _height, _format);
+}
 
-//     endSingleTimeCommands(commandBuffer);
-// }
+void Image::upload_data(const std::vector<uint32_t>& pixels)
+{
+    if (pixels.size() != width()*height()*channel_count()*channel_bytes_size())
+    {
+        THROW_ERROR("pixel vector has not the right size.")
+    }
+    VkCommandBuffer commandBuffer = _begin_single_time_commands();
+    _transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, commandBuffer);
+    staging_buffer->upload(pixels.data());
+    VkBufferImageCopy region{};
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+    region.imageOffset = {0, 0, 0};
+    region.imageExtent = {width(), height(), 1};
+    vkCmdCopyBufferToImage(commandBuffer, *(staging_buffer->_vk_buffer), *_vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    _end_single_time_commands(commandBuffer);
+}
+
+std::vector<uint32_t> Image::download_data()
+{
+    std::vector<uint32_t> pixels(width()*height()*channel_count()*channel_bytes_size());
+    VkCommandBuffer commandBuffer = _begin_single_time_commands();
+    _transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, commandBuffer);
+    VkBufferImageCopy region{};
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+    region.imageOffset = {0, 0, 0};
+    region.imageExtent = {width(), height(), 1};
+    vkCmdCopyImageToBuffer(commandBuffer, *_vk_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, *(staging_buffer->_vk_buffer), 1, &region);
+    _end_single_time_commands(commandBuffer);
+    staging_buffer->download(pixels.data());
+    return pixels;
+}

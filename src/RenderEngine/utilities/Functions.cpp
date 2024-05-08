@@ -17,6 +17,18 @@ unsigned int Utilities::pow2(unsigned int power)
     return (1 << power);
 }
 
+bool Utilities::ends_with(const std::string& string, const std::string& suffix)
+{
+    if (string.length() >= suffix.length())
+    {
+        return (0 == string.compare(string.length() - suffix.length(), suffix.length(), suffix));
+    }
+    else
+    {
+        return false;
+    }
+}
+
 std::string Utilities::extension(const std::string& file_name)
 {
     size_t n = file_name.find_last_of(".", std::string::npos);

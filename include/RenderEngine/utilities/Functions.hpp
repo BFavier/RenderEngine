@@ -16,6 +16,7 @@ namespace RenderEngine
     public:
         static unsigned int log2(unsigned int x);
         static unsigned int pow2(unsigned int power);
+        static bool ends_with(const std::string& string, const std::string& suffix);
         ///< Returns the extension of a file path (or an empty string if there is none)
         static std::string extension(const std::string& file_name);
         ///< Returns a string in full upper case

@@ -1,5 +1,7 @@
 #pragma once
 #include <RenderEngine/utilities/External.hpp>
+#include <RenderEngine/utilities/Macro.hpp>
+#include <string>
 
 namespace RenderEngine
 {
