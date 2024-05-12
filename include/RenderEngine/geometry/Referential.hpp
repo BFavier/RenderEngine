@@ -9,7 +9,6 @@ namespace RenderEngine
     class Referential
     {
     public:
-        Referential();
         Referential(const Vector& position={}, const Quaternion orientation={}, double scale=1.0, Referential* parent=nullptr);
         Referential(const Referential& other);
         ~Referential();

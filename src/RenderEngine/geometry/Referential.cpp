@@ -1,10 +1,6 @@
 #include <RenderEngine/geometry/Referential.hpp>
 using namespace RenderEngine;
 
-Referential::Referential()
-{
-}
-
 Referential::Referential(const Vector& _position, const Quaternion _orientation, double _scale, Referential* _parent)
 {
     parent = _parent;
@@ -85,9 +81,10 @@ std::tuple<Vector, Quaternion, double> Referential::absolute_coordinates() const
 
 std::tuple<Vector, Quaternion, double> Referential::coordinates_in(const Referential& other) const
 {
-    std::tuple<Vector, Quaternion, double> this_position = absolute_coordinates();
-    std::tuple<Vector, Quaternion, double> other_position = other.absolute_coordinates();
-    return std::make_tuple(std::get<0>(this_position) - std::get<0>(other_position),
-                           std::get<1>(other_position) * std::get<1>(this_position).inverse(),
-                           std::get<2>(this_position) / std::get<2>(other_position));
+    std::tuple<Vector, Quaternion, double> this_coordinates = absolute_coordinates();
+    std::tuple<Vector, Quaternion, double> other_coordinates = other.absolute_coordinates();
+    Quaternion inverse_orientation = std::get<1>(other_coordinates).inverse();
+    return std::make_tuple(inverse_orientation * (std::get<0>(this_coordinates) - std::get<0>(other_coordinates)) / std::get<2>(other_coordinates),
+                           inverse_orientation * std::get<1>(this_coordinates),
+                           std::get<2>(this_coordinates) / std::get<2>(other_coordinates));
 }

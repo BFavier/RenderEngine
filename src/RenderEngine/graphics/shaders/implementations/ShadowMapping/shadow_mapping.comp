@@ -1,38 +1,35 @@
 #version 450
 #define LOCAL_SIZE_X 256
 
-layout (set=0, binding = 0) uniform ParameterUBO {
-    float deltaTime;
-} ubo;
-
-struct Particle {
-    vec2 position;
-    vec2 velocity;
-    vec4 color;
+struct Vertex
+{
+    vec3 position;  // x, y, z
+    vec3 normal;  // nx, ny, nz
+    vec4 color;  // r, g, b, a
 };
 
-layout(std140, set=0, binding=1) buffer readonly ParticleSSBOIn
+layout (set=0, binding=0) uniform Mesh
 {
-   Particle particlesIn[];
+    Vertex vertices[];
+} mesh;
+
+layout(std140, set=1, binding=0) buffer readonly ParticleSSBOIn
+{
+   float test[];
 } ssbo_in;
 
-layout(std140, set=0, binding=2) buffer ParticleSSBOOut
+layout(std140, set=1, binding=1) buffer ParticleSSBOOut
 {
-   Particle particlesOut[];
+   float test[];
 } ssbo_out;
 
-layout (local_size_x=LOCAL_SIZE_X, local_size_y=1, local_size_z=1) in;
+shared vec3 local_absorbtion[LOCAL_SIZE_X];
 
-shared vec3[LOCAL_SIZE_X] shade;
+layout (local_size_x=LOCAL_SIZE_X, local_size_y=1, local_size_z=1) in;
 
 void main()
 {
     uint index = gl_GlobalInvocationID.x;  
-
-    Particle particleIn = ssbo_in.particlesIn[index];
-
-    ssbo_out.particlesOut[index].position = particleIn.position + particleIn.velocity.xy * ubo.deltaTime;
-    ssbo_out.particlesOut[index].velocity = particleIn.velocity;
 
     memoryBarrierShared();
 }

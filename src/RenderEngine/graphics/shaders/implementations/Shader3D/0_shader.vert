@@ -29,9 +29,6 @@ void main()
     // mesh coords to world coords
     vec3 position = vec3(mp.mesh_position) + mp.mesh_rotation * (mp.mesh_scale * vertex_position);
     vec3 normal = mp.mesh_rotation * vertex_normal;
-    // world coords to camera coords
-    position = cp.world_to_camera * (position - vec3(cp.camera_position)) / cp.camera_scale;
-    normal = normalize(cp.world_to_camera * normal);
     // camera coords to screen coords
     vec2 xy_coords = vec2(position) * cp.focal_length / (cp.focal_length + abs(position.z)) * 2/cp.camera_aperture_size;
     // outputs

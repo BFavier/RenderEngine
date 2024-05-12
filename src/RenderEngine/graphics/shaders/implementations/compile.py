@@ -17,12 +17,11 @@ UNIFORM_TYPES = {
                 }
 FRAMEBUFFER_FORMATS = ["ERROR", "ImageFormat::GRAY", "ERROR", "ImageFormat::RGB", "ImageFormat::RGBA"]
 BUFFER_TYPE = "VK_DESCRIPTOR_TYPE_STORAGE_BUFFER"
-LAYOUT_REGEX = re.compile(r"layout *\((?:(push_constant)|(?:input_attachment_index *= *(\d+))|(?:set *= *(\d+))|(?:binding *= *(\d+))|(?:offset *= *(\d+))|(?:location *= *(\d+))|(?:std\d+)|(?:, *))+\) +(in|out|uniform|buffer) +(?:(readonly |writeonly ))?(\w+)(?:\s*{[^}]+})? +(\w+)?(?:\[(\d+)\])?;")
+LAYOUT_REGEX = re.compile(r"layout *\((?:(push_constant)|(?:input_attachment_index *= *(\d+))|(?:set *= *(\d+))|(?:binding *= *(\d+))|(?:offset *= *(\d+))|(?:location *= *(\d+))|(?:std\d+)|(?:, *))+\) +(in|out|uniform|buffer) +(?:(readonly|writeonly) )?(\w+)(?:\s*{[^}]+})? +(\w+)?(?:\[(\d*)\])?;")
 
 
 SHADER_SRC = """#include <RenderEngine/graphics/shaders/implementations/{shader_name}.hpp>
 #include <RenderEngine/graphics/ImageFormat.hpp>
-#include <RenderEngine/graphics/shaders/Vertex.hpp>
 #include <RenderEngine/graphics/shaders/Types.hpp>
 using namespace RenderEngine;
 
@@ -64,7 +63,6 @@ namespace RenderEngine
 
 COMPUTE_SHADER_SRC = """#include <RenderEngine/graphics/shaders/implementations/{shader_name}.hpp>
 #include <RenderEngine/graphics/ImageFormat.hpp>
-#include <RenderEngine/graphics/shaders/Vertex.hpp>
 #include <RenderEngine/graphics/shaders/Types.hpp>
 using namespace RenderEngine;
 
@@ -128,6 +126,8 @@ def _get_subpasses_code(shader_path: pathlib.Path) -> dict:
             spirv: pathlib.Path = shader_path / (subpass+stage+".spv")
             if not spirv.is_file() or (spirv.lstat().st_mtime < source.lstat().st_mtime):
                 sp = subprocess.run([GLSLC, source, "-o", spirv], capture_output=True)
+                if sp.stderr:
+                    raise RuntimeError(f"{spirv} compilation failed:\n{sp.stderr.decode()}")
                 print("Compiled:", spirv.relative_to(PATH))
             with open(source, "r", encoding="utf-8") as f:
                 src = f.read()

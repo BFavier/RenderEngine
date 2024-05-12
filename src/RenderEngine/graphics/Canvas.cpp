@@ -269,7 +269,7 @@ void Canvas::set_view(const Camera& camera)
     vkCmdPushDescriptorSet(*_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipeline_layouts[0], 0, descriptors.size(), descriptors.data());
 }
 
-void Canvas::draw(const Mesh& mesh, const Vector& mesh_position, const Quaternion& mesh_rotation, const double& mesh_scaling, bool cull_back_faces)
+void Canvas::draw(const Mesh& mesh, const std::tuple<Vector, Quaternion, double>& coordinates_in_camera, bool cull_back_faces)
 {
     if (_rendering)
     {
@@ -294,7 +294,7 @@ void Canvas::draw(const Mesh& mesh, const Vector& mesh_position, const Quaternio
     vkCmdBindVertexBuffers(*_command_buffer, 0, vertex_buffers.size(), vertex_buffers.data(), offsets.data());
     // set mesh scale/position/rotation
     VkPushConstantRange mesh_range = gpu->shader3d->_push_constants[0][0].second;
-    MeshParameters mesh_parameters = {mesh_position.to_vec4(), Matrix(mesh_rotation.inverse()).to_mat3(), static_cast<float>(mesh_scaling)};
+    MeshParameters mesh_parameters = {std::get<0>(coordinates_in_camera).to_vec4(), Matrix(std::get<1>(coordinates_in_camera).inverse()).to_mat3(), static_cast<float>(std::get<2>(coordinates_in_camera))};
     vkCmdPushConstants(*_command_buffer, gpu->shader3d->_pipeline_layouts[0], mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &mesh_parameters);
     // send a command to command buffer
     vkCmdDraw(*_command_buffer, mesh.bytes_size()/sizeof(Vertex), 1, 0, 0);
