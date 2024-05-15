@@ -17,10 +17,12 @@ namespace RenderEngine
         friend class Window;
         public:
             Canvas() = delete;
+            Canvas(const Canvas& other) = delete;
+            Canvas& operator=(const Canvas& other) = delete;
             Canvas(const std::shared_ptr<GPU>& gpu,  uint32_t width, uint32_t height,
-                   Image::AntiAliasing sample_count = Image::AntiAliasing::X1, bool texture_compatible = false);
+                   bool texture_compatible = false, AntiAliasing sample_count = AntiAliasing::X1);
             Canvas(const std::shared_ptr<GPU>& gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height,
-                   Image::AntiAliasing sample_count = Image::AntiAliasing::X1, bool texture_compatible = false);
+                   bool texture_compatible = false, AntiAliasing sample_count = AntiAliasing::X1);
             ~Canvas();
         public:
             std::shared_ptr<GPU> gpu = nullptr;

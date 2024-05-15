@@ -6,21 +6,26 @@
 namespace RenderEngine
 {
     class Buffer
-    // A buffer is an array of memory visible both by CPU and GPU, used to transfer data to and from GPU stored objects
+    // A buffer is an array of GPU memory that can be synchronized with CPU RAM
     {
+        friend class Canvas;
+        friend class Image;
     public:
         Buffer() = delete;
+        Buffer(const Buffer& other) = delete;
+        Buffer& operator=(const Buffer& other) = delete;
+    public:
         Buffer(const std::shared_ptr<GPU>& gpu, size_t bytes_size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory_properties);
         ~Buffer();
     public:
         const std::shared_ptr<GPU>& gpu;
-        std::shared_ptr<VkBuffer> _vk_buffer = nullptr;
-        std::shared_ptr<VkDeviceMemory> _vk_memory = nullptr;
     public:
         size_t bytes_size() const;
         void upload(const void* data) const;
         void download(void* data) const;
     protected:
+        VkBuffer* _vk_buffer = nullptr;
+        VkDeviceMemory* _vk_memory = nullptr;
         void* _data = nullptr;
         size_t _bytes_size = 0;
         VkMemoryPropertyFlags _memory_properties = 0;

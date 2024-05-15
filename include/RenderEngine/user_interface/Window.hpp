@@ -5,7 +5,7 @@
 #include <RenderEngine/user_interface/Keyboard.hpp>
 #include <RenderEngine/user_interface/Mouse.hpp>
 #include <RenderEngine/graphics/SwapChain.hpp>
-#include <RenderEngine/graphics/Image.hpp>
+#include <RenderEngine/graphics/AntiAliasing.hpp>
 
 namespace RenderEngine
 {
@@ -108,7 +108,7 @@ namespace RenderEngine
         std::string _window_title;
         bool _window_full_screen = false;
         bool _window_vsync = false;
-        Image::AntiAliasing _window_sample_count = Image::AntiAliasing::X1;
+        AntiAliasing _window_sample_count = AntiAliasing::X1;
         SwapChain* _swap_chain = nullptr;
         GLFWwindow* _glfw_window = nullptr;
         VkSurfaceKHR _vk_surface = VK_NULL_HANDLE;

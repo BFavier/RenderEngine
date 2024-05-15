@@ -137,7 +137,7 @@ SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : g
         // create the Canvas of the obtained frame
         std::shared_ptr<VkImage> vk_image(new VkImage); // Using the standard dealocator instead of Image::_deallocate_image because VkImage aquired from the swap chain should NOT be deleted using VkDestroyImage
         *vk_image = vk_images[i];
-        frames.push_back(Canvas(gpu, vk_image, extent.width, extent.height, window._window_sample_count, false));
+        frames.push_back(new Canvas(gpu, vk_image, extent.width, extent.height, false, window._window_sample_count));
         // create a semaphore
         VkSemaphore semaphore;
         VkSemaphoreCreateInfo semaphoreInfo{};
@@ -157,6 +157,10 @@ SwapChain::~SwapChain()
     {
         vkDestroySemaphore(gpu->_logical_device, frame_available_semaphores.front(), nullptr);
         frame_available_semaphores.pop();
+    }
+    for (Canvas* canvas : frames)
+    {
+        delete canvas;
     }
     frames.clear();
     vkDestroySwapchainKHR(gpu->_logical_device, _vk_swap_chain, nullptr);
@@ -198,7 +202,7 @@ Canvas* SwapChain::get_current_frame()
     {
         return nullptr;
     }
-    return &frames[_frame_index_current];
+    return frames[_frame_index_current];
 }
 
 
@@ -209,10 +213,10 @@ Canvas& SwapChain::get_next_frame()
         uint32_t i = std::numeric_limits<uint32_t>::max();
         VkSemaphore semaphore = frame_available_semaphores.front();
         vkAcquireNextImageKHR(gpu->_logical_device, _vk_swap_chain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &i);
-        frames[i]._dependencies.insert(semaphore);
+        frames[i]->_dependencies.insert(semaphore);
         frame_available_semaphores.pop();
         frame_available_semaphores.push(semaphore);
         _frame_index_next = static_cast<int>(i);
     }
-    return frames[_frame_index_next];
+    return *frames[_frame_index_next];
 }

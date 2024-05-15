@@ -24,7 +24,7 @@ namespace RenderEngine
         ~SwapChain();
     public:
         std::shared_ptr<GPU> gpu;
-        std::vector<Canvas> frames;
+        std::vector<Canvas*> frames;
         std::queue<VkSemaphore> frame_available_semaphores;
         VkSwapchainKHR _vk_swap_chain;
     public:

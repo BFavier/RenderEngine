@@ -5,26 +5,26 @@
 using namespace RenderEngine;
 
 Image::Image(const std::shared_ptr<GPU>& _gpu, const std::string& file_path, std::optional<ImageFormat> requested_format,
-             Image::AntiAliasing sample_count, bool texture_compatible, bool storage_compatible, VkMemoryPropertyFlags memory_type) : gpu(_gpu)
+             bool texture_compatible, bool storage_compatible, VkMemoryPropertyFlags memory_type, AntiAliasing sample_count) : gpu(_gpu)
 {
     std::vector<uint8_t> pixels;
     ImageFormat format;
-    uint32_t width, height, n_channels;
+    uint32_t width, height;
     std::tie<std::vector<uint8_t>, uint32_t, uint32_t, ImageFormat>(pixels, width, height, format) = read_pixels_from_file(file_path, requested_format);
-    _allocate_vk_image(width, height, format, sample_count, texture_compatible, storage_compatible, memory_type);
+    _allocate_vk_image(width, height, 1, format, texture_compatible, storage_compatible, memory_type, sample_count);
     _allocate_vk_image_view();
-    // upload_data(...);
+    upload_data(pixels);
 }
 
-Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, ImageFormat format, AntiAliasing sample_count, bool texture_compatible, bool storage_compatible, VkMemoryPropertyFlags memory_type) : gpu(_gpu)
+Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, uint32_t layers, ImageFormat format, bool texture_compatible, bool storage_compatible, VkMemoryPropertyFlags memory_type, AntiAliasing sample_count) : gpu(_gpu)
 {
-    _allocate_vk_image(width, height, format, sample_count, texture_compatible, storage_compatible, memory_type);
+    _allocate_vk_image(width, height, layers, format, texture_compatible, storage_compatible, memory_type, sample_count);
     _allocate_vk_image_view();
 }
 
-Image::Image(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height, ImageFormat format, AntiAliasing sample_count, bool texture_compatible, bool storage_compatible) : gpu(_gpu)
+Image::Image(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height, ImageFormat format, bool texture_compatible, bool storage_compatible, AntiAliasing sample_count) : gpu(_gpu)
 {
-    _set_attributes(width, height, format, sample_count, texture_compatible, storage_compatible);
+    _set_attributes(width, height, 1, format, texture_compatible, storage_compatible, sample_count);
     _vk_image = vk_image;
     _allocate_vk_image_view();
 }
@@ -48,19 +48,19 @@ ImageFormat Image::format() const
     return _format;
 }
 
+uint32_t Image::layers() const
+{
+    return _layers;
+}
+
 uint32_t Image::channel_count() const
 {
     return Image::format_channel_count(_format);
 }
 
-uint32_t Image::channel_bytes_size() const
+size_t Image::channel_bytes_size() const
 {
     return Image::format_channel_bytessize(_format);
-}
-
-Image::AntiAliasing Image::sample_count() const
-{
-    return _sample_count;
 }
 
 bool Image::is_texture_compatible() const
@@ -68,14 +68,12 @@ bool Image::is_texture_compatible() const
     return _texture_compatible;
 }
 
-void Image::_set_attributes(uint32_t width, uint32_t height, ImageFormat format, Image::AntiAliasing sample_count, bool texture_compatible, bool storage_compatible)
+void Image::_set_attributes(uint32_t width, uint32_t height, uint32_t layers, ImageFormat format, bool texture_compatible, bool storage_compatible, AntiAliasing sample_count)
 {
-    uint8_t n_channels = Image::format_channel_count(format);
-    staging_buffer.reset(new Buffer(gpu, n_channels*width*height, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
     _width = width;
     _height = height;
+    _layers = layers;
     _format = format;
-    _sample_count = sample_count;
     _texture_compatible = texture_compatible;
     if (texture_compatible)
     {
@@ -85,12 +83,15 @@ void Image::_set_attributes(uint32_t width, uint32_t height, ImageFormat format,
     {
         _mip_levels = 1;
     }
+    _storage_compatible = storage_compatible;
+    _sample_count = sample_count;
     _layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    _current_queue = std::nullopt;
 }
 
-void Image::_allocate_vk_image(uint32_t width, uint32_t height, ImageFormat format, Image::AntiAliasing sample_count, bool texture_compatible, bool storage_compatible, VkMemoryPropertyFlags memory_type)
+void Image::_allocate_vk_image(uint32_t width, uint32_t height, uint32_t layers, ImageFormat format, bool texture_compatible, bool storage_compatible, VkMemoryPropertyFlags memory_type, AntiAliasing sample_count)
 {
-    _set_attributes(width, height, format, sample_count, texture_compatible, storage_compatible);
+    _set_attributes(width, height, layers, format, texture_compatible, storage_compatible, sample_count);
     _vk_image.reset(new VkImage, std::bind(&Image::_deallocate_image, gpu, std::placeholders::_1));
     VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     if (_format == ImageFormat::DEPTH)
@@ -116,7 +117,7 @@ void Image::_allocate_vk_image(uint32_t width, uint32_t height, ImageFormat form
     info.extent.width = _width;
     info.extent.height = _height;
     info.extent.depth = 1; // 2D images only
-    info.arrayLayers = 1; // Only one image is allocated
+    info.arrayLayers = _layers;
     info.tiling = VK_IMAGE_TILING_OPTIMAL;
     info.samples = static_cast<VkSampleCountFlagBits>(sample_count);
     info.usage = usage;
@@ -183,7 +184,7 @@ void Image::_allocate_vk_image_view()
     info.subresourceRange.baseMipLevel = 0;
     info.subresourceRange.levelCount = _mip_levels;
     info.subresourceRange.baseArrayLayer = 0;
-    info.subresourceRange.layerCount = 1;
+    info.subresourceRange.layerCount = _layers;
     if (vkCreateImageView(gpu->_logical_device, &info, nullptr, _vk_image_view.get()) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create image view");
@@ -261,7 +262,8 @@ std::tuple<std::vector<uint8_t>, uint32_t, uint32_t, ImageFormat> Image::read_pi
     }
     uint32_t bytes_size = Image::format_channel_bytessize(format);
     // creating the vector of data
-    std::vector<uint8_t> pixels(i_height*i_width*n_channels*bytes_size);
+    std::vector<uint8_t> pixels;
+    pixels.reserve(i_height * i_width * n_channels * bytes_size);
     for (uint32_t i=0;i<i_height;i++)
     {
         for (uint32_t j=0;j<i_width;j++)
@@ -279,7 +281,7 @@ std::tuple<std::vector<uint8_t>, uint32_t, uint32_t, ImageFormat> Image::read_pi
     return std::make_tuple(pixels, static_cast<uint32_t>(i_width), static_cast<uint32_t>(i_height), format);
 }
 
-void Image::save_pixels_to_file(const std::string& file_path, const std::vector<uint32_t>& pixels, uint32_t& width, uint32_t& height, ImageFormat format)
+void Image::save_pixels_to_file(const std::string& file_path, const std::vector<uint8_t>& pixels, uint32_t& width, uint32_t& height, ImageFormat format)
 {
     std::string upper_file_path = Utilities::to_upper(file_path);
     int result;
@@ -464,38 +466,52 @@ void Image::_end_single_time_commands(VkCommandBuffer commandBuffer)
     vkFreeCommandBuffers(gpu->_logical_device, std::get<2>(_current_queue.value()), 1, &commandBuffer);
 }
 
+AntiAliasing Image::sample_count() const
+{
+    return _sample_count;
+}
+
 void Image::save_to_disk(const std::string& file_path)
 {
-    std::vector<uint32_t> pixels = download_data();
+    std::vector<uint8_t> pixels = download_data();
     Image::save_pixels_to_file(file_path, pixels, _width, _height, _format);
 }
 
-void Image::upload_data(const std::vector<uint32_t>& pixels)
+void Image::upload_data(const std::vector<uint8_t>& pixels, uint32_t layer_offset)
 {
-    if (pixels.size() != width()*height()*channel_count()*channel_bytes_size())
+    size_t image_size = width()*(height()*(channel_count()*channel_bytes_size()));
+    if ((pixels.size() % image_size != 0) || (pixels.size() < image_size))
     {
         THROW_ERROR("pixel vector has not the right size.")
     }
+    uint8_t n_channels = Image::format_channel_count(_format);
+    Buffer staging_buffer(gpu, n_channels*_width*_height,
+                          VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    staging_buffer.upload(pixels.data());
     VkCommandBuffer commandBuffer = _begin_single_time_commands();
     _transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, commandBuffer);
-    staging_buffer->upload(pixels.data());
     VkBufferImageCopy region{};
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
     region.bufferImageHeight = 0;
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;// | VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
     region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
+    region.imageSubresource.baseArrayLayer = layer_offset;
+    region.imageSubresource.layerCount = pixels.size() / image_size;
     region.imageOffset = {0, 0, 0};
     region.imageExtent = {width(), height(), 1};
-    vkCmdCopyBufferToImage(commandBuffer, *(staging_buffer->_vk_buffer), *_vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyBufferToImage(commandBuffer, *staging_buffer._vk_buffer, *_vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
     _end_single_time_commands(commandBuffer);
 }
 
-std::vector<uint32_t> Image::download_data()
+std::vector<uint8_t> Image::download_data(uint32_t layer)
 {
-    std::vector<uint32_t> pixels(width()*height()*channel_count()*channel_bytes_size());
+    uint8_t n_channels = Image::format_channel_count(_format);
+    Buffer staging_buffer(gpu, n_channels*_width*_height,
+                          VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    std::vector<uint8_t> pixels(width()*height()*channel_count()*channel_bytes_size());
     VkCommandBuffer commandBuffer = _begin_single_time_commands();
     _transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, commandBuffer);
     VkBufferImageCopy region{};
@@ -508,8 +524,8 @@ std::vector<uint32_t> Image::download_data()
     region.imageSubresource.layerCount = 1;
     region.imageOffset = {0, 0, 0};
     region.imageExtent = {width(), height(), 1};
-    vkCmdCopyImageToBuffer(commandBuffer, *_vk_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, *(staging_buffer->_vk_buffer), 1, &region);
+    vkCmdCopyImageToBuffer(commandBuffer, *_vk_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, *staging_buffer._vk_buffer, 1, &region);
     _end_single_time_commands(commandBuffer);
-    staging_buffer->download(pixels.data());
+    staging_buffer.download(pixels.data());
     return pixels;
 }

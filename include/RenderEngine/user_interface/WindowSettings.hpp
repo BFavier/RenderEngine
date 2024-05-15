@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include <RenderEngine/graphics/Image.hpp>
+#include <RenderEngine/graphics/AntiAliasing.hpp>
 
 namespace RenderEngine
 {
@@ -26,7 +26,7 @@ namespace RenderEngine
         ///< If true, the vsync of the window is enabled
         bool vsync = true;
         ///< Number of samples for the Multi Sample Anti Aliasing
-        Image::AntiAliasing sample_count = Image::AntiAliasing::X1;
+        AntiAliasing sample_count = AntiAliasing::X1;
         ///< If true, the swap chain is created at window construction time, otherwise it is only initialized at next 'update' call.
         bool initialize_swapchain = true;
     };

@@ -14,7 +14,9 @@ int main()
         Mouse& mouse = window.mouse;
         Keyboard& keyboard = window.keyboard;
         Timer timer;
-        Mesh cube = Mesh::cube(gpu, 0.5);
+        Image screenshot(gpu, "screenshot.png");
+        screenshot.save_to_disk("screenshot_loaded.png");
+        Mesh cube = Mesh(gpu, Mesh::cube(1.0));
         Referential model;
         // Face face({{ {0.f, 0.5f, 0.f }, { -0.5, -0.5, 0. }, { 0.5, -0.5, 0. } }}, { 1.0, 0., 0., 1.0 });
         // Mesh cube(gpu, { face });

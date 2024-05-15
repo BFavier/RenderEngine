@@ -10,6 +10,13 @@ Buffer::Buffer(const std::shared_ptr<GPU>& _gpu, size_t bytes_size, VkBufferUsag
 
 Buffer::~Buffer()
 {
+    // delete memory
+    vkDeviceWaitIdle(gpu->_logical_device);
+    vkUnmapMemory(gpu->_logical_device, *_vk_memory);
+    vkFreeMemory(gpu->_logical_device, *_vk_memory, nullptr);
+    // delete buffer
+    vkDeviceWaitIdle(gpu->_logical_device);
+    vkDestroyBuffer(gpu->_logical_device, *_vk_buffer, nullptr);
 }
 
 size_t Buffer::bytes_size() const
@@ -61,13 +68,13 @@ uint32_t Buffer::_find_memory_type(VkPhysicalDevice physical_device, uint32_t ty
 void Buffer::_allocate_buffer(VkBufferUsageFlags usage)
 {
     const std::shared_ptr<GPU>& _gpu = gpu;
-    _vk_buffer.reset(new VkBuffer, [_gpu](VkBuffer* vk_buffer){vkDeviceWaitIdle(_gpu->_logical_device);vkDestroyBuffer(_gpu->_logical_device, *vk_buffer, nullptr);vk_buffer = nullptr;});
+    _vk_buffer = new VkBuffer();
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = _bytes_size;
     bufferInfo.usage = usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    if (vkCreateBuffer(gpu->_logical_device, &bufferInfo, nullptr, _vk_buffer.get()) != VK_SUCCESS)
+    if (vkCreateBuffer(gpu->_logical_device, &bufferInfo, nullptr, _vk_buffer) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create vertex buffer!");
     }
@@ -78,14 +85,12 @@ void Buffer::_allocate_memory(VkMemoryPropertyFlags memory_properties)
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(gpu->_logical_device, *_vk_buffer, &memRequirements);
     std::shared_ptr<GPU> _gpu = gpu;
-    const std::shared_ptr <VkDeviceMemory>& vk_memory = _vk_memory;
-    VkDeviceMemory* memory = new VkDeviceMemory();
-    _vk_memory.reset(memory, [_gpu, &memory](VkDeviceMemory* memory) {vkDeviceWaitIdle(_gpu->_logical_device); vkUnmapMemory(_gpu->_logical_device, *memory); vkFreeMemory(_gpu->_logical_device, *memory, nullptr);});
+    _vk_memory = new VkDeviceMemory();
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = _find_memory_type(gpu->_physical_device, memRequirements.memoryTypeBits, memory_properties);
-    if (vkAllocateMemory(gpu->_logical_device, &allocInfo, nullptr, _vk_memory.get()) != VK_SUCCESS)
+    if (vkAllocateMemory(gpu->_logical_device, &allocInfo, nullptr, _vk_memory) != VK_SUCCESS)
     {
         THROW_ERROR("failed to allocate buffer memory!");
     }

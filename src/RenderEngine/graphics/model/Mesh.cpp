@@ -19,9 +19,9 @@ Mesh::~Mesh()
 }
 
 
-Mesh Mesh::cube(const std::shared_ptr<GPU>& gpu, float L)
+std::vector<Face> Mesh::cube(float length)
 {
-    float l = L/2;
+    float l = length/2;
     std::vector<Face> faces = {Face({{{-l, -l, -l}, {-l, l, -l}, {l, l, -l}}}, {1., 0., 0., 1.}),
                                Face({{{-l, -l, -l}, {l, l, -l}, {l, -l, -l}}}, {1., 0., 0., 1.}),
                                Face({{{-l, -l, l}, {l, l, l}, {-l, l, l}}}, {1., 1., 0., 1.}),
@@ -36,6 +36,5 @@ Mesh Mesh::cube(const std::shared_ptr<GPU>& gpu, float L)
                                Face({{{-l, -l, -l}, {-l, l, l}, {-l, l, -l}}}, {0., 1., 1., 1.}),
                                Face({{{l, -l, -l}, {l, l, l}, {l, -l, l}}}, {0., 1., 0., 1.}),
                                Face({{{l, -l, -l}, {l, l, -l}, {l, l, l}}}, {0., 1., 0., 1.})};
-    Mesh mesh(gpu, faces);
-    return mesh;
+    return faces;
 }
