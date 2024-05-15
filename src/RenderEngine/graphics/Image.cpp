@@ -22,15 +22,27 @@ Image::Image(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, 
     _allocate_vk_image_view();
 }
 
-Image::Image(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height, ImageFormat format, bool texture_compatible, bool storage_compatible, AntiAliasing sample_count) : gpu(_gpu)
+Image::Image(const std::shared_ptr<GPU>& _gpu, const VkImage& vk_image, uint32_t width, uint32_t height, ImageFormat format, bool texture_compatible, bool storage_compatible, AntiAliasing sample_count) : gpu(_gpu)
 {
     _set_attributes(width, height, 1, format, texture_compatible, storage_compatible, sample_count);
     _vk_image = vk_image;
+    _owned_vk_image = false;
     _allocate_vk_image_view();
 }
 
 Image::~Image()
 {
+    // delete sampler
+    vkDestroySampler(gpu->_logical_device, _vk_sampler, nullptr);
+    // delete image memory
+    vkFreeMemory(gpu->_logical_device, _vk_device_memory, nullptr);
+    // delete image view
+    vkDestroyImageView(gpu->_logical_device, _vk_image_view, nullptr);
+    // delete image
+    if (_owned_vk_image)
+    {
+        vkDestroyImage(gpu->_logical_device, _vk_image, nullptr);
+    }
 }
 
 uint32_t Image::width() const
@@ -85,14 +97,14 @@ void Image::_set_attributes(uint32_t width, uint32_t height, uint32_t layers, Im
     }
     _storage_compatible = storage_compatible;
     _sample_count = sample_count;
-    _layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    _current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
     _current_queue = std::nullopt;
 }
 
 void Image::_allocate_vk_image(uint32_t width, uint32_t height, uint32_t layers, ImageFormat format, bool texture_compatible, bool storage_compatible, VkMemoryPropertyFlags memory_type, AntiAliasing sample_count)
 {
+    _owned_vk_image = true;
     _set_attributes(width, height, layers, format, texture_compatible, storage_compatible, sample_count);
-    _vk_image.reset(new VkImage, std::bind(&Image::_deallocate_image, gpu, std::placeholders::_1));
     VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     if (_format == ImageFormat::DEPTH)
     {
@@ -124,27 +136,24 @@ void Image::_allocate_vk_image(uint32_t width, uint32_t height, uint32_t layers,
     info.mipLevels = _mip_levels;
     info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     info.queueFamilyIndexCount = 0;
-    info.initialLayout = _layout;
-    if (vkCreateImage(gpu->_logical_device, &info, nullptr, _vk_image.get()) != VK_SUCCESS)
+    info.initialLayout = _current_layout;
+    if (vkCreateImage(gpu->_logical_device, &info, nullptr, &_vk_image) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create image");
     }
     // bind memory
-    std::shared_ptr<GPU>& _gpu = gpu;
-    _vk_device_memory.reset(new VkDeviceMemory, [_gpu](VkDeviceMemory* mem) {Image::_free_image_memory(_gpu, mem);});
     VkMemoryRequirements mem_requirements;
-    vkGetImageMemoryRequirements(gpu->_logical_device, *_vk_image, &mem_requirements);
+    vkGetImageMemoryRequirements(gpu->_logical_device, _vk_image, &mem_requirements);
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = mem_requirements.size;
     allocInfo.memoryTypeIndex = _find_memory_type_index(mem_requirements.memoryTypeBits, memory_type);
-    if (vkAllocateMemory(gpu->_logical_device, &allocInfo, nullptr, _vk_device_memory.get()) != VK_SUCCESS)
+    if (vkAllocateMemory(gpu->_logical_device, &allocInfo, nullptr, &_vk_device_memory) != VK_SUCCESS)
     {
         THROW_ERROR("failed to allocate image memory!");
     }
-    vkBindImageMemory(gpu->_logical_device, *_vk_image, *_vk_device_memory.get(), 0);
+    vkBindImageMemory(gpu->_logical_device, _vk_image, _vk_device_memory, 0);
     // create sampler
-    _vk_sampler.reset(new VkSampler, [_gpu](VkSampler* sampler){_deallocate_sampler(_gpu, sampler);});
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerInfo.magFilter = VK_FILTER_LINEAR;
@@ -162,7 +171,7 @@ void Image::_allocate_vk_image(uint32_t width, uint32_t height, uint32_t layers,
     samplerInfo.mipLodBias = 0.0f;
     samplerInfo.minLod = 0.0f;
     samplerInfo.maxLod = 0.0f;
-    if (vkCreateSampler(gpu->_logical_device, &samplerInfo, nullptr, _vk_sampler.get()) != VK_SUCCESS)
+    if (vkCreateSampler(gpu->_logical_device, &samplerInfo, nullptr, &_vk_sampler) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create texture sampler!");
     }
@@ -170,10 +179,9 @@ void Image::_allocate_vk_image(uint32_t width, uint32_t height, uint32_t layers,
 
 void Image::_allocate_vk_image_view()
 {
-    _vk_image_view.reset(new VkImageView, std::bind(&Image::_deallocate_image_view, gpu, std::placeholders::_1));
     VkImageViewCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    info.image = *_vk_image;
+    info.image = _vk_image;
     info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     info.format = static_cast<VkFormat>(_format == ImageFormat::DEPTH ? gpu->depth_format().second : _format);
     info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -185,7 +193,7 @@ void Image::_allocate_vk_image_view()
     info.subresourceRange.levelCount = _mip_levels;
     info.subresourceRange.baseArrayLayer = 0;
     info.subresourceRange.layerCount = _layers;
-    if (vkCreateImageView(gpu->_logical_device, &info, nullptr, _vk_image_view.get()) != VK_SUCCESS)
+    if (vkCreateImageView(gpu->_logical_device, &info, nullptr, &_vk_image_view) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create image view");
     }
@@ -316,43 +324,19 @@ void Image::save_pixels_to_file(const std::string& file_path, const std::vector<
     }
 }
 
-void Image::_deallocate_image(const std::shared_ptr<GPU>& gpu, VkImage* vk_image)
-{
-    vkDestroyImage(gpu->_logical_device, *vk_image, nullptr);
-    delete vk_image;
-}
-
-void Image::_deallocate_image_view(const std::shared_ptr<GPU>& gpu, VkImageView* vk_image_view)
-{
-    vkDestroyImageView(gpu->_logical_device, *vk_image_view, nullptr);
-    delete vk_image_view;
-}
-
-void Image::_free_image_memory(const std::shared_ptr<GPU>& gpu, VkDeviceMemory* vk_device_memory)
-{
-    vkFreeMemory(gpu->_logical_device, *vk_device_memory, nullptr);
-    *vk_device_memory = VK_NULL_HANDLE;
-}
-
-void Image::_deallocate_sampler(const std::shared_ptr<GPU>& gpu, VkSampler* vk_sampler)
-{
-    vkDestroySampler(gpu->_logical_device, *vk_sampler, nullptr);;
-    *vk_sampler = nullptr;
-}
-
 void Image::_transition_to_layout(VkImageLayout new_layout, VkCommandBuffer command_buffer)
 {
-    if (new_layout == _layout)
+    if (new_layout == _current_layout)
     {
         return;
     }
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = _layout;
+    barrier.oldLayout = _current_layout;
     barrier.newLayout = new_layout;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = *_vk_image;
+    barrier.image = _vk_image;
     barrier.subresourceRange.aspectMask = _get_aspect_mask();
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = _mip_levels;
@@ -362,7 +346,7 @@ void Image::_transition_to_layout(VkImageLayout new_layout, VkCommandBuffer comm
     barrier.dstAccessMask = 0;  // will be modified later in the function
     VkPipelineStageFlags source_stage;
     VkPipelineStageFlags destination_stage;
-    _fill_layout_attributes(_layout, barrier.srcQueueFamilyIndex, barrier.srcAccessMask, source_stage);
+    _fill_layout_attributes(_current_layout, barrier.srcQueueFamilyIndex, barrier.srcAccessMask, source_stage);
     _fill_layout_attributes(new_layout, barrier.dstQueueFamilyIndex, barrier.dstAccessMask, destination_stage);
     vkCmdPipelineBarrier(
         command_buffer,
@@ -501,7 +485,7 @@ void Image::upload_data(const std::vector<uint8_t>& pixels, uint32_t layer_offse
     region.imageSubresource.layerCount = pixels.size() / image_size;
     region.imageOffset = {0, 0, 0};
     region.imageExtent = {width(), height(), 1};
-    vkCmdCopyBufferToImage(commandBuffer, *staging_buffer._vk_buffer, *_vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyBufferToImage(commandBuffer, staging_buffer._vk_buffer, _vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
     _end_single_time_commands(commandBuffer);
 }
 
@@ -524,7 +508,7 @@ std::vector<uint8_t> Image::download_data(uint32_t layer)
     region.imageSubresource.layerCount = 1;
     region.imageOffset = {0, 0, 0};
     region.imageExtent = {width(), height(), 1};
-    vkCmdCopyImageToBuffer(commandBuffer, *_vk_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, *staging_buffer._vk_buffer, 1, &region);
+    vkCmdCopyImageToBuffer(commandBuffer, _vk_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, staging_buffer._vk_buffer, 1, &region);
     _end_single_time_commands(commandBuffer);
     staging_buffer.download(pixels.data());
     return pixels;

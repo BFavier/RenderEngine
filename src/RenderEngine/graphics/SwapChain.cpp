@@ -135,9 +135,7 @@ SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : g
     for (int i=0; i<image_count; i++)
     {
         // create the Canvas of the obtained frame
-        std::shared_ptr<VkImage> vk_image(new VkImage); // Using the standard dealocator instead of Image::_deallocate_image because VkImage aquired from the swap chain should NOT be deleted using VkDestroyImage
-        *vk_image = vk_images[i];
-        frames.push_back(new Canvas(gpu, vk_image, extent.width, extent.height, false, window._window_sample_count));
+        frames.push_back(new Canvas(gpu, vk_images[i], extent.width, extent.height, false, window._window_sample_count));
         // create a semaphore
         VkSemaphore semaphore;
         VkSemaphoreCreateInfo semaphoreInfo{};
@@ -184,7 +182,7 @@ void SwapChain::present_next_frame()
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = next_frame.is_rendering() ? 1 : 0;
-    presentInfo.pWaitSemaphores = next_frame.is_rendering() ? next_frame._rendered_semaphore.get() : nullptr;
+    presentInfo.pWaitSemaphores = next_frame.is_rendering() ? &next_frame._rendered_semaphore : nullptr;
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &_vk_swap_chain;
     presentInfo.pImageIndices = &i;

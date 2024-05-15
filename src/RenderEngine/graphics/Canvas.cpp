@@ -11,22 +11,22 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height
     depth_buffer(_gpu, width, height, 1, ImageFormat::DEPTH, false, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, AntiAliasing::X1)
 {
     _allocate_frame_buffer();
-    _allocate_command_buffer(_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
-    _allocate_fence(_rendered_fence);
+    _allocate_command_buffer(_vk_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
+    _allocate_fence(_vk_fence);
     _allocate_semaphore(_rendered_semaphore);
     _allocate_camera_view(_camera_view);
 }
 
 
-Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height, bool texture_compatible, AntiAliasing sample_count) :
+Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const VkImage& vk_image, uint32_t width, uint32_t height, bool texture_compatible, AntiAliasing sample_count) :
     gpu(_gpu),
     color(_gpu, vk_image, width, height, ImageFormat::RGBA, texture_compatible, false, AntiAliasing::X1),
     handles(_gpu, width, height, 1, ImageFormat::POINTER, false, true, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, AntiAliasing::X1),
     depth_buffer(_gpu, width, height, 1, ImageFormat::DEPTH, false, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, AntiAliasing::X1)
 {
     _allocate_frame_buffer();
-    _allocate_command_buffer(_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
-    _allocate_fence(_rendered_fence);
+    _allocate_command_buffer(_vk_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
+    _allocate_fence(_vk_fence);
     _allocate_semaphore(_rendered_semaphore);
     _allocate_camera_view(_camera_view);
 }
@@ -35,14 +35,18 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>&
 Canvas::~Canvas()
 {
     vkDeviceWaitIdle(gpu->_logical_device);
+    vkDestroySemaphore(gpu->_logical_device, _rendered_semaphore, nullptr);
+    vkDestroyFence(gpu->_logical_device, _vk_fence, nullptr);
+    vkFreeCommandBuffers(gpu->_logical_device, std::get<2>(gpu->_graphics_queue.value()), 1, &_vk_command_buffer);
+    vkDestroyFramebuffer(gpu->_logical_device, _vk_frame_buffer, nullptr);
+    delete _camera_view;
 }
 
 
 void Canvas::_allocate_frame_buffer()
 {
     std::shared_ptr<GPU>& _gpu = this->gpu;
-    _frame_buffer.reset(new VkFramebuffer, [_gpu](VkFramebuffer* frm_buffer) {Canvas::_deallocate_frame_buffer(_gpu, frm_buffer);});
-    std::vector<VkImageView> attachments = {*color._vk_image_view, *depth_buffer._vk_image_view};
+    std::vector<VkImageView> attachments = {color._vk_image_view, depth_buffer._vk_image_view};
     VkFramebufferCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     info.renderPass = gpu->shader3d->_render_pass;
@@ -51,61 +55,58 @@ void Canvas::_allocate_frame_buffer()
     info.width = color.width();
     info.height = color.height();
     info.layers = 1;
-    if (vkCreateFramebuffer(gpu->_logical_device, &info, nullptr, _frame_buffer.get()) != VK_SUCCESS)
+    if (vkCreateFramebuffer(gpu->_logical_device, &info, nullptr, &_vk_frame_buffer) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create framebuffer");
     }
 }
 
 
-void Canvas::_allocate_command_buffer(std::shared_ptr<VkCommandBuffer>& command_buffer, VkCommandPool pool)
+void Canvas::_allocate_command_buffer(VkCommandBuffer& command_buffer, VkCommandPool pool)
 {
     std::shared_ptr<GPU>& _gpu = this->gpu;
-    command_buffer.reset(new VkCommandBuffer, [_gpu, pool](VkCommandBuffer* cmd_buffer) {Canvas::_deallocate_command_buffer(_gpu, pool, cmd_buffer);});
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = std::get<2>(gpu->_graphics_queue.value());
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = 1;
-    if (vkAllocateCommandBuffers(gpu->_logical_device, &allocInfo, command_buffer.get()) != VK_SUCCESS)
+    if (vkAllocateCommandBuffers(gpu->_logical_device, &allocInfo, &command_buffer) != VK_SUCCESS)
     {
         THROW_ERROR("failed to allocate command buffers!");
     }
 }
 
 
-void Canvas::_allocate_fence(std::shared_ptr<VkFence>& fence)
+void Canvas::_allocate_fence(VkFence& fence)
 {
     std::shared_ptr<GPU>& _gpu = this->gpu;
-    fence.reset(new VkFence, [_gpu](VkFence* fnc) {Canvas::_deallocate_fence(_gpu, fnc);});
     VkFenceCreateInfo fenceInfo{};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = 0;//VK_FENCE_CREATE_SIGNALED_BIT;
-    if (vkCreateFence(gpu->_logical_device, &fenceInfo, nullptr, fence.get()) != VK_SUCCESS)
+    if (vkCreateFence(gpu->_logical_device, &fenceInfo, nullptr, &fence) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create VkFence");
     }
 }
 
 
-void Canvas::_allocate_semaphore(std::shared_ptr<VkSemaphore>& semaphore)
+void Canvas::_allocate_semaphore(VkSemaphore& semaphore)
 {
     std::shared_ptr<GPU>& _gpu = this->gpu;
-    semaphore.reset(new VkSemaphore, [_gpu](VkSemaphore* smp) {Canvas::_deallocate_semaphore(_gpu, smp);});
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    if (vkCreateSemaphore(gpu->_logical_device, &semaphoreInfo, nullptr, semaphore.get()) != VK_SUCCESS)
+    if (vkCreateSemaphore(gpu->_logical_device, &semaphoreInfo, nullptr, &semaphore) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create VkSemaphore");
     }
 }
 
 
-void Canvas::_allocate_camera_view(std::shared_ptr<Buffer>& camera_view)
+void Canvas::_allocate_camera_view(Buffer*& camera_view)
 {
-    camera_view.reset(new Buffer(gpu, sizeof(CameraParameters),
-                                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT));
+    camera_view = new Buffer(gpu, sizeof(CameraParameters),
+                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 }
 
@@ -127,51 +128,51 @@ void Canvas::_allocate_camera_view(std::shared_ptr<Buffer>& camera_view)
 // }
 
 
-void Canvas::_deallocate_frame_buffer(const std::shared_ptr<GPU>& gpu, VkFramebuffer* frame_buffer)
-{
-    vkDestroyFramebuffer(gpu->_logical_device, *frame_buffer, nullptr);
-    *frame_buffer = VK_NULL_HANDLE;
-}
+// void Canvas::_deallocate_frame_buffer(const std::shared_ptr<GPU>& gpu, VkFramebuffer* frame_buffer)
+// {
+//     vkDestroyFramebuffer(gpu->_logical_device, *frame_buffer, nullptr);
+//     *frame_buffer = VK_NULL_HANDLE;
+// }
 
 
-void Canvas::_deallocate_command_buffer(const std::shared_ptr<GPU>& gpu, const VkCommandPool& pool, VkCommandBuffer* command_buffer)
-{
-    vkFreeCommandBuffers(gpu->_logical_device, pool, 1, command_buffer);
-    *command_buffer = VK_NULL_HANDLE;
-}
+// void Canvas::_deallocate_command_buffer(const std::shared_ptr<GPU>& gpu, const VkCommandPool& pool, VkCommandBuffer* command_buffer)
+// {
+//     vkFreeCommandBuffers(gpu->_logical_device, pool, 1, command_buffer);
+//     *command_buffer = VK_NULL_HANDLE;
+// }
 
 
-void Canvas::_deallocate_fence(const std::shared_ptr<GPU>& gpu, VkFence* fence)
-{
-    vkDestroyFence(gpu->_logical_device, *fence, nullptr);
-    *fence = VK_NULL_HANDLE;
-}
+// void Canvas::_deallocate_fence(const std::shared_ptr<GPU>& gpu, VkFence* fence)
+// {
+//     vkDestroyFence(gpu->_logical_device, *fence, nullptr);
+//     *fence = VK_NULL_HANDLE;
+// }
 
 
-void Canvas::_deallocate_semaphore(const std::shared_ptr<GPU>& gpu, VkSemaphore* semaphore)
-{
-    vkDestroySemaphore(gpu->_logical_device, *semaphore, nullptr);
-    *semaphore = VK_NULL_HANDLE;
-}
+// void Canvas::_deallocate_semaphore(const std::shared_ptr<GPU>& gpu, VkSemaphore* semaphore)
+// {
+//     vkDestroySemaphore(gpu->_logical_device, *semaphore, nullptr);
+//     *semaphore = VK_NULL_HANDLE;
+// }
 
 
 void Canvas::_initialize_recording()
 {
     // reset command buffer
-    vkResetCommandBuffer(*_command_buffer, 0);
+    vkResetCommandBuffer(_vk_command_buffer, 0);
     // begin command buffer recording
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = 0; // Optional
     beginInfo.pInheritanceInfo = nullptr; // Optional
-    if (vkBeginCommandBuffer(*_command_buffer, &beginInfo) != VK_SUCCESS)
+    if (vkBeginCommandBuffer(_vk_command_buffer, &beginInfo) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to begin recording command buffer!");
     }
     // bind the successive pipelines
     for (unsigned int i = 0; i < gpu->shader3d->_pipelines.size(); i++)
     {
-        vkCmdBindPipeline(*_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipelines[i]);
+        vkCmdBindPipeline(_vk_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipelines[i]);
     }
     // set viewport and scissor
     VkViewport viewport{};
@@ -181,11 +182,11 @@ void Canvas::_initialize_recording()
     viewport.height = static_cast<float>(color.height());
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(*_command_buffer, 0, 1, &viewport);
+    vkCmdSetViewport(_vk_command_buffer, 0, 1, &viewport);
     VkRect2D scissor{};
     scissor.offset = { 0, 0 };
     scissor.extent = { color.width(), color.height() };
-    vkCmdSetScissor(*_command_buffer, 0, 1, &scissor);
+    vkCmdSetScissor(_vk_command_buffer, 0, 1, &scissor);
     // setup the recording flag
     _recording = true;
 }
@@ -195,8 +196,8 @@ void Canvas::wait_completion()
 {
     if (_rendering)
     {
-        vkWaitForFences(gpu->_logical_device, 1, _rendered_fence.get(), VK_TRUE, std::numeric_limits<uint64_t>::max());
-        vkResetFences(gpu->_logical_device, 1, _rendered_fence.get());
+        vkWaitForFences(gpu->_logical_device, 1, &_vk_fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+        vkResetFences(gpu->_logical_device, 1, &_vk_fence);
         _rendering = false;
     }
 }
@@ -217,16 +218,16 @@ void Canvas::clear(unsigned char R, unsigned char G, unsigned char B, unsigned c
         _end_render_pass_recording();
     }
     // transition layout
-    color._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, *_command_buffer);
-    depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, *_command_buffer);
+    color._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _vk_command_buffer);
+    depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _vk_command_buffer);
     // Clear color image
     VkClearColorValue clear_color = {{R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f}};
     VkImageSubresourceRange color_range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, color._mip_levels, 0, 1};
-    vkCmdClearColorImage(*_command_buffer, *color._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &color_range);
+    vkCmdClearColorImage(_vk_command_buffer, color._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &color_range);
     // Clear depth buffer
     VkClearDepthStencilValue clear_depth = {0.f, 0};
     VkImageSubresourceRange depth_range = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, color._mip_levels, 0, 1};
-    vkCmdClearDepthStencilImage(*_command_buffer, *depth_buffer._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1, &depth_range);
+    vkCmdClearDepthStencilImage(_vk_command_buffer, depth_buffer._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1, &depth_range);
     // start render pass
     if (!_recording)
     {
@@ -258,7 +259,7 @@ void Canvas::set_view(const Camera& camera)
     params.camera_aperture_size = {static_cast<float>(camera.aperture_width), static_cast<float>(camera.aperture_height)};
     _camera_view->upload(&params);
     // Push camera view to device
-    VkDescriptorBufferInfo camera_parameters = {*(_camera_view->_vk_buffer), 0, VK_WHOLE_SIZE};
+    VkDescriptorBufferInfo camera_parameters = {_camera_view->_vk_buffer, 0, VK_WHOLE_SIZE};
     VkWriteDescriptorSet uniform_buffer{};
     uniform_buffer.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     uniform_buffer.dstBinding = 0;
@@ -266,7 +267,7 @@ void Canvas::set_view(const Camera& camera)
     uniform_buffer.descriptorCount = 1;
 	uniform_buffer.pBufferInfo = &camera_parameters;
     std::vector<VkWriteDescriptorSet> descriptors = {uniform_buffer};
-    vkCmdPushDescriptorSet(*_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipeline_layouts[0], 0, descriptors.size(), descriptors.data());
+    vkCmdPushDescriptorSet(_vk_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipeline_layouts[0], 0, descriptors.size(), descriptors.data());
 }
 
 void Canvas::draw(const Mesh& mesh, const std::tuple<Vector, Quaternion, double>& coordinates_in_camera, bool cull_back_faces)
@@ -286,18 +287,18 @@ void Canvas::draw(const Mesh& mesh, const std::tuple<Vector, Quaternion, double>
     // set culling mode
     if (gpu->dynamic_culling_supported())
     {
-        vkCmdSetCullMode(*_command_buffer, cull_back_faces ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE);
+        vkCmdSetCullMode(_vk_command_buffer, cull_back_faces ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE);
     }
     // set mesh vertices
-    std::vector<VkBuffer> vertex_buffers = {*mesh._vk_buffer};
+    std::vector<VkBuffer> vertex_buffers = {mesh._vk_buffer};
     std::vector<VkDeviceSize> offsets(vertex_buffers.size(), 0);
-    vkCmdBindVertexBuffers(*_command_buffer, 0, vertex_buffers.size(), vertex_buffers.data(), offsets.data());
+    vkCmdBindVertexBuffers(_vk_command_buffer, 0, vertex_buffers.size(), vertex_buffers.data(), offsets.data());
     // set mesh scale/position/rotation
     VkPushConstantRange mesh_range = gpu->shader3d->_push_constants[0][0].second;
     MeshParameters mesh_parameters = {std::get<0>(coordinates_in_camera).to_vec4(), Matrix(std::get<1>(coordinates_in_camera).inverse()).to_mat3(), static_cast<float>(std::get<2>(coordinates_in_camera))};
-    vkCmdPushConstants(*_command_buffer, gpu->shader3d->_pipeline_layouts[0], mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &mesh_parameters);
+    vkCmdPushConstants(_vk_command_buffer, gpu->shader3d->_pipeline_layouts[0], mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &mesh_parameters);
     // send a command to command buffer
-    vkCmdDraw(*_command_buffer, mesh.bytes_size()/sizeof(Vertex), 1, 0, 0);
+    vkCmdDraw(_vk_command_buffer, mesh.bytes_size()/sizeof(Vertex), 1, 0, 0);
 }
 
 
@@ -324,7 +325,7 @@ void Canvas::render()
         _end_render_pass_recording();
     }
     // End command buffer
-    if (vkEndCommandBuffer(*_command_buffer) != VK_SUCCESS)
+    if (vkEndCommandBuffer(_vk_command_buffer) != VK_SUCCESS)
     {
         THROW_ERROR("failed to record command buffer!");
     }
@@ -336,10 +337,10 @@ void Canvas::render()
     submitInfo.pWaitSemaphores = wait_semaphores.data();
     submitInfo.pWaitDstStageMask = &wait_stages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = _command_buffer.get();
+    submitInfo.pCommandBuffers = &_vk_command_buffer;
     submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = _rendered_semaphore.get();
-    if (vkQueueSubmit(std::get<1>(gpu->_graphics_queue.value()), 1, &submitInfo, *_rendered_fence) != VK_SUCCESS)
+    submitInfo.pSignalSemaphores = &_rendered_semaphore;
+    if (vkQueueSubmit(std::get<1>(gpu->_graphics_queue.value()), 1, &submitInfo, _vk_fence) != VK_SUCCESS)
     {
         THROW_ERROR("failed to submit draw command buffer!");
     }
@@ -363,8 +364,8 @@ bool Canvas::is_rendering() const
 void Canvas::_start_render_pass_recording()
 {
     // transition layouts
-    color._transition_to_layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, *_command_buffer);
-    depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, *_command_buffer);
+    color._transition_to_layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _vk_command_buffer);
+    depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, _vk_command_buffer);
     // begin render pass
     std::vector<VkClearValue> clear_values;
     for (unsigned int i = 0; i < 3; i++)
@@ -377,12 +378,12 @@ void Canvas::_start_render_pass_recording()
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = gpu->shader3d->_render_pass;
-    renderPassInfo.framebuffer = *_frame_buffer;
+    renderPassInfo.framebuffer = _vk_frame_buffer;
     renderPassInfo.renderArea.offset = { 0, 0 };
     renderPassInfo.renderArea.extent = { color.width(), color.height() };
     renderPassInfo.clearValueCount = clear_values.size();
     renderPassInfo.pClearValues = clear_values.data();
-    vkCmdBeginRenderPass(*_command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(_vk_command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
     // Set the flag
     _recording_render_pass = true;
 }
@@ -390,6 +391,6 @@ void Canvas::_start_render_pass_recording()
 
 void Canvas::_end_render_pass_recording()
 {
-    vkCmdEndRenderPass(*_command_buffer);
+    vkCmdEndRenderPass(_vk_command_buffer);
     _recording_render_pass = false;
 }

@@ -10,7 +10,7 @@ namespace RenderEngine
     {
         friend class Canvas;
         friend class Image;
-    public:
+    public: // This class is non copyable
         Buffer() = delete;
         Buffer(const Buffer& other) = delete;
         Buffer& operator=(const Buffer& other) = delete;
@@ -24,8 +24,8 @@ namespace RenderEngine
         void upload(const void* data) const;
         void download(void* data) const;
     protected:
-        VkBuffer* _vk_buffer = nullptr;
-        VkDeviceMemory* _vk_memory = nullptr;
+        VkBuffer _vk_buffer = VK_NULL_HANDLE;
+        VkDeviceMemory _vk_memory = VK_NULL_HANDLE;
         void* _data = nullptr;
         size_t _bytes_size = 0;
         VkMemoryPropertyFlags _memory_properties = 0;
