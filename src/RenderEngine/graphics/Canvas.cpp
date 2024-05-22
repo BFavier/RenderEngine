@@ -105,8 +105,7 @@ void Canvas::_allocate_semaphore(VkSemaphore& semaphore)
 void Canvas::_allocate_camera_view(Buffer*& camera_view)
 {
     camera_view = new Buffer(gpu, sizeof(CameraParameters),
-                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+                             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
 }
 
@@ -257,7 +256,7 @@ void Canvas::set_view(const Camera& camera)
     params.camera_scale = static_cast<float>(std::get<2>(camera_coordinates));
     params.focal_length = camera.focal_length();
     params.camera_aperture_size = {static_cast<float>(camera.aperture_width), static_cast<float>(camera.aperture_height)};
-    _camera_view->upload(&params);
+    _camera_view->upload(reinterpret_cast<uint8_t*>(&params), sizeof(CameraParameters), 0);
     // Push camera view to device
     VkDescriptorBufferInfo camera_parameters = {_camera_view->_vk_buffer, 0, VK_WHOLE_SIZE};
     VkWriteDescriptorSet uniform_buffer{};
@@ -290,7 +289,7 @@ void Canvas::draw(const Mesh& mesh, const std::tuple<Vector, Quaternion, double>
         vkCmdSetCullMode(_vk_command_buffer, cull_back_faces ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE);
     }
     // set mesh vertices
-    std::vector<VkBuffer> vertex_buffers = {mesh._vk_buffer};
+    std::vector<VkBuffer> vertex_buffers = {mesh._buffer->_vk_buffer};
     std::vector<VkDeviceSize> offsets(vertex_buffers.size(), 0);
     vkCmdBindVertexBuffers(_vk_command_buffer, 0, vertex_buffers.size(), vertex_buffers.data(), offsets.data());
     // set mesh scale/position/rotation

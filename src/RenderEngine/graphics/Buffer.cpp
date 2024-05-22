@@ -2,10 +2,10 @@
 using namespace RenderEngine;
 
 
-Buffer::Buffer(const std::shared_ptr<GPU>& _gpu, size_t bytes_size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory_properties) : gpu(_gpu), _bytes_size(bytes_size)
+Buffer::Buffer(const std::shared_ptr<GPU>& _gpu, size_t bytes_size, VkBufferUsageFlags usage) : gpu(_gpu), _bytes_size(bytes_size)
 {
     _allocate_buffer(usage);
-    _allocate_memory(memory_properties);
+    _allocate_memory(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 }
 
 Buffer::~Buffer()
@@ -23,28 +23,28 @@ size_t Buffer::bytes_size() const
     return _bytes_size;
 }
 
-void Buffer::upload(const void* data) const
+void Buffer::upload(const uint8_t* data, std::size_t bytes_size, std::size_t offset) const
 {
-    memcpy(_data, data, _bytes_size);
+    memcpy(_data+offset, data, bytes_size);
     if (!(_memory_properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
     {
         VkMappedMemoryRange  mem_range{};
         mem_range.memory = _vk_memory;
-        mem_range.offset = 0;
-        mem_range.size = _bytes_size;
+        mem_range.offset = offset;
+        mem_range.size = bytes_size;
         vkFlushMappedMemoryRanges(gpu->_logical_device, 1, &mem_range);
     }
 }
 
-void Buffer::download(void* data) const
+void Buffer::download(uint8_t* data, std::size_t bytes_size, std::size_t offset) const
 {
-    memcpy(data, _data, _bytes_size);
+    memcpy(data, _data+offset, bytes_size);
     if (!(_memory_properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
     {
         VkMappedMemoryRange  mem_range{};
         mem_range.memory = _vk_memory;
-        mem_range.offset = 0;
-        mem_range.size = _bytes_size;
+        mem_range.offset = offset;
+        mem_range.size = bytes_size;
         vkInvalidateMappedMemoryRanges(gpu->_logical_device, 1, &mem_range);
     }
 }
@@ -92,5 +92,5 @@ void Buffer::_allocate_memory(VkMemoryPropertyFlags memory_properties)
         THROW_ERROR("failed to allocate buffer memory!");
     }
     vkBindBufferMemory(gpu->_logical_device, _vk_buffer, _vk_memory, 0);
-    vkMapMemory(gpu->_logical_device, _vk_memory, 0, _bytes_size, 0, &_data);
+    vkMapMemory(gpu->_logical_device, _vk_memory, 0, _bytes_size, 0, reinterpret_cast<void**>(&_data));
 }

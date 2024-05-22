@@ -543,15 +543,13 @@ void Image::save_to_disk(const std::string& file_path)
 void Image::upload_data(const std::vector<uint8_t>& pixels)
 {
     size_t image_size = width()*(height()*(channel_count()*channel_bytes_size()));
-    if ((pixels.size() % image_size != 0) || (pixels.size() < image_size))
+    if (pixels.size() != image_size)
     {
         THROW_ERROR("pixel vector has not the right size.")
     }
     uint8_t n_channels = Image::format_channel_count(_format);
-    Buffer staging_buffer(_gpu, n_channels*_width*_height,
-                          VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    staging_buffer.upload(pixels.data());
+    Buffer staging_buffer(_gpu, image_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+    staging_buffer.upload(reinterpret_cast<const uint8_t*>(pixels.data()), staging_buffer.bytes_size(), 0);
     VkCommandBuffer commandBuffer = _begin_single_time_commands();
     _transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, commandBuffer);
     VkBufferImageCopy region{};
@@ -571,10 +569,8 @@ void Image::upload_data(const std::vector<uint8_t>& pixels)
 std::vector<uint8_t> Image::download_data()
 {
     uint8_t n_channels = Image::format_channel_count(_format);
-    Buffer staging_buffer(_gpu, n_channels*_width*_height,
-                          VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    std::vector<uint8_t> pixels(width()*height()*channel_count()*channel_bytes_size());
+    Buffer staging_buffer(_gpu, width()*height()*channel_count()*channel_bytes_size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+    std::vector<uint8_t> pixels(staging_buffer.bytes_size());
     VkCommandBuffer commandBuffer = _begin_single_time_commands();
     _transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, commandBuffer);
     VkBufferImageCopy region{};
@@ -589,6 +585,6 @@ std::vector<uint8_t> Image::download_data()
     region.imageExtent = {width(), height(), 1};
     vkCmdCopyImageToBuffer(commandBuffer, *_vk_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, staging_buffer._vk_buffer, 1, &region);
     _end_single_time_commands(commandBuffer);
-    staging_buffer.download(pixels.data());
+    staging_buffer.download(pixels.data(), staging_buffer.bytes_size(), 0);
     return pixels;
 }
