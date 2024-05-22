@@ -10,6 +10,7 @@ project(RenderEngine)
 add_executable(${PROJECT_NAME}
     src/stb/stb_image.c
     src/stb/stb_image_write.c
+    src/stb/stb_image_resize.c
     src/RenderEngine/graphics/Buffer.cpp
     src/RenderEngine/graphics/Canvas.cpp
     src/RenderEngine/graphics/GPU.cpp

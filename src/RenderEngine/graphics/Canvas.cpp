@@ -4,11 +4,11 @@
 #include <RenderEngine/graphics/shaders/Types.hpp>
 using namespace RenderEngine;
 
-Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, bool texture_compatible, AntiAliasing sample_count) :
+Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, bool mip_maped, AntiAliasing sample_count) :
     gpu(_gpu),
-    color(_gpu, width, height, 1, ImageFormat::RGBA, texture_compatible, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, AntiAliasing::X1),
-    handles(_gpu, width, height, 1, ImageFormat::POINTER, false, true, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, AntiAliasing::X1),
-    depth_buffer(_gpu, width, height, 1, ImageFormat::DEPTH, false, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, AntiAliasing::X1)
+    color(_gpu, ImageFormat::RGBA, width, height, mip_maped),
+    handles(_gpu, ImageFormat::POINTER, width, height, false),
+    depth_buffer(_gpu, ImageFormat::DEPTH, width, height, false)
 {
     _allocate_frame_buffer();
     _allocate_command_buffer(_vk_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
@@ -18,11 +18,11 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height
 }
 
 
-Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const VkImage& vk_image, uint32_t width, uint32_t height, bool texture_compatible, AntiAliasing sample_count) :
+Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height, AntiAliasing sample_count) :
     gpu(_gpu),
-    color(_gpu, vk_image, width, height, ImageFormat::RGBA, texture_compatible, false, AntiAliasing::X1),
-    handles(_gpu, width, height, 1, ImageFormat::POINTER, false, true, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, AntiAliasing::X1),
-    depth_buffer(_gpu, width, height, 1, ImageFormat::DEPTH, false, false, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, AntiAliasing::X1)
+    color(_gpu, vk_image, nullptr, ImageFormat::RGBA, width, height, false),
+    handles(_gpu, ImageFormat::POINTER, width, height, false),
+    depth_buffer(_gpu, ImageFormat::DEPTH, width, height, false)
 {
     _allocate_frame_buffer();
     _allocate_command_buffer(_vk_command_buffer, std::get<2>(gpu->_graphics_queue.value()));
@@ -222,12 +222,12 @@ void Canvas::clear(unsigned char R, unsigned char G, unsigned char B, unsigned c
     depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _vk_command_buffer);
     // Clear color image
     VkClearColorValue clear_color = {{R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f}};
-    VkImageSubresourceRange color_range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, color._mip_levels, 0, 1};
-    vkCmdClearColorImage(_vk_command_buffer, color._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &color_range);
+    VkImageSubresourceRange color_range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, color.mip_levels_count(), 0, 1};
+    vkCmdClearColorImage(_vk_command_buffer, *color._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &color_range);
     // Clear depth buffer
     VkClearDepthStencilValue clear_depth = {0.f, 0};
-    VkImageSubresourceRange depth_range = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, color._mip_levels, 0, 1};
-    vkCmdClearDepthStencilImage(_vk_command_buffer, depth_buffer._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1, &depth_range);
+    VkImageSubresourceRange depth_range = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, color.mip_levels_count(), 0, 1};
+    vkCmdClearDepthStencilImage(_vk_command_buffer, *depth_buffer._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1, &depth_range);
     // start render pass
     if (!_recording)
     {

@@ -14,8 +14,9 @@ int main()
         Mouse& mouse = window.mouse;
         Keyboard& keyboard = window.keyboard;
         Timer timer;
-        Image screenshot(gpu, "screenshot.png");
-        screenshot.save_to_disk("screenshot_loaded.png");
+        std::vector<std::shared_ptr<Image>> images = Image::bulk_load_images(gpu, {"dices.png", "screenshot.png"}, ImageFormat::RGBA, 1024, 1024);
+        images[0]->save_to_disk("dices_loaded.png");
+        images[1]->save_to_disk("screenshot_loaded.png");
         Mesh cube = Mesh(gpu, Mesh::cube(1.0));
         Referential model;
         // Face face({{ {0.f, 0.5f, 0.f }, { -0.5, -0.5, 0. }, { 0.5, -0.5, 0. } }}, { 1.0, 0., 0., 1.0 });
