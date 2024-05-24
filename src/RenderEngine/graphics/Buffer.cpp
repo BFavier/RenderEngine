@@ -49,24 +49,8 @@ void Buffer::download(uint8_t* data, std::size_t bytes_size, std::size_t offset)
     }
 }
 
-uint32_t Buffer::_find_memory_type(VkPhysicalDevice physical_device, uint32_t typeFilter, VkMemoryPropertyFlags memory_properties)
-{
-    VkPhysicalDeviceMemoryProperties mem_properties;
-    vkGetPhysicalDeviceMemoryProperties(physical_device, &mem_properties);
-    for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++)
-    {
-        if ((typeFilter & (1 << i)) && (mem_properties.memoryTypes[i].propertyFlags & memory_properties) == memory_properties)
-        {
-            _memory_properties = mem_properties.memoryTypes[i].propertyFlags;
-            return i;
-        }
-    }
-    THROW_ERROR("Failed to find suitable memory type.");
-}
-
 void Buffer::_allocate_buffer(VkBufferUsageFlags usage)
 {
-    const std::shared_ptr<GPU>& _gpu = gpu;
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = _bytes_size;
@@ -82,15 +66,36 @@ void Buffer::_allocate_memory(VkMemoryPropertyFlags memory_properties)
 {
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(gpu->_logical_device, _vk_buffer, &memRequirements);
-    std::shared_ptr<GPU> _gpu = gpu;
+    // finding memory type
+    uint32_t memoryTypeIndex = std::numeric_limits<uint32_t>::max();
+    VkPhysicalDeviceMemoryProperties mem_properties;
+    vkGetPhysicalDeviceMemoryProperties(gpu->_physical_device, &mem_properties);
+    for (uint32_t i = 0; i < mem_properties.memoryTypeCount; i++)
+    {
+        if ((memRequirements.memoryTypeBits & (1 << i))
+            &&
+            ((mem_properties.memoryTypes[i].propertyFlags & memory_properties) == memory_properties))
+        {
+            memoryTypeIndex = i;
+            _memory_properties = mem_properties.memoryTypes[i].propertyFlags;
+            break;
+        }
+    }
+    if (memoryTypeIndex == std::numeric_limits<uint32_t>::max())
+    {
+        THROW_ERROR("Failed to find suitable memory type.");
+    }
+    // allocate memory
+    std::size_t required_memory_bytes = ((memRequirements.size / memRequirements.alignment) + (memRequirements.size % memRequirements.alignment == 0 ? 0 : 1)) * memRequirements.alignment;
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = _find_memory_type(gpu->_physical_device, memRequirements.memoryTypeBits, memory_properties);
+    allocInfo.allocationSize = required_memory_bytes;
+    allocInfo.memoryTypeIndex = memoryTypeIndex;
     if (vkAllocateMemory(gpu->_logical_device, &allocInfo, nullptr, &_vk_memory) != VK_SUCCESS)
     {
         THROW_ERROR("failed to allocate buffer memory!");
     }
+    // bind and map
     vkBindBufferMemory(gpu->_logical_device, _vk_buffer, _vk_memory, 0);
     vkMapMemory(gpu->_logical_device, _vk_memory, 0, _bytes_size, 0, reinterpret_cast<void**>(&_data));
 }

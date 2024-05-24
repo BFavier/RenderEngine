@@ -137,6 +137,7 @@ std::tuple<std::shared_ptr<VkDeviceMemory>, std::size_t> Image::_allocate_vk_dev
     // query required memory properties
     VkMemoryRequirements mem_requirements;
     vkGetImageMemoryRequirements(gpu->_logical_device, *vk_image, &mem_requirements);
+    std::size_t required_memory_bytes = ((mem_requirements.size / mem_requirements.alignment) + (mem_requirements.size % mem_requirements.alignment == 0 ? 0 : 1)) * mem_requirements.alignment;
     // find suitable memory type/heap
     uint32_t memoryTypeIndex = std::numeric_limits<uint32_t>::max();
     VkPhysicalDeviceMemoryProperties memProperties;
@@ -145,7 +146,7 @@ std::tuple<std::shared_ptr<VkDeviceMemory>, std::size_t> Image::_allocate_vk_dev
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
         if ((mem_requirements.memoryTypeBits & (1 << i))
             &&
-            (memProperties.memoryTypes[i].propertyFlags & memory_requirements == memory_requirements))
+            ((memProperties.memoryTypes[i].propertyFlags & memory_requirements) == memory_requirements))
         {
             memoryTypeIndex = i;
             break;
@@ -162,13 +163,13 @@ std::tuple<std::shared_ptr<VkDeviceMemory>, std::size_t> Image::_allocate_vk_dev
     );
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = mem_requirements.size * n_images;
+    allocInfo.allocationSize = required_memory_bytes * n_images;
     allocInfo.memoryTypeIndex = memoryTypeIndex;
     if (vkAllocateMemory(gpu->_logical_device, &allocInfo, nullptr, vk_device_memory.get()) != VK_SUCCESS)
     {
         THROW_ERROR("failed to allocate image memory!");
     }
-    return std::make_pair(vk_device_memory, mem_requirements.size);
+    return std::make_pair(vk_device_memory, required_memory_bytes);
 }
 
 void Image::_bind_image_to_memory(const std::shared_ptr<GPU>& gpu, const std::shared_ptr<VkImage>& vk_image, const std::shared_ptr<VkDeviceMemory>& vk_device_memory, std::size_t offset)

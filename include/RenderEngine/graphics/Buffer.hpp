@@ -30,7 +30,6 @@ namespace RenderEngine
         std::size_t _bytes_size = 0;
         VkMemoryPropertyFlags _memory_properties = 0;
     protected:
-        uint32_t _find_memory_type(VkPhysicalDevice physical_device, uint32_t typeFilter, VkMemoryPropertyFlags memory_properties);
         void _allocate_buffer(VkBufferUsageFlags usage);
         void _allocate_memory(VkMemoryPropertyFlags memory_properties);
     };
