@@ -56,7 +56,7 @@ namespace RenderEngine
             // Set the view for the 3D rendering to the current state of the given camera
             void set_view(const Camera& camera);
             // Record objects to draw in the command buffer. Rendering only starts once the 'render' method is called.
-            void draw(const Mesh& mesh, const std::tuple<Vector, Quaternion, double>& coordinates_in_camera, bool cull_back_faces);
+            void draw(const std::shared_ptr<Mesh>& mesh, const std::tuple<Vector, Quaternion, double>& coordinates_in_camera, bool cull_back_faces);
             // Send the command buffers to GPU. Does nothing if the canvas is not in recording state, or already in rendering state. This command is asynchrone, and completion is garanteed only once 'wait_completion' is called.
             void render();
             // blocks on CPU side until the rendering on GPU is complete

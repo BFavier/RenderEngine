@@ -9,6 +9,13 @@ Mesh::Mesh(const std::shared_ptr<GPU>& _gpu, const std::vector<Face>& faces)
     upload(faces);
 }
 
+Mesh::Mesh(const std::shared_ptr<Buffer>& buffer, std::size_t offset, const std::vector<Face>& faces)
+{
+    _buffer = buffer;
+    _offset = offset;
+    _bytes_size = faces.size() * sizeof(Vertex) * 3;
+}
+
 Mesh::~Mesh()
 {
 }
@@ -29,4 +36,23 @@ void Mesh::upload(const std::vector<Face>& faces)
 std::size_t Mesh::bytes_size() const
 {
     return _bytes_size;
+}
+
+std::vector<std::shared_ptr<Mesh>> Mesh::bulk_allocate_meshes(const std::shared_ptr<GPU>& gpu, const std::vector<std::vector<Face>>& faces)
+{
+    std::size_t bytes_size = 0;
+    std::vector<std::size_t> offsets;
+    for (const std::vector<Face>& mesh : faces)
+    {
+        offsets.push_back(bytes_size);
+        bytes_size += mesh.size() * sizeof(Vertex) * 3;
+    }
+    std::shared_ptr<Buffer> buffer(new Buffer(gpu, bytes_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT));
+    std::vector<std::shared_ptr<Mesh>> meshes;
+    for (std::size_t i=0; i<faces.size(); i++)
+    {
+        meshes.emplace_back(new Mesh(buffer, offsets[i], faces[i]));
+        meshes[i]->upload(faces[i]);
+    }
+    return meshes;
 }
