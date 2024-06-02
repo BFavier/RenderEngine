@@ -57,10 +57,10 @@ std::vector<Face> Mesh::sphere(double radius, uint32_t divides)
     // creating the icosahedron coordinates
     const double phi = (1.0+std::sqrt(5))/2.0;
     const double phi_square = std::sqrt(1 + std::pow(phi, 2));
-    const std::vector<Vector> phi_theta_zero = {{0, 0, 0},
-                                                {PI/3, 0, 0}, {PI/3, 2*PI/5, 0}, {PI/3, 4*PI/5, 0}, {PI/3, 6*PI/5, 0}, {PI/3, 8*PI/5, 0},
-                                                {2*PI/3, PI/5, 0}, {2*PI/3, 3*PI/5, 0}, {2*PI/3, 5*PI/5, 0}, {2*PI/3, 7*PI/5, 0}, {2*PI/3, 9*PI/5, 0},
-                                                {PI, 0, 0}};
+    const std::vector<Vector> phi_theta_r = {{0, 0, radius},
+                                             {PI/3, 0, radius}, {PI/3, 2*PI/5, radius}, {PI/3, 4*PI/5, radius}, {PI/3, 6*PI/5, radius}, {PI/3, 8*PI/5, radius},
+                                             {2*PI/3, PI/5, radius}, {2*PI/3, 3*PI/5, radius}, {2*PI/3, 5*PI/5, radius}, {2*PI/3, 7*PI/5, radius}, {2*PI/3, 9*PI/5, radius},
+                                             {PI, 0, radius}};
     const std::vector<std::array<uint8_t, 3>> indices = {{0,1,2},{0,2,3},{0,3,4},{0,4,5},{0,5,1},
                                                          {2,1,6},{3,2,7},{4,3,8},{5,4,9},{1,5,10},
                                                          {1,10,6},{2,6,7},{3,7,8},{4,8,9},{5,9,10},
@@ -74,9 +74,9 @@ std::vector<Face> Mesh::sphere(double radius, uint32_t divides)
     {
         vec4 color = colors[i];
         std::array<uint8_t, 3> indice = indices[i];
-        Vector p0 = phi_theta_zero[indice[0]];
-        Vector p1 = phi_theta_zero[indice[1]];
-        Vector p2 = phi_theta_zero[indice[2]];
+        Vector p0 = _spherical_to_cartesian(phi_theta_r[indice[0]]);
+        Vector p1 = _spherical_to_cartesian(phi_theta_r[indice[1]]);
+        Vector p2 = _spherical_to_cartesian(phi_theta_r[indice[2]]);
         Vector u = (p1-p0) / (divides + 1);
         Vector v = (p2-p0) / (divides + 1);
         /*
@@ -85,7 +85,7 @@ std::vector<Face> Mesh::sphere(double radius, uint32_t divides)
                                                   /x\
                                                  1---2
                                                 /x\x/ \
-                                       u ↙     3---4---5      ↘ v
+                                        u ↙    3---4---5   ↘ v
                                               /x\x/ \ / \
                                              6---7---8---9    
                                             /x\x/ \ / \ / \ 
@@ -94,25 +94,22 @@ std::vector<Face> Mesh::sphere(double radius, uint32_t divides)
         */
         for (unsigned int j=0; j<divides+1; j++) // loop over v divides - the strips
         {
-            // add the top of strip triangle
+            // add the top of strip triangle, such as 0-1-2
             Vector top = p0+j*v;
-            faces.push_back(_phi_theta_to_face(top, top+u, top+v, color, radius));
-            for (unsigned int k=0; k<j; k++)  // loop over u divides - the rectangles of a strip
+            faces.push_back(Face({top.normed()*radius, (top+u).normed()*radius, (top+v).normed()*radius}, color));
+            for (unsigned int k=0; k<divides-j; k++)  // loop over u divides - the rectangles of a strip
             {
                 top += u;
-                // add faces linked to a rectangle such as 1-2-4-3, 
-                faces.push_back(Face({top, top+u, top+v}, color));
-                faces.push_back(Face({top, top+v, top+v-u}, color));
+                // add faces linked to a rectangle, such as 1-2-4-3
+                faces.push_back(Face({top.normed()*radius, (top+u).normed()*radius, (top+v).normed()*radius}, color));
+                faces.push_back(Face({top.normed()*radius, (top+v).normed()*radius, (top+v-u).normed()*radius}, color));
             }
         }
     }
     return faces;
 }
 
-Face Mesh::_phi_theta_to_face(const Vector& p0, const Vector& p1, const Vector& p2, vec4 color, double radius)
+Vector Mesh::_spherical_to_cartesian(const Vector& p)
 {
-    return Face({Vector(radius*std::sin(p0.x)*std::cos(p0.y), radius*std::sin(p0.x)*std::sin(p0.y), radius*std::cos(p0.x)),
-                 Vector(radius*std::sin(p1.x)*std::cos(p1.y), radius*std::sin(p1.x)*std::sin(p1.y), radius*std::cos(p1.x)),
-                 Vector(radius*std::sin(p2.x)*std::cos(p2.y), radius*std::sin(p2.x)*std::sin(p2.y), radius*std::cos(p2.x))},
-                 color);
+    return Vector(p.z*std::sin(p.x)*std::cos(p.y), p.z*std::sin(p.x)*std::sin(p.y), p.z*std::cos(p.x));
 }

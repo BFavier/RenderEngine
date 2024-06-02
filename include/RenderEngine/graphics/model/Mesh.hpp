@@ -30,6 +30,6 @@ namespace RenderEngine
         std::size_t _offset = 0;
         std::size_t _bytes_size;
     protected:
-        static Face _phi_theta_to_face(const Vector& p0, const Vector& p1, const Vector& p2, vec4 color, double radius);
+        static Vector _spherical_to_cartesian(const Vector& p);
     };
 }
