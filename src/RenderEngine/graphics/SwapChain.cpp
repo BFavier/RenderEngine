@@ -135,9 +135,7 @@ SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : g
     for (int i=0; i<image_count; i++)
     {
         // create the Canvas of the obtained frame
-        std::shared_ptr<VkImage> vkimg(new VkImage);
-        *vkimg = vk_images[i];
-        frames.push_back(new Canvas(gpu, vkimg, extent.width, extent.height, window._window_sample_count));
+        frames.push_back(new Canvas(gpu, vk_images[i], extent.width, extent.height, window._window_sample_count));
         // create a semaphore
         VkSemaphore semaphore;
         VkSemaphoreCreateInfo semaphoreInfo{};

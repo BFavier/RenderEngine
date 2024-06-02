@@ -29,14 +29,14 @@ namespace RenderEngine
               std::optional<uint32_t> resized_height=std::nullopt);
         // create an image from dimensions and format
         Image(const std::shared_ptr<GPU>& gpu, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped=true, AntiAliasing sample_count=AntiAliasing::X1);
-        // Create an image view from an existing VkImage
-        Image(const std::shared_ptr<GPU>& gpu, const std::shared_ptr<VkImage>& vk_image, const std::shared_ptr<VkDeviceMemory>& vk_device_memory,
+        // Create an image view from an existing VkImage, if vk_device_memory==nullptr, the vk_image won't be destroyed by Image destructor (it is owned by the swapchain)
+        Image(const std::shared_ptr<GPU>& gpu, const VkImage& vk_image, const std::shared_ptr<VkDeviceMemory>& vk_device_memory,
               ImageFormat format, uint32_t width, uint32_t height, bool mipmaped);
         // Image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, ImageFormat format, const std::vector<unsigned char>& data);
         ~Image();
     protected:
         std::shared_ptr<GPU> _gpu = nullptr;
-        std::shared_ptr<VkImage> _vk_image = nullptr;
+        VkImage _vk_image = VK_NULL_HANDLE;
         std::shared_ptr<VkDeviceMemory> _vk_device_memory = nullptr;  // this is not used, only keeping a reference to avoid premature deallocation
         VkImageView _vk_image_view = VK_NULL_HANDLE;
         VkSampler _vk_sampler = VK_NULL_HANDLE;
@@ -47,9 +47,9 @@ namespace RenderEngine
         VkImageLayout _current_layout = VK_IMAGE_LAYOUT_UNDEFINED; // the current layout of the image in memory
         std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _current_queue = std::nullopt; // The (queue family index, queue, command pool) the image is currently used by, if any.
     protected:
-        static std::shared_ptr<VkImage> _create_vk_image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, ImageFormat format, uint32_t mip_levels, AntiAliasing sample_count);
-        static std::tuple<std::shared_ptr<VkDeviceMemory>, std::size_t> _allocate_vk_device_memory(const std::shared_ptr<GPU>& gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t n_images);
-        static void _bind_image_to_memory(const std::shared_ptr<GPU>& gpu, const std::shared_ptr<VkImage>& vk_image, const std::shared_ptr<VkDeviceMemory>& vk_device_memory, std::size_t offset);
+        static VkImage _create_vk_image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, ImageFormat format, uint32_t mip_levels, AntiAliasing sample_count);
+        static std::tuple<std::shared_ptr<VkDeviceMemory>, std::size_t> _allocate_vk_device_memory(const std::shared_ptr<GPU>& gpu, const VkImage& vk_image, uint32_t n_images);
+        static void _bind_image_to_memory(const std::shared_ptr<GPU>& gpu, const VkImage& vk_image, const std::shared_ptr<VkDeviceMemory>& vk_device_memory, std::size_t offset);
         static uint32_t _mip_levels_count(uint32_t width, uint32_t height); // return the mip levels count for an image of given width/height
         void _create_vk_sampler();
         void _create_vk_image_view();

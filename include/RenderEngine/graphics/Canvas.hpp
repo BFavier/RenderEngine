@@ -23,7 +23,7 @@ namespace RenderEngine
         public:
             Canvas(const std::shared_ptr<GPU>& gpu,  uint32_t width, uint32_t height,
                    bool mip_maped = false, AntiAliasing sample_count = AntiAliasing::X1);
-            Canvas(const std::shared_ptr<GPU>& gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height,
+            Canvas(const std::shared_ptr<GPU>& gpu, const VkImage& vk_image, uint32_t width, uint32_t height,
                    AntiAliasing sample_count = AntiAliasing::X1);
             ~Canvas();
         public:

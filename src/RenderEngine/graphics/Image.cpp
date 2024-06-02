@@ -48,7 +48,7 @@ Image::Image(const std::shared_ptr<GPU>& gpu, ImageFormat format, uint32_t width
     _create_vk_sampler();
 }
 
-Image::Image(const std::shared_ptr<GPU>& gpu, const std::shared_ptr<VkImage>& vk_image, const std::shared_ptr<VkDeviceMemory>& vk_device_memory,
+Image::Image(const std::shared_ptr<GPU>& gpu, const VkImage& vk_image, const std::shared_ptr<VkDeviceMemory>& vk_device_memory,
              ImageFormat format, uint32_t width, uint32_t height, bool mipmaped) : _gpu(gpu)
 {
     _vk_image = vk_image;
@@ -66,6 +66,11 @@ Image::~Image()
 {
     vkDestroySampler(_gpu->_logical_device, _vk_sampler, nullptr);
     vkDestroyImageView(_gpu->_logical_device, _vk_image_view, nullptr);
+    // If the image is owned (not created by the swapchain), destroy it
+    if (_vk_device_memory.get() != nullptr)
+    {
+        vkDestroyImage(_gpu->_logical_device, _vk_image, nullptr);
+    }
 }
 
 uint32_t Image::width() const
@@ -98,9 +103,9 @@ size_t Image::channel_bytes_size() const
     return Image::format_channel_bytessize(_format);
 }
 
-std::shared_ptr<VkImage> Image::_create_vk_image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, ImageFormat format, uint32_t mip_levels, AntiAliasing sample_count)
+VkImage Image::_create_vk_image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, ImageFormat format, uint32_t mip_levels, AntiAliasing sample_count)
 {
-    std::shared_ptr<VkImage> vk_image(new VkImage, [gpu](VkImage* vk_image){vkDestroyImage(gpu->_logical_device, *vk_image, nullptr);delete vk_image;});
+    VkImage vk_image = VK_NULL_HANDLE;
     VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     if (format == ImageFormat::DEPTH)
     {
@@ -125,18 +130,18 @@ std::shared_ptr<VkImage> Image::_create_vk_image(const std::shared_ptr<GPU>& gpu
     info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     info.queueFamilyIndexCount = 0;
     info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    if (vkCreateImage(gpu->_logical_device, &info, nullptr, vk_image.get()) != VK_SUCCESS)
+    if (vkCreateImage(gpu->_logical_device, &info, nullptr, &vk_image) != VK_SUCCESS)
     {
         THROW_ERROR("failed to create image");
     }
     return vk_image;
 }
 
-std::tuple<std::shared_ptr<VkDeviceMemory>, std::size_t> Image::_allocate_vk_device_memory(const std::shared_ptr<GPU>& gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t n_images)
+std::tuple<std::shared_ptr<VkDeviceMemory>, std::size_t> Image::_allocate_vk_device_memory(const std::shared_ptr<GPU>& gpu, const VkImage& vk_image, uint32_t n_images)
 {
     // query required memory properties
     VkMemoryRequirements mem_requirements;
-    vkGetImageMemoryRequirements(gpu->_logical_device, *vk_image, &mem_requirements);
+    vkGetImageMemoryRequirements(gpu->_logical_device, vk_image, &mem_requirements);
     std::size_t required_memory_bytes = ((mem_requirements.size / mem_requirements.alignment) + (mem_requirements.size % mem_requirements.alignment == 0 ? 0 : 1)) * mem_requirements.alignment;
     // find suitable memory type/heap
     uint32_t memoryTypeIndex = std::numeric_limits<uint32_t>::max();
@@ -172,9 +177,9 @@ std::tuple<std::shared_ptr<VkDeviceMemory>, std::size_t> Image::_allocate_vk_dev
     return std::make_pair(vk_device_memory, required_memory_bytes);
 }
 
-void Image::_bind_image_to_memory(const std::shared_ptr<GPU>& gpu, const std::shared_ptr<VkImage>& vk_image, const std::shared_ptr<VkDeviceMemory>& vk_device_memory, std::size_t offset)
+void Image::_bind_image_to_memory(const std::shared_ptr<GPU>& gpu, const VkImage& vk_image, const std::shared_ptr<VkDeviceMemory>& vk_device_memory, std::size_t offset)
 {
-    vkBindImageMemory(gpu->_logical_device, *vk_image, *vk_device_memory.get(), offset);
+    vkBindImageMemory(gpu->_logical_device, vk_image, *vk_device_memory.get(), offset);
 }
 
 uint32_t Image::_mip_levels_count(uint32_t width, uint32_t height)
@@ -211,7 +216,7 @@ void Image::_create_vk_image_view()
 {
     VkImageViewCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    info.image = *_vk_image;
+    info.image = _vk_image;
     info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     info.format = static_cast<VkFormat>(_format == ImageFormat::DEPTH ? _gpu->depth_format().second : _format);
     info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -260,7 +265,7 @@ std::vector<std::shared_ptr<Image>> Image::bulk_allocate_images(const std::share
     {
         return images;
     }
-    std::vector<std::shared_ptr<VkImage>> vk_images;
+    std::vector<VkImage> vk_images;
     for (uint32_t i=0; i<n_images; i++)
     {
         vk_images.push_back(_create_vk_image(gpu, width, height, format, _mip_levels_count(width, height), AntiAliasing::X1));
@@ -421,7 +426,7 @@ void Image::_transition_to_layout(VkImageLayout new_layout, VkCommandBuffer comm
     barrier.newLayout = new_layout;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = *_vk_image;
+    barrier.image = _vk_image;
     barrier.subresourceRange.aspectMask = _get_aspect_mask();
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = _mip_levels;
@@ -563,7 +568,7 @@ void Image::upload_data(const std::vector<uint8_t>& pixels)
     region.imageSubresource.layerCount = pixels.size() / image_size;
     region.imageOffset = {0, 0, 0};
     region.imageExtent = {width(), height(), 1};
-    vkCmdCopyBufferToImage(commandBuffer, staging_buffer._vk_buffer, *_vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    vkCmdCopyBufferToImage(commandBuffer, staging_buffer._vk_buffer, _vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
     _end_single_time_commands(commandBuffer);
 }
 
@@ -584,7 +589,7 @@ std::vector<uint8_t> Image::download_data()
     region.imageSubresource.layerCount = 1;
     region.imageOffset = {0, 0, 0};
     region.imageExtent = {width(), height(), 1};
-    vkCmdCopyImageToBuffer(commandBuffer, *_vk_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, staging_buffer._vk_buffer, 1, &region);
+    vkCmdCopyImageToBuffer(commandBuffer, _vk_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, staging_buffer._vk_buffer, 1, &region);
     _end_single_time_commands(commandBuffer);
     staging_buffer.download(pixels.data(), staging_buffer.bytes_size(), 0);
     return pixels;

@@ -18,7 +18,7 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height
 }
 
 
-Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const std::shared_ptr<VkImage>& vk_image, uint32_t width, uint32_t height, AntiAliasing sample_count) :
+Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const VkImage& vk_image, uint32_t width, uint32_t height, AntiAliasing sample_count) :
     gpu(_gpu),
     color(_gpu, vk_image, nullptr, ImageFormat::RGBA, width, height, false),
     handles(_gpu, ImageFormat::POINTER, width, height, false),
@@ -222,11 +222,11 @@ void Canvas::clear(unsigned char R, unsigned char G, unsigned char B, unsigned c
     // Clear color image
     VkClearColorValue clear_color = {{R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f}};
     VkImageSubresourceRange color_range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, color.mip_levels_count(), 0, 1};
-    vkCmdClearColorImage(_vk_command_buffer, *color._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &color_range);
+    vkCmdClearColorImage(_vk_command_buffer, color._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &color_range);
     // Clear depth buffer
     VkClearDepthStencilValue clear_depth = {0.f, 0};
     VkImageSubresourceRange depth_range = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, color.mip_levels_count(), 0, 1};
-    vkCmdClearDepthStencilImage(_vk_command_buffer, *depth_buffer._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1, &depth_range);
+    vkCmdClearDepthStencilImage(_vk_command_buffer, depth_buffer._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1, &depth_range);
     // start render pass
     if (!_recording)
     {
