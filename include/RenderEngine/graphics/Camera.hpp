@@ -14,7 +14,7 @@ namespace RenderEngine
     public:
         Camera() = delete;
         // Build from a GPU, camera opening's width and height (in meters), field of view (in ° along the biggest dimension between width and height)
-        Camera(double field_of_view = 90.0,
+        Camera(double field_of_view = 45.0,
                Vector position = {0., 0., 0.}, Quaternion orientation = {}, double scale=1.0, Referential* parent = nullptr);
         ~Camera();
     public:
