@@ -22,6 +22,7 @@ namespace RenderEngine
         std::size_t bytes_size() const;
     public:
         static std::vector<std::shared_ptr<Mesh>> bulk_allocate_meshes(const std::shared_ptr<GPU>& gpu, const std::vector<std::vector<Face>>& faces);
+        static std::map<std::string, std::shared_ptr<Mesh>> bulk_allocate_meshes(const std::shared_ptr<GPU>& gpu, const std::map<std::string, std::vector<Face>>& faces);
     protected:
         std::shared_ptr<Buffer> _buffer = nullptr;
         std::size_t _offset = 0;

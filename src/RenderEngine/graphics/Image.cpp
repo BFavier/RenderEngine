@@ -303,6 +303,24 @@ std::vector<std::shared_ptr<Image>> Image::bulk_load_images(const std::shared_pt
     return images;
 }
 
+std::map<std::string, std::shared_ptr<Image>> Image::bulk_load_images(const std::shared_ptr<GPU>& gpu, const std::map<std::string, std::string>& resource_paths, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped)
+{
+    std::vector<std::string> keys;
+    std::vector<std::string> file_paths;
+    for (const std::pair<std::string, std::string>& resource_path : resource_paths)
+    {
+        keys.push_back(resource_path.first);
+        file_paths.push_back(resource_path.second);
+    }
+    std::vector<std::shared_ptr<Image>> images = Image::bulk_load_images(gpu, file_paths, format, width, height, mipmaped);
+    std::map<std::string, std::shared_ptr<Image>> resources;
+    for (std::size_t i=0; i<resource_paths.size(); i++)
+    {
+        resources[keys[i]] = images[i];
+    }
+    return resources;
+}
+
 std::tuple<std::vector<uint8_t>, uint32_t, uint32_t, ImageFormat> Image::read_pixels_from_file(const std::string& file_path, const std::optional<ImageFormat>& read_format)
 {
     ImageFormat format;

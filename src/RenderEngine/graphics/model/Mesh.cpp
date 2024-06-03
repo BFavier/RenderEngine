@@ -56,3 +56,22 @@ std::vector<std::shared_ptr<Mesh>> Mesh::bulk_allocate_meshes(const std::shared_
     }
     return meshes;
 }
+
+
+std::map<std::string, std::shared_ptr<Mesh>> Mesh::bulk_allocate_meshes(const std::shared_ptr<GPU>& gpu, const std::map<std::string, std::vector<Face>>& faces)
+{
+    std::vector<std::string> names;
+    std::vector<std::vector<Face>> faces_vector;
+    for (const std::pair<std::string, std::vector<Face>>& key_values : faces)
+    {
+        names.push_back(key_values.first);
+        faces_vector.push_back(key_values.second);
+    }
+    std::vector<std::shared_ptr<Mesh>> meshes = Mesh::bulk_allocate_meshes(gpu, faces_vector);
+    std::map<std::string, std::shared_ptr<Mesh>> meshes_map;
+    for (std::size_t i=0; i<meshes.size(); i++)
+    {
+        meshes_map[names[i]] = meshes[i];
+    }
+    return meshes_map;
+}

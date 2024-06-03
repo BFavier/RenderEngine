@@ -74,6 +74,7 @@ namespace RenderEngine
     public:
         static std::vector<std::shared_ptr<Image>> bulk_allocate_images(const std::shared_ptr<GPU>& gpu, uint32_t n_images, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped=true);
         static std::vector<std::shared_ptr<Image>> bulk_load_images(const std::shared_ptr<GPU>& gpu, const std::vector<std::string>& file_paths, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped=true);
+        static std::map<std::string, std::shared_ptr<Image>> bulk_load_images(const std::shared_ptr<GPU>& gpu, const std::map<std::string, std::string>& file_paths, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped=true);
         static std::tuple<std::vector<uint8_t>, uint32_t, uint32_t, ImageFormat> read_pixels_from_file(const std::string& file_path, const std::optional<ImageFormat>& requested_format = {});
         static std::vector<uint8_t> resize_pixels(const std::vector<uint8_t>& pixels, ImageFormat format, uint32_t width, uint32_t height, uint32_t new_width, uint32_t new_height);
         static void save_pixels_to_file(const std::string& file_path, const std::vector<uint8_t>& pixels, uint32_t& width, uint32_t& height, ImageFormat format);

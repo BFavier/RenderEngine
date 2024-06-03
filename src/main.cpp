@@ -14,15 +14,17 @@ int main()
         Mouse& mouse = window.mouse;
         Keyboard& keyboard = window.keyboard;
         Timer timer;
-        std::vector<std::shared_ptr<Image>> images = Image::bulk_load_images(gpu, {"dices.png", "screenshot.png"}, ImageFormat::RGBA, 1024, 1024);
-        images[0]->save_to_disk("dices_loaded.png");
-        images[1]->save_to_disk("screenshot_loaded.png");
-        std::vector<std::shared_ptr<Mesh>> meshes = Mesh::bulk_allocate_meshes(gpu, {Face::cube(0.5), Face::cone(0.5, 0.1, 20)});
-        Referential model;
-        // Face face({{ {0.f, 0.5f, 0.f }, { -0.5, -0.5, 0. }, { 0.5, -0.5, 0. } }}, { 1.0, 0., 0., 1.0 });
-        // Mesh cube(gpu, { face });
+        std::map<std::string, std::shared_ptr<Image>> images = Image::bulk_load_images(gpu, std::map<std::string, std::string>({{"dices", "./dices.png"}, {"screenshot", "./screenshot.png"}}), ImageFormat::RGBA, 1024, 1024);
+        images["dices"]->save_to_disk("./dices_loaded.png");
+        images["screenshot"]->save_to_disk("./screenshot_loaded.png");
+        std::map<std::string, std::shared_ptr<Mesh>> meshes = Mesh::bulk_allocate_meshes(gpu,
+            {{"cube", Face::cube(0.5)},
+             {"cone", Face::cone(0.5, 0.1, 20)},
+             {"quad", Face::quad(Vector(1., 0., 1.), Vector(-1., 0., 1.), Vector(-1., 0., -1.), Vector(1., 0., -1.), {1.0, 1.0, 1.0, 1.0})}});
+        Model cube(meshes["cube"], {0., -1., 0.});
+        Model floor(meshes["quad"], {0., 0., 0.}, Quaternion(), 1.0);
         Referential yaw(Vector(0., 0., -1.), Quaternion(), 1.0);  // yaw only rotates around the global Y axis
-        Camera camera(45.0, Vector(), Quaternion(), 1.0, &yaw); // the camera only pitches around yaw's X axis
+        Camera camera(45.0, Vector(0., -1.0, 0.), Quaternion(), 1.0, &yaw); // the camera only pitches around yaw's X axis
         while(!window.closing())
         {
             double dt = timer.dt();
@@ -85,7 +87,8 @@ int main()
                 std::tie(camera.aperture_width, camera.aperture_height) = std::make_tuple(frame->color.width() * 0.001, frame->color.height() * 0.001);
                 frame->clear(10, 0, 30, 255);
                 frame->set_view(camera);
-                frame->draw(meshes[1], model.coordinates_in(camera), true);
+                frame->draw(cube.mesh, cube.coordinates_in(camera), true);
+                frame->draw(floor.mesh, floor.coordinates_in(camera), false);
             }
             window.update();
         }
