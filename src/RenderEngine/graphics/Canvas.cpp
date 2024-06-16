@@ -234,42 +234,42 @@ void Canvas::clear(unsigned char R, unsigned char G, unsigned char B, unsigned c
     }
 }
 
-void Canvas::set_view(const Camera& camera)
-{
-    if (_rendering)
-    {
-        wait_completion();
-    }
-    if (!_recording)
-    {
-        _initialize_recording();
-    }
-    if (_recording_render_pass)
-    {
-        _end_render_pass_recording();
-    }
-    // Read camera view
-    std::tuple<Vector, Quaternion, double> camera_coordinates = camera.absolute_coordinates();
-    CameraParameters params{};
-    params.camera_position = std::get<0>(camera_coordinates).to_vec4();
-    params.world_to_camera = Matrix(std::get<1>(camera_coordinates)).to_mat3();
-    params.camera_scale = static_cast<float>(std::get<2>(camera_coordinates));
-    params.focal_length = camera.focal_length();
-    params.camera_aperture_size = {static_cast<float>(camera.aperture_width), static_cast<float>(camera.aperture_height)};
-    _camera_view->upload(reinterpret_cast<uint8_t*>(&params), sizeof(CameraParameters), 0);
-    // Push camera view to device
-    VkDescriptorBufferInfo camera_parameters = {_camera_view->_vk_buffer, 0, VK_WHOLE_SIZE};
-    VkWriteDescriptorSet uniform_buffer{};
-    uniform_buffer.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    uniform_buffer.dstBinding = 0;
-    uniform_buffer.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    uniform_buffer.descriptorCount = 1;
-	uniform_buffer.pBufferInfo = &camera_parameters;
-    std::vector<VkWriteDescriptorSet> descriptors = {uniform_buffer};
-    vkCmdPushDescriptorSet(_vk_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipeline_layouts[0], 0, descriptors.size(), descriptors.data());
-}
+// void Canvas::set_view(const Camera& camera)
+// {
+//     if (_rendering)
+//     {
+//         wait_completion();
+//     }
+//     if (!_recording)
+//     {
+//         _initialize_recording();
+//     }
+//     if (_recording_render_pass)
+//     {
+//         _end_render_pass_recording();
+//     }
+//     // Read camera view
+//     std::tuple<Vector, Quaternion, double> camera_coordinates = camera.absolute_coordinates();
+//     CameraParameters params{};
+//     params.camera_position = std::get<0>(camera_coordinates).to_vec4();
+//     params.world_to_camera = Matrix(std::get<1>(camera_coordinates)).to_mat3();
+//     params.camera_scale = static_cast<float>(std::get<2>(camera_coordinates));
+//     params.focal_length = camera.focal_length();
+//     params.camera_aperture_size = {0., 0.};
+//     _camera_view->upload(reinterpret_cast<uint8_t*>(&params), sizeof(CameraParameters), 0);
+//     // Push camera view to device
+//     VkDescriptorBufferInfo camera_parameters = {_camera_view->_vk_buffer, 0, VK_WHOLE_SIZE};
+//     VkWriteDescriptorSet uniform_buffer{};
+//     uniform_buffer.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+//     uniform_buffer.dstBinding = 0;
+//     uniform_buffer.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+//     uniform_buffer.descriptorCount = 1;
+// 	uniform_buffer.pBufferInfo = &camera_parameters;
+//     std::vector<VkWriteDescriptorSet> descriptors = {uniform_buffer};
+//     vkCmdPushDescriptorSet(_vk_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipeline_layouts[0], 0, descriptors.size(), descriptors.data());
+// }
 
-void Canvas::draw(const std::shared_ptr<Mesh>& mesh, const std::tuple<Vector, Quaternion, double>& coordinates_in_camera, bool cull_back_faces)
+void Canvas::draw(const Camera& camera, const std::shared_ptr<Mesh>& mesh, const std::tuple<Vector, Quaternion, double>& coordinates_in_camera, bool cull_back_faces)
 {
     if (_rendering)
     {
@@ -294,7 +294,10 @@ void Canvas::draw(const std::shared_ptr<Mesh>& mesh, const std::tuple<Vector, Qu
     vkCmdBindVertexBuffers(_vk_command_buffer, 0, vertex_buffers.size(), vertex_buffers.data(), offsets.data());
     // set mesh scale/position/rotation
     VkPushConstantRange mesh_range = gpu->shader3d->_push_constants[0][0].second;
-    MeshParameters mesh_parameters = {std::get<0>(coordinates_in_camera).to_vec4(), Matrix(std::get<1>(coordinates_in_camera).inverse()).to_mat3(), static_cast<float>(std::get<2>(coordinates_in_camera))};
+    MeshDrawParameters mesh_parameters = {std::get<0>(coordinates_in_camera).to_vec4(),
+                                          Matrix(std::get<1>(coordinates_in_camera).inverse()).to_mat3(),
+                                          vec4({camera.field_of_view, static_cast<float>(color.width())/color.height(), camera.near_plane, camera.far_plane}),
+                                          static_cast<float>(std::get<2>(coordinates_in_camera))};
     vkCmdPushConstants(_vk_command_buffer, gpu->shader3d->_pipeline_layouts[0], mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &mesh_parameters);
     // send a command to command buffer
     vkCmdDraw(_vk_command_buffer, mesh->bytes_size()/sizeof(Vertex), 1, 0, 0);

@@ -68,10 +68,11 @@ namespace RenderEngine
         vec4 color;  // r, g, b, a
     };
 
-    struct MeshParameters
+    struct MeshDrawParameters
     {
         vec4 mesh_position;
         mat3 mesh_rotation;
+        vec4 camera_parameters;
         float mesh_scale;
     };
 

@@ -6,10 +6,11 @@ layout(location = 0) in vec3 vertex_position;
 layout(location = 1) in vec3 vertex_normal;
 layout(location = 2) in vec4 vertex_color;
 
-layout(push_constant, std430) uniform MeshParameters
+layout(push_constant, std430) uniform MeshDrawParameters
 {
     vec4 mesh_position;
 	mat3 mesh_rotation;
+    vec4 camera_parameters;
     float mesh_scale;
 } mp;
 
@@ -26,17 +27,19 @@ layout(location = 0) out vec4 frag_color;
 
 void main()
 {
+    float field_of_view = mp.camera_parameters.x;
+    float width_to_height_ratio = mp.camera_parameters.y;
+    float near_plane = mp.camera_parameters.z;
+    float far_plane = mp.camera_parameters.w;
     // mesh coords to world coords
     vec3 position = vec3(mp.mesh_position) + mp.mesh_rotation * (mp.mesh_scale * vertex_position);
     vec3 normal = mp.mesh_rotation * vertex_normal;
-    // camera coords to screen coords
-    vec2 xy_coords = vec2(position) * cp.focal_length / (cp.focal_length + abs(position.z)) * 2/cp.camera_aperture_size;
-    // outputs
-    gl_Position = vec4(xy_coords, 1 - exp(-0.001*position.z), 1.0);
+    // output in clip coords: normalised device coordinates = (x_clip, y_clip, z_clip) / w_clip
+    gl_Position = vec4(position.x / (width_to_height_ratio * tan(field_of_view/2.0)),
+                       position.y / tan(field_of_view/2.0),
+                       (position.z - near_plane) * far_plane / (far_plane - near_plane),
+                       position.z);
     frag_color = vertex_color;
 
-    //debugPrintfEXT("camera position is %f %f %f\n", cp.camera_position.x, cp.camera_position.y, cp.camera_position.z);
-    //debugPrintfEXT("camera screen dimension is %f %f, focal_length is %f\n", cp.camera_aperture_size.x, cp.camera_aperture_size.y, cp.focal_length);
-    //debugPrintfEXT("camera: scale=%f, aperture size (x=%f, y=%f), focal length=%f\n", cp.camera_scale, cp.camera_aperture_size.x, cp.camera_aperture_size.y, cp.focal_length);
     //debugPrintfEXT("fragment coordinates is (x=%f, y=%f, z=%f) screen coordinates are (x=%f, y=%f, z=%f)\n", position.x, position.y, position.z, gl_Position.x, gl_Position.y, gl_Position.z);
 }

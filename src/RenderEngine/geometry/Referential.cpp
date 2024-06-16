@@ -71,7 +71,7 @@ std::tuple<Vector, Quaternion, double> Referential::absolute_coordinates() const
     Referential* parent = this->parent;
     while (parent != nullptr)
     {
-        abs_position = (parent->orientation.inverse() * abs_position) + parent->position;
+        abs_position = (parent->orientation.inverse() * abs_position) * parent->scale + parent->position;
         abs_orientation = parent->orientation * abs_orientation;
         abs_scale = abs_scale * parent->scale;
         parent = parent->parent;

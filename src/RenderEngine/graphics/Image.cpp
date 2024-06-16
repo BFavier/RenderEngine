@@ -1,7 +1,10 @@
 #include <RenderEngine/graphics/Image.hpp>
 #include <RenderEngine/utilities/Macro.hpp>
-#include <RenderEngine/utilities/External.hpp>
 #include <RenderEngine/utilities/Functions.hpp>
+#include <stb/stb_image.h>
+#include <stb/stb_image_write.h>
+#include <stb/stb_image_resize.h>
+
 using namespace RenderEngine;
 
 Image::Image(const std::shared_ptr<GPU>& gpu, const std::string& file_path, std::optional<ImageFormat> requested_format,

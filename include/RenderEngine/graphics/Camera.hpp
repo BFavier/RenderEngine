@@ -14,13 +14,13 @@ namespace RenderEngine
     public:
         Camera() = delete;
         // Build from a GPU, camera opening's width and height (in meters), field of view (in ° along the biggest dimension between width and height)
-        Camera(double field_of_view = 45.0,
+        Camera(float field_of_view = 45.0,
                Vector position = {0., 0., 0.}, Quaternion orientation = {}, double scale=1.0, Referential* parent = nullptr);
         ~Camera();
     public:
-        double aperture_width = 0.16;
-        double aperture_height = 0.09;
-        double field_of_view;
+        float near_plane = 1.0E-1;
+        float far_plane = 1.0E3;
+        float field_of_view;
     public:
         float focal_length() const; // the length in  meter between the center of the aperture and the focal point
     };
