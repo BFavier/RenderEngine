@@ -2,7 +2,7 @@
 using namespace RenderEngine;
 
 
-Face::Face(const std::array<Vector, 3>& _points, const std::array<UV, 3>& _UVs, const vec4& _color, const Material& _material)
+Face::Face(const std::array<Vector, 3>& _points, const std::array<UV, 3>& _UVs, const Color& _color, const Material& _material)
 {
     points = _points;
     UVs = _UVs;
@@ -16,33 +16,33 @@ Face::~Face()
 {
 }
 
-std::vector<Face> Face::quad(const Vector& p1, const Vector& p2, const Vector& p3, const Vector& p4, const vec4& color, const Material& material)
+std::vector<Face> Face::quad(const Vector& p1, const Vector& p2, const Vector& p3, const Vector& p4, const Color& color, const Material& material)
 {
     return {Face({p1, p2, p3}, {UV(0., 0.), UV(0., 1.), UV(1., 1.)}, color, material),
             Face({p1, p3, p4}, {UV(0., 0.), UV(1., 1.), UV(1., 0.)}, color, material)};
 }
 
-std::vector<Face> Face::cube(double length, const std::optional<vec4>& color, const Material& material)
+std::vector<Face> Face::cube(double length, const std::optional<Color>& color, const Material& material)
 {
     double l = length/2;
-    std::vector<Face> faces = {Face({{{-l, -l, -l}, {-l, l, -l}, {l, l, -l}}}, {UV(0., 0.), UV(0., 1.), UV(1., 1.)}, color.has_value() ? color.value() : vec4({1., 0., 0., 1.}), material),
-                               Face({{{-l, -l, -l}, {l, l, -l}, {l, -l, -l}}}, {UV(0., 0.), UV(1., 1.), UV(1., 0.)}, color.has_value() ? color.value() : vec4({1., 0., 0., 1.}), material),
-                               Face({{{-l, -l, l}, {l, l, l}, {-l, l, l}}}, {UV(0., 0.), UV(0., 1.), UV(1., 1.)}, color.has_value() ? color.value() : vec4({1., 1., 0., 1.}), material),
-                               Face({{{-l, -l, l}, {l, -l, l}, {l, l, l}}}, {UV(0., 0.), UV(1., 1.), UV(1., 0.)}, color.has_value() ? color.value() : vec4({1., 1., 0., 1.}), material),
+    std::vector<Face> faces = {Face({{{-l, -l, -l}, {-l, l, -l}, {l, l, -l}}}, {UV(0., 0.), UV(0., 1.), UV(1., 1.)}, color.has_value() ? color.value() : Color(1., 0., 0., 1.), material),
+                               Face({{{-l, -l, -l}, {l, l, -l}, {l, -l, -l}}}, {UV(0., 0.), UV(1., 1.), UV(1., 0.)}, color.has_value() ? color.value() : Color(1., 0., 0., 1.), material),
+                               Face({{{-l, -l, l}, {l, l, l}, {-l, l, l}}}, {UV(0., 0.), UV(0., 1.), UV(1., 1.)}, color.has_value() ? color.value() : Color(1., 1., 0., 1.), material),
+                               Face({{{-l, -l, l}, {l, -l, l}, {l, l, l}}}, {UV(0., 0.), UV(1., 1.), UV(1., 0.)}, color.has_value() ? color.value() : Color(1., 1., 0., 1.), material),
 
-                               Face({{{-l, -l, -l}, {l, -l, -l}, {l, -l, l}}}, {UV(0., 0.), UV(0., 1.), UV(1., 1.)}, color.has_value() ? color.value() : vec4({1., 0., 1., 1.}), material),
-                               Face({{{-l, -l, -l}, {l, -l, l}, {-l, -l, l}}}, {UV(0., 0.), UV(1., 1.), UV(1., 0.)}, color.has_value() ? color.value() : vec4({1., 0., 1., 1.}), material),
-                               Face({{{-l, l, -l}, {l, l, l}, {l, l, -l}}}, {UV(0., 0.), UV(0., 1.), UV(1., 1.)}, color.has_value() ? color.value() : vec4({0., 0., 1., 1.}), material),
-                               Face({{{-l, l, -l}, {-l, l, l}, {l, l, l}}}, {UV(0., 0.), UV(1., 1.), UV(1., 0.)}, color.has_value() ? color.value() : vec4({0., 0., 1., 1.}), material),
+                               Face({{{-l, -l, -l}, {l, -l, -l}, {l, -l, l}}}, {UV(0., 0.), UV(0., 1.), UV(1., 1.)}, color.has_value() ? color.value() : Color(1., 0., 1., 1.), material),
+                               Face({{{-l, -l, -l}, {l, -l, l}, {-l, -l, l}}}, {UV(0., 0.), UV(1., 1.), UV(1., 0.)}, color.has_value() ? color.value() : Color(1., 0., 1., 1.), material),
+                               Face({{{-l, l, -l}, {l, l, l}, {l, l, -l}}}, {UV(0., 0.), UV(0., 1.), UV(1., 1.)}, color.has_value() ? color.value() : Color(0., 0., 1., 1.), material),
+                               Face({{{-l, l, -l}, {-l, l, l}, {l, l, l}}}, {UV(0., 0.), UV(1., 1.), UV(1., 0.)}, color.has_value() ? color.value() : Color(0., 0., 1., 1.), material),
                                
-                               Face({{{-l, -l, -l}, {-l, -l, l}, {-l, l, l}}}, {UV(0., 0.), UV(0., 1.), UV(1., 1.)}, color.has_value() ? color.value() : vec4({0., 1., 1., 1.}), material),
-                               Face({{{-l, -l, -l}, {-l, l, l}, {-l, l, -l}}}, {UV(0., 0.), UV(1., 1.), UV(1., 0.)}, color.has_value() ? color.value() : vec4({0., 1., 1., 1.}), material),
-                               Face({{{l, -l, -l}, {l, l, l}, {l, -l, l}}}, {UV(0., 0.), UV(0., 1.), UV(1., 1.)}, color.has_value() ? color.value() : vec4({0., 1., 0., 1.}), material),
-                               Face({{{l, -l, -l}, {l, l, -l}, {l, l, l}}}, {UV(0., 0.), UV(1., 1.), UV(1., 0.)}, color.has_value() ? color.value() : vec4({0., 1., 0., 1.}), material)};
+                               Face({{{-l, -l, -l}, {-l, -l, l}, {-l, l, l}}}, {UV(0., 0.), UV(0., 1.), UV(1., 1.)}, color.has_value() ? color.value() : Color(0., 1., 1., 1.), material),
+                               Face({{{-l, -l, -l}, {-l, l, l}, {-l, l, -l}}}, {UV(0., 0.), UV(1., 1.), UV(1., 0.)}, color.has_value() ? color.value() : Color(0., 1., 1., 1.), material),
+                               Face({{{l, -l, -l}, {l, l, l}, {l, -l, l}}}, {UV(0., 0.), UV(0., 1.), UV(1., 1.)}, color.has_value() ? color.value() : Color(0., 1., 0., 1.), material),
+                               Face({{{l, -l, -l}, {l, l, -l}, {l, l, l}}}, {UV(0., 0.), UV(1., 1.), UV(1., 0.)}, color.has_value() ? color.value() : Color(0., 1., 0., 1.), material)};
     return faces;
 }
 
-std::vector<Face> Face::sphere(double radius, uint32_t divides, bool smooth_normals, const std::optional<vec4>& color, const Material& material)
+std::vector<Face> Face::sphere(double radius, uint32_t divides, bool smooth_normals, const std::optional<Color>& color, const Material& material)
 {
     std::vector<Face> faces;
     // creating the icosahedron coordinates
@@ -56,14 +56,14 @@ std::vector<Face> Face::sphere(double radius, uint32_t divides, bool smooth_norm
                                                          {2,1,6},{3,2,7},{4,3,8},{5,4,9},{1,5,10},
                                                          {1,10,6},{2,6,7},{3,7,8},{4,8,9},{5,9,10},
                                                          {11,6,10},{11,7,6},{11,8,7},{11,9,8},{11,10,9}};
-    const std::vector<vec4> colors = {{0.12156862745098039, 0.4666666666666667, 0.7058823529411765, 1.0}, {1.0, 0.4980392156862745, 0.054901960784313725, 1.0}, {0.17254901960784313, 0.6274509803921569, 0.17254901960784313, 1.0}, {0.8392156862745098, 0.15294117647058825, 0.1568627450980392, 1.0}, {0.5803921568627451, 0.403921568627451, 0.7411764705882353, 1.0},
-                                      {0.5490196078431373, 0.33725490196078434, 0.29411764705882354, 1.0}, {0.8901960784313725, 0.4666666666666667, 0.7607843137254902, 1.0}, {0.4980392156862745, 0.4980392156862745, 0.4980392156862745, 1.0}, {0.7372549019607844, 0.7411764705882353, 0.13333333333333333, 1.0}, {0.09019607843137255, 0.7450980392156863, 0.8117647058823529, 1.0},
-                                      {0.12156862745098039, 0.4666666666666667, 0.7058823529411765, 1.0}, {1.0, 0.4980392156862745, 0.054901960784313725, 1.0}, {0.17254901960784313, 0.6274509803921569, 0.17254901960784313, 1.0}, {0.8392156862745098, 0.15294117647058825, 0.1568627450980392, 1.0}, {0.5803921568627451, 0.403921568627451, 0.7411764705882353, 1.0},
-                                      {0.5490196078431373, 0.33725490196078434, 0.29411764705882354, 1.0}, {0.8901960784313725, 0.4666666666666667, 0.7607843137254902, 1.0}, {0.4980392156862745, 0.4980392156862745, 0.4980392156862745, 1.0}, {0.7372549019607844, 0.7411764705882353, 0.13333333333333333, 1.0}, {0.09019607843137255, 0.7450980392156863, 0.8117647058823529, 1.0}}; 
+    const std::vector<Color> colors = {{0.12156862745098039, 0.4666666666666667, 0.7058823529411765, 1.0}, {1.0, 0.4980392156862745, 0.054901960784313725, 1.0}, {0.17254901960784313, 0.6274509803921569, 0.17254901960784313, 1.0}, {0.8392156862745098, 0.15294117647058825, 0.1568627450980392, 1.0}, {0.5803921568627451, 0.403921568627451, 0.7411764705882353, 1.0},
+                                       {0.5490196078431373, 0.33725490196078434, 0.29411764705882354, 1.0}, {0.8901960784313725, 0.4666666666666667, 0.7607843137254902, 1.0}, {0.4980392156862745, 0.4980392156862745, 0.4980392156862745, 1.0}, {0.7372549019607844, 0.7411764705882353, 0.13333333333333333, 1.0}, {0.09019607843137255, 0.7450980392156863, 0.8117647058823529, 1.0},
+                                       {0.12156862745098039, 0.4666666666666667, 0.7058823529411765, 1.0}, {1.0, 0.4980392156862745, 0.054901960784313725, 1.0}, {0.17254901960784313, 0.6274509803921569, 0.17254901960784313, 1.0}, {0.8392156862745098, 0.15294117647058825, 0.1568627450980392, 1.0}, {0.5803921568627451, 0.403921568627451, 0.7411764705882353, 1.0},
+                                       {0.5490196078431373, 0.33725490196078434, 0.29411764705882354, 1.0}, {0.8901960784313725, 0.4666666666666667, 0.7607843137254902, 1.0}, {0.4980392156862745, 0.4980392156862745, 0.4980392156862745, 1.0}, {0.7372549019607844, 0.7411764705882353, 0.13333333333333333, 1.0}, {0.09019607843137255, 0.7450980392156863, 0.8117647058823529, 1.0}}; 
     // subdividing
     for (unsigned int i=0; i<indices.size(); i++)
     {
-        vec4 face_color = colors[i];
+        Color face_color = colors[i];
         std::array<uint8_t, 3> indice = indices[i];
         Vector p0 = _spherical_to_cartesian(phi_theta_r[indice[0]]);
         Vector p1 = _spherical_to_cartesian(phi_theta_r[indice[1]]);
@@ -126,9 +126,9 @@ std::vector<Face> Face::sphere(double radius, uint32_t divides, bool smooth_norm
     return faces;
 }
 
-std::vector<Face> Face::cylinder(double length, double radius, uint32_t divides, bool smooth_normals, const std::optional<vec4>& color, const Material& material)
+std::vector<Face> Face::cylinder(double length, double radius, uint32_t divides, bool smooth_normals, const std::optional<Color>& color, const Material& material)
 {
-    const std::vector<vec4> colors = {{0.21568627450980393, 0.49411764705882355, 0.7215686274509804, 1.0}, {0.30196078431372547, 0.6862745098039216, 0.2901960784313726, 1.0}, {0.596078431372549, 0.3058823529411765, 0.6392156862745098, 1.0}, {1.0, 0.4980392156862745, 0.0, 1.0}, {1.0, 1.0, 0.2, 1.0}, {0.6509803921568628, 0.33725490196078434, 0.1568627450980392, 1.0}, {0.9686274509803922, 0.5058823529411764, 0.7490196078431373, 1.0}};
+    const std::vector<Color> colors = {{0.22, 0.49, 0.72, 1.0}, {0.30, 0.69, 0.29, 1.0}, {0.60, 0.31, 0.64, 1.0}, {1.0, 0.50, 0.0, 1.0}, {1.0, 1.0, 0.2, 1.0}, {0.65, 0.34, 0.16, 1.0}, {0.97, 0.51, 0.75, 1.0}};
     Vector z(0., 0., length);
     std::vector<Face> faces;
     for (uint32_t i=0; i<divides;i++)
@@ -152,15 +152,15 @@ std::vector<Face> Face::cylinder(double length, double radius, uint32_t divides,
         // circular extremities
         Vector uv1 = p1 / radius * Vector(0.29, 0.97, 0.);
         Vector uv2 = p2 / radius * Vector(0.29, 0.97, 0.);
-        faces.push_back(Face({p1, Vector(0., 0., 0.), p2}, {UV(uv1.x + 0.15, uv1.y + 0.015), UV(0.15, 0.5), UV(uv2.x + 0.15, uv2.y + 0.015)}, color.has_value() ? color.value() : vec4({0.8941176470588236, 0.10196078431372549, 0.10980392156862745, 1.0}), material));
-        faces.push_back(Face({p2+z, z, p1+z}, {UV(uv2.x + 0.85, uv2.y + 0.015), UV(0.85, 0.5), UV(uv1.x + 0.85, uv1.y + 0.015)}, color.has_value() ? color.value() : vec4({0.6, 0.6, 0.6, 1.0}), material));
+        faces.push_back(Face({p1, Vector(0., 0., 0.), p2}, {UV(uv1.x + 0.15, uv1.y + 0.015), UV(0.15, 0.5), UV(uv2.x + 0.15, uv2.y + 0.015)}, color.has_value() ? color.value() : Color(0.89, 0.10, 0.11, 1.0), material));
+        faces.push_back(Face({p2+z, z, p1+z}, {UV(uv2.x + 0.85, uv2.y + 0.015), UV(0.85, 0.5), UV(uv1.x + 0.85, uv1.y + 0.015)}, color.has_value() ? color.value() : Color(0.6, 0.6, 0.6, 1.0), material));
     }
     return faces;
 }
 
-std::vector<Face> Face::cone(double length, double radius, uint32_t divides, bool smooth_normals, const std::optional<vec4>& color, const Material& material)
+std::vector<Face> Face::cone(double length, double radius, uint32_t divides, bool smooth_normals, const std::optional<Color>& color, const Material& material)
 {
-    const std::vector<vec4> colors = {{0.21568627450980393, 0.49411764705882355, 0.7215686274509804, 1.0}, {0.30196078431372547, 0.6862745098039216, 0.2901960784313726, 1.0}, {0.596078431372549, 0.3058823529411765, 0.6392156862745098, 1.0}, {1.0, 0.4980392156862745, 0.0, 1.0}, {1.0, 1.0, 0.2, 1.0}, {0.6509803921568628, 0.33725490196078434, 0.1568627450980392, 1.0}, {0.9686274509803922, 0.5058823529411764, 0.7490196078431373, 1.0}};
+    const std::vector<Color> colors = {{0.22, 0.49, 0.72, 1.0}, {0.30, 0.69, 0.29, 1.0}, {0.60, 0.31, 0.64, 1.0}, {1.0, 0.50, 0.0, 1.0}, {1.0, 1.0, 0.2, 1.0}, {0.65, 0.34, 0.16, 1.0}, {0.97, 0.51, 0.75, 1.0}};
     Vector z(0., 0., length);
     std::vector<Face> faces;
     for (uint32_t i=0; i<divides;i++)
@@ -171,7 +171,7 @@ std::vector<Face> Face::cone(double length, double radius, uint32_t divides, boo
         Vector p2(radius*std::cos(angle2), radius*std::sin(angle2), 0.0);
         Vector uv1 = p1 / radius * Vector(0.29, 0.97, 0.);
         Vector uv2 = p2 / radius * Vector(0.29, 0.97, 0.);
-        faces.push_back(Face({p1, Vector(0., 0., 0.), p2}, {UV(uv1.x + 0.15, uv1.y + 0.015), UV(0.15, 0.5), UV(uv2.x + 0.15, uv2.y + 0.015)}, color.has_value() ? color.value() : vec4({0.8941176470588236, 0.10196078431372549, 0.10980392156862745, 1.0}), material));
+        faces.push_back(Face({p1, Vector(0., 0., 0.), p2}, {UV(uv1.x + 0.15, uv1.y + 0.015), UV(0.15, 0.5), UV(uv2.x + 0.15, uv2.y + 0.015)}, color.has_value() ? color.value() : Color(0.89, 0.10, 0.11, 1.0), material));
         Face face({z, p1, p2}, {UV(1.0, 0.5), UV(0.35, angle1/(2*PI)), UV(0.35, angle2/(2*PI))}, color.has_value() ? color.value() : colors[i % colors.size()], material);
         if (smooth_normals)
         {

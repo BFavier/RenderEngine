@@ -26,9 +26,9 @@ void Mesh::upload(const std::vector<Face>& faces)
     for (size_t i=0; i<faces.size();i++)
     {
         const Face& face = faces[i];
-        vertices[i*3] = {face.points[0].to_vec3(), face.normals[0].to_vec3(), face.color, face.UVs[0].to_vec(), face.material.to_vec()};
-        vertices[i*3+1] = {face.points[1].to_vec3(), face.normals[1].to_vec3(), face.color, face.UVs[1].to_vec(), face.material.to_vec()};
-        vertices[i*3+2] = {face.points[2].to_vec3(), face.normals[2].to_vec3(), face.color, face.UVs[2].to_vec(), face.material.to_vec()};
+        vertices[i*3] = {face.points[0].to_vec3(), face.normals[0].to_vec3(), face.color.to_vec4(), face.UVs[0].to_vec(), face.material.to_vec()};
+        vertices[i*3+1] = {face.points[1].to_vec3(), face.normals[1].to_vec3(), face.color.to_vec4(), face.UVs[1].to_vec(), face.material.to_vec()};
+        vertices[i*3+2] = {face.points[2].to_vec3(), face.normals[2].to_vec3(), face.color.to_vec4(), face.UVs[2].to_vec(), face.material.to_vec()};
     }
     _buffer->upload(reinterpret_cast<uint8_t*>(vertices.data()), faces.size()*sizeof(Vertex)*3, _offset);
 }

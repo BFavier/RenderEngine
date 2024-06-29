@@ -20,9 +20,9 @@ int main()
         std::map<std::string, std::shared_ptr<Mesh>> meshes = Mesh::bulk_allocate_meshes(gpu,
             {{"cube", Face::cube(0.5)},
              {"cone", Face::cone(0.5, 0.1, 20)},
-             {"quad", Face::quad(Vector(1., 0., 1.), Vector(-1., 0., 1.), Vector(-1., 0., -1.), Vector(1., 0., -1.), {1.0, 1.0, 1.0, 1.0})}});
-        Model cube(meshes["cube"], {0., -1., 0.});
-        Model floor(meshes["quad"], {0., 0., 0.}, Quaternion(), 5.0);
+             {"quad", Face::quad(Vector(1., 0., 1.), Vector(-1., 0., 1.), Vector(-1., 0., -1.), Vector(1., 0., -1.), Color(1.0, 1.0, 1.0, 1.0))}});
+        Model cube(meshes["cube"], Vector(0., -1., 0.));
+        Model floor(meshes["quad"], Vector(0., 0., 0.), Quaternion(), 5.0);
         Referential yaw(Vector(0., 0., -1.), Quaternion(), 1.0);  // yaw only rotates around the global Y axis
         Camera camera(45.0, Vector(0., -1.0, 0.), Quaternion(), 1.0, &yaw); // the camera only pitches around yaw's X axis
         while(!window.closing())
@@ -84,7 +84,7 @@ int main()
             Canvas* frame = window.next_frame();
             if (frame != nullptr)
             {
-                frame->clear(10, 0, 30, 255);
+                frame->clear(Color(0.1, 0.0, 0.3, 1.0));
                 // frame->set_view(camera);
                 frame->draw(camera, cube.mesh, cube.coordinates_in(camera), true);
                 frame->draw(camera, floor.mesh, floor.coordinates_in(camera), false);

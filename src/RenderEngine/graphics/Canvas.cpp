@@ -204,7 +204,7 @@ void Canvas::wait_completion()
 }
 
 
-void Canvas::clear(unsigned char R, unsigned char G, unsigned char B, unsigned char A)
+void Canvas::clear(Color _color)
 {
     if (_rendering)
     {
@@ -224,9 +224,9 @@ void Canvas::clear(unsigned char R, unsigned char G, unsigned char B, unsigned c
     material._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _vk_command_buffer);
     depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _vk_command_buffer);
     // Clear albedo image
-    VkClearColorValue clear_color = {{R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f}};
-    VkImageSubresourceRange color_range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, color.mip_levels_count(), 0, 1};
-    vkCmdClearColorImage(_vk_command_buffer, color._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &color_range);
+    VkClearColorValue clear_albedo = {{_color.r, _color.g, _color.b, _color.a}};
+    VkImageSubresourceRange albedo_range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, color.mip_levels_count(), 0, 1};
+    vkCmdClearColorImage(_vk_command_buffer, color._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_albedo, 1, &albedo_range);
     // Clear normal image
     VkClearColorValue clear_normal = {{0.f, 0.f, 0.f, 1.0f}};
     VkImageSubresourceRange normal_range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, color.mip_levels_count(), 0, 1};

@@ -5,6 +5,7 @@
 #include <RenderEngine/geometry/Vector.hpp>
 #include <RenderEngine/geometry/Matrix.hpp>
 #include <RenderEngine/graphics/Camera.hpp>
+#include <RenderEngine/graphics/Color.hpp>
 
 
 namespace RenderEngine
@@ -53,7 +54,7 @@ namespace RenderEngine
             void _end_render_pass_recording();
         public:
             // Clear the color image to the given color. Also clear other images (depth buffer, ...)
-            void clear(unsigned char R, unsigned char G, unsigned char B, unsigned char A);
+            void clear(Color color);
             // Set the view for the 3D rendering to the current state of the given camera
             void set_view(const Camera& camera);
             // Record objects to draw in the command buffer. Rendering only starts once the 'render' method is called.
