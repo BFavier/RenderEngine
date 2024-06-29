@@ -66,6 +66,8 @@ namespace RenderEngine
         vec3 position;  // x, y, z
         vec3 normal;  // nx, ny, nz
         vec4 color;  // r, g, b, a
+        vec2 uv; // u, v
+        vec3 material; // metallic, roughness
     };
 
     struct MeshDrawParameters
