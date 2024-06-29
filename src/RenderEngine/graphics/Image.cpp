@@ -240,9 +240,7 @@ void Image::_create_vk_image_view()
 uint8_t Image::format_channel_count(const ImageFormat& format)
 {
     if (format == ImageFormat::GRAY) {return 1;}
-    else if(format == ImageFormat::RGB) {return 3;}
     else if (format == ImageFormat::RGBA) {return 4;}
-    else if (format == ImageFormat::POINTER) {return 1;}
     else if (format == ImageFormat::FLOAT3) {return 3;}
     else if (format == ImageFormat::FLOAT4) {return 4;}
     else if (format == ImageFormat::DEPTH) {return 1;}
@@ -252,9 +250,7 @@ uint8_t Image::format_channel_count(const ImageFormat& format)
 size_t Image::format_channel_bytessize(const ImageFormat& format)
 {
     if (format == ImageFormat::GRAY) {return 1;}
-    else if(format == ImageFormat::RGB) {return 1;}
     else if (format == ImageFormat::RGBA) {return 1;}
-    else if (format == ImageFormat::POINTER) {return sizeof(void*);}
     else if (format == ImageFormat::FLOAT3) {return 4;}
     else if (format == ImageFormat::FLOAT4) {return 4;}
     else if (format == ImageFormat::DEPTH) {return 4;}
@@ -326,12 +322,13 @@ std::map<std::string, std::shared_ptr<Image>> Image::bulk_load_images(const std:
 
 std::tuple<std::vector<uint8_t>, uint32_t, uint32_t, ImageFormat> Image::read_pixels_from_file(const std::string& file_path, const std::optional<ImageFormat>& read_format)
 {
+    //TODO : improve the image format handling
     ImageFormat format;
     int i_width, i_height, n_channels, n_required_channels;
     if (read_format.has_value())
     {
         format = read_format.value();
-        if (format != ImageFormat::GRAY && format != ImageFormat::RGB && format != ImageFormat::RGBA)
+        if (format != ImageFormat::GRAY && format != ImageFormat::RGBA)
         {
             THROW_ERROR("Reading pixels format '" + std::to_string(format) + "' from an image file is not supported.");
         }
@@ -348,7 +345,7 @@ std::tuple<std::vector<uint8_t>, uint32_t, uint32_t, ImageFormat> Image::read_pi
         if (Utilities::ends_with(upper_file_path, ".HDR") && n_channels == 3) {format = ImageFormat::FLOAT3;}
         else if (Utilities::ends_with(upper_file_path, ".HDR") && n_channels == 4) {format = ImageFormat::FLOAT4;}
         else if (n_channels == 4) {format = ImageFormat::RGBA;}
-        else if (n_channels == 3) {format = ImageFormat::RGB;}
+        else if (n_channels == 3) {THROW_ERROR("Reading RGB image is not implemented, specify read_format=RGBA");format = ImageFormat::RGBA;}
         else if (n_channels == 1) {format = ImageFormat::GRAY;}
         else {THROW_ERROR("Unexpected number of channels in image file");}
     }
@@ -381,7 +378,7 @@ std::vector<uint8_t> Image::resize_pixels(const std::vector<uint8_t>& pixels, Im
 {
     int result;
     std::vector<uint8_t> resized_pixels(new_width*new_height*format_channel_count(format)*format_channel_bytessize(format));
-    if (format == ImageFormat::GRAY || format == ImageFormat::RGB || format == ImageFormat::RGBA)
+    if (format == ImageFormat::GRAY || format == ImageFormat::RGBA)
     {
         result = stbir_resize_uint8(pixels.data(), width, height, 0,
                                     resized_pixels.data(), new_width, new_height, 0,

@@ -7,7 +7,8 @@ using namespace RenderEngine;
 Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, bool mip_maped, AntiAliasing sample_count) :
     gpu(_gpu),
     color(_gpu, ImageFormat::RGBA, width, height, mip_maped),
-    handles(_gpu, ImageFormat::POINTER, width, height, false),
+    normal(_gpu, ImageFormat::RGBA, width, height, mip_maped),
+    material(_gpu, ImageFormat::RGBA, width, height, mip_maped),
     depth_buffer(_gpu, ImageFormat::DEPTH, width, height, false)
 {
     _allocate_frame_buffer();
@@ -21,7 +22,8 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height
 Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const VkImage& vk_image, uint32_t width, uint32_t height, AntiAliasing sample_count) :
     gpu(_gpu),
     color(_gpu, vk_image, nullptr, ImageFormat::RGBA, width, height, false),
-    handles(_gpu, ImageFormat::POINTER, width, height, false),
+    normal(_gpu, ImageFormat::RGBA, width, height, false),
+    material(_gpu, ImageFormat::RGBA, width, height, false),
     depth_buffer(_gpu, ImageFormat::DEPTH, width, height, false)
 {
     _allocate_frame_buffer();
@@ -46,7 +48,7 @@ Canvas::~Canvas()
 void Canvas::_allocate_frame_buffer()
 {
     std::shared_ptr<GPU>& _gpu = this->gpu;
-    std::vector<VkImageView> attachments = {color._vk_image_view, depth_buffer._vk_image_view};
+    std::vector<VkImageView> attachments = {color._vk_image_view, normal._vk_image_view, material._vk_image_view, depth_buffer._vk_image_view};
     VkFramebufferCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     info.renderPass = gpu->shader3d->_render_pass;
@@ -218,20 +220,25 @@ void Canvas::clear(unsigned char R, unsigned char G, unsigned char B, unsigned c
     }
     // transition layout
     color._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _vk_command_buffer);
+    normal._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _vk_command_buffer);
+    material._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _vk_command_buffer);
     depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _vk_command_buffer);
-    // Clear color image
+    // Clear albedo image
     VkClearColorValue clear_color = {{R / 255.0f, G / 255.0f, B / 255.0f, A / 255.0f}};
     VkImageSubresourceRange color_range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, color.mip_levels_count(), 0, 1};
     vkCmdClearColorImage(_vk_command_buffer, color._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &color_range);
+    // Clear normal image
+    VkClearColorValue clear_normal = {{0.f, 0.f, 0.f, 1.0f}};
+    VkImageSubresourceRange normal_range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, color.mip_levels_count(), 0, 1};
+    vkCmdClearColorImage(_vk_command_buffer, normal._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_normal, 1, &normal_range);
+    // Clear material image
+    VkClearColorValue clear_material = {{0.f, 0.f, 0.f, 1.0f}};
+    VkImageSubresourceRange material_range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, color.mip_levels_count(), 0, 1};
+    vkCmdClearColorImage(_vk_command_buffer, material._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_material, 1, &material_range);
     // Clear depth buffer
     VkClearDepthStencilValue clear_depth = {0.f, 0};
     VkImageSubresourceRange depth_range = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, color.mip_levels_count(), 0, 1};
     vkCmdClearDepthStencilImage(_vk_command_buffer, depth_buffer._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1, &depth_range);
-    // start render pass
-    if (!_recording)
-    {
-        _initialize_recording();
-    }
 }
 
 // void Canvas::set_view(const Camera& camera)
@@ -367,10 +374,12 @@ void Canvas::_start_render_pass_recording()
 {
     // transition layouts
     color._transition_to_layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _vk_command_buffer);
+    normal._transition_to_layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _vk_command_buffer);
+    material._transition_to_layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _vk_command_buffer);
     depth_buffer._transition_to_layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, _vk_command_buffer);
     // begin render pass
     std::vector<VkClearValue> clear_values;
-    for (unsigned int i = 0; i < 3; i++)
+    for (unsigned int i = 0; i < 4; i++)
     {
         VkClearValue clear_value = {};
         clear_value.color = { {0.0f, 0.0f, 0.0f, 1.0f} };

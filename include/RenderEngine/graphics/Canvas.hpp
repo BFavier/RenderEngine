@@ -29,7 +29,8 @@ namespace RenderEngine
         public:
             std::shared_ptr<GPU> gpu;
             Image color;
-            Image handles;
+            Image normal;
+            Image material;
             Image depth_buffer;
         protected:
             bool _recording = false; // boolean that is set to true when commands are beeing recorded on cpu
