@@ -54,8 +54,8 @@ void main()
     {
         gl_Position = vec4(position.x / (near_plane_width / 2.0),
                            position.y / (near_plane_height / 2.0),
-                           position.z*position.z / far_plane_distance,
-                           position.z);
+                           position.z / far_plane_distance,
+                           1.0);
     }
 
     // return fragment attributes
