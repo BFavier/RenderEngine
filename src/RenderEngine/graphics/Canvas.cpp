@@ -8,8 +8,8 @@ using namespace RenderEngine;
 Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, bool mip_maped, AntiAliasing sample_count) :
     gpu(_gpu),
     color(_gpu, ImageFormat::RGBA, width, height, mip_maped),
-    normal(_gpu, ImageFormat::RGBA, width, height, mip_maped),
-    material(_gpu, ImageFormat::RGBA, width, height, mip_maped),
+    normal(_gpu, ImageFormat::NORMAL, width, height, mip_maped),
+    material(_gpu, ImageFormat::MATERIAL, width, height, mip_maped),
     depth_buffer(_gpu, ImageFormat::DEPTH, width, height, false)
 {
     _allocate_frame_buffer();
@@ -23,8 +23,8 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height
 Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const VkImage& vk_image, uint32_t width, uint32_t height, AntiAliasing sample_count) :
     gpu(_gpu),
     color(_gpu, vk_image, nullptr, ImageFormat::RGBA, width, height, false),
-    normal(_gpu, ImageFormat::RGBA, width, height, false),
-    material(_gpu, ImageFormat::RGBA, width, height, false),
+    normal(_gpu, ImageFormat::NORMAL, width, height, false),
+    material(_gpu, ImageFormat::MATERIAL, width, height, false),
     depth_buffer(_gpu, ImageFormat::DEPTH, width, height, false)
 {
     _allocate_frame_buffer();

@@ -80,7 +80,7 @@ int main()
                 if (frame != nullptr)
                 {
                     frame->wait_completion();
-                    frame->color.save_to_disk("screenshot.png");
+                    frame->normal.save_to_disk("screenshot.png");
                     std::cout << "screenshot saved." << std::endl;
                 }
             }
@@ -89,8 +89,8 @@ int main()
             {
                 frame->clear(Color(0.1, 0.0, 0.3, 1.0));
                 // frame->set_view(camera);
-                frame->draw(ortho_camera, cube.mesh, cube.coordinates_in(camera), true);
-                frame->draw(ortho_camera, floor.mesh, floor.coordinates_in(camera), false);
+                frame->draw(camera, cube.mesh, cube.coordinates_in(camera), true);
+                frame->draw(camera, floor.mesh, floor.coordinates_in(camera), false);
             }
             window.update();
         }

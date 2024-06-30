@@ -241,6 +241,8 @@ uint8_t Image::format_channel_count(const ImageFormat& format)
 {
     if (format == ImageFormat::GRAY) {return 1;}
     else if (format == ImageFormat::RGBA) {return 4;}
+    else if (format == ImageFormat::NORMAL) { return 4; }
+    else if (format == ImageFormat::MATERIAL) { return 4; }
     else if (format == ImageFormat::FLOAT3) {return 3;}
     else if (format == ImageFormat::FLOAT4) {return 4;}
     else if (format == ImageFormat::DEPTH) {return 1;}
@@ -251,6 +253,8 @@ size_t Image::format_channel_bytessize(const ImageFormat& format)
 {
     if (format == ImageFormat::GRAY) {return 1;}
     else if (format == ImageFormat::RGBA) {return 1;}
+    else if (format == ImageFormat::NORMAL) { return 1; }
+    else if (format == ImageFormat::MATERIAL) { return 1; }
     else if (format == ImageFormat::FLOAT3) {return 4;}
     else if (format == ImageFormat::FLOAT4) {return 4;}
     else if (format == ImageFormat::DEPTH) {return 4;}
