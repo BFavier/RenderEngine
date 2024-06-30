@@ -1,4 +1,5 @@
 #include <RenderEngine/Internal.hpp>
+#include <RenderEngine/utilities/Macro.hpp>
 #include <RenderEngine/graphics/GPU.hpp>
 #include <RenderEngine/user_interface/WindowSettings.hpp>
 #include <RenderEngine/user_interface/Window.hpp>

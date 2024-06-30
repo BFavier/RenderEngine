@@ -1,5 +1,6 @@
 #pragma once
-#include <RenderEngine/utilities/Macro.hpp>
+#include <ostream>
+#include <cmath>
 
 namespace RenderEngine
 {
@@ -12,7 +13,7 @@ namespace RenderEngine
         Quaternion();
         Quaternion(const Quaternion& other);
         Quaternion(double w, double x, double y, double z);
-        Quaternion(double angle, const Vector& axis);
+        Quaternion(double radians, const Vector& axis);
         Quaternion(const Vector& from, const Vector& to);
         ~Quaternion();
     public:

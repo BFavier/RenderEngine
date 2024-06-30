@@ -1,6 +1,6 @@
 #pragma once
-#include <RenderEngine/utilities/Macro.hpp>
 #include <RenderEngine/graphics/shaders/Types.hpp>
+#include <ostream>
 #include <array>
 
 namespace RenderEngine

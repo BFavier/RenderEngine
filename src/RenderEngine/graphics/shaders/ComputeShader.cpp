@@ -1,6 +1,7 @@
 #include <RenderEngine/graphics/shaders/Shader.hpp>
 #include <RenderEngine/graphics/shaders/ComputeShader.hpp>
 #include <RenderEngine/graphics/GPU.hpp>
+#include <RenderEngine/utilities/Macro.hpp>
 using namespace RenderEngine;
 
 ComputeShader::ComputeShader(const GPU* _gpu,

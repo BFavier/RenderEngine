@@ -1,14 +1,17 @@
 #pragma once
-#include <RenderEngine/geometry/Referential.hpp>
+#include <RenderEngine/graphics/Camera.hpp>
+#include <RenderEngine/graphics/Color.hpp>
 
 namespace RenderEngine
 {
-    class Light : public Referential
+    class Light : public Camera
     {
         public:
             Light();
             ~Light();
         public:
+            Color color;
+            double luminance = 0;
 
     };
 }

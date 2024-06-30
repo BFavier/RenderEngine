@@ -4,6 +4,7 @@
 #include <RenderEngine/user_interface/Mouse.hpp>
 #include <RenderEngine/utilities/External.hpp>
 #include <RenderEngine/graphics/GPU.hpp>
+#include <RenderEngine/utilities/Macro.hpp>
 using namespace RenderEngine;
 
 Window::Window(const WindowSettings& settings) : keyboard(*this), mouse(*this)

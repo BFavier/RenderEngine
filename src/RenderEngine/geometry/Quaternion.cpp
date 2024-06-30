@@ -1,5 +1,6 @@
 #include <RenderEngine/geometry/Quaternion.hpp>
 #include <RenderEngine/geometry/Vector.hpp>
+#include <RenderEngine/utilities/Macro.hpp>
 
 using namespace RenderEngine;
 
@@ -23,14 +24,13 @@ Quaternion::Quaternion(double W, double X, double Y, double Z)
     z = Z;
 }
 
-Quaternion::Quaternion(double angle, const Vector& axis)
+Quaternion::Quaternion(double radians, const Vector& axis)
 {
-    double radians = angle * PI / 180.;
     Vector normed = axis.normed();
-    w = cos(radians/2);
-    x = normed.x*sin(radians/2);
-    y = normed.y*sin(radians/2);
-    z = normed.z*sin(radians/2);
+    w = std::cos(radians/2);
+    x = normed.x*std::sin(radians/2);
+    y = normed.y*std::sin(radians/2);
+    z = normed.z*std::sin(radians/2);
 }
 
 Quaternion::Quaternion(const Vector& from, const Vector& to)

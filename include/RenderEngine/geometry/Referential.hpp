@@ -1,5 +1,4 @@
 #pragma once
-#include <RenderEngine/utilities/Macro.hpp>
 #include <RenderEngine/geometry/Vector.hpp>
 #include <RenderEngine/geometry/Quaternion.hpp>
 #include <list>

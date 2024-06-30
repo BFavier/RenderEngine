@@ -36,14 +36,27 @@ void main()
     vec3 normal = mp.mesh_rotation * vertex_normal;
 
     // output in clip coords: normalised device coordinates = (x_clip, y_clip, z_clip) / w_clip
+    /*
     float field_of_view = mp.camera_parameters.x;
-    float width_to_height_ratio = mp.camera_parameters.y;
-    float near_plane = mp.camera_parameters.z;
-    float far_plane = mp.camera_parameters.w;
-    gl_Position = vec4(position.x / (width_to_height_ratio * tan(field_of_view/2.0)),
-                       position.y / tan(field_of_view/2.0),
-                       (position.z - near_plane) * far_plane / (far_plane - near_plane),
-                       position.z);
+    */
+    float near_plane_width = mp.camera_parameters.x;
+    float near_plane_height = mp.camera_parameters.y;
+    float near_plane_distance = mp.camera_parameters.z;
+    float far_plane_distance = mp.camera_parameters.w;
+    if (near_plane_distance > 0.)
+    {
+        gl_Position = vec4(position.x * near_plane_distance * 2 / near_plane_width,
+                           position.y * near_plane_distance * 2 / near_plane_height,
+                           (position.z - near_plane_distance) * far_plane_distance / (far_plane_distance - near_plane_distance),
+                           position.z);
+    }
+    else
+    {
+        gl_Position = vec4(position.x / (near_plane_width / 2.0),
+                           position.y / (near_plane_height / 2.0),
+                           position.z*position.z / far_plane_distance,
+                           position.z);
+    }
 
     // return fragment attributes
     frag_color = vertex_color;

@@ -1,4 +1,5 @@
 #include <RenderEngine/geometry/Vector.hpp>
+#include <RenderEngine/utilities/Macro.hpp>
 #include <vector>
 using namespace RenderEngine;
 

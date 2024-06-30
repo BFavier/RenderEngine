@@ -1,6 +1,7 @@
 #include <RenderEngine/graphics/SwapChain.hpp>
 #include <RenderEngine/graphics/GPU.hpp>
 #include <RenderEngine/user_interface/Window.hpp>
+#include <RenderEngine/utilities/Macro.hpp>
 using namespace RenderEngine;
 
 SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : gpu(_gpu)

@@ -2,6 +2,7 @@
 #include <RenderEngine/graphics/Canvas.hpp>
 #include <RenderEngine/graphics/model/Mesh.hpp>
 #include <RenderEngine/graphics/shaders/Types.hpp>
+#include <RenderEngine/utilities/Macro.hpp>
 using namespace RenderEngine;
 
 Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t width, uint32_t height, bool mip_maped, AntiAliasing sample_count) :
@@ -303,7 +304,7 @@ void Canvas::draw(const Camera& camera, const std::shared_ptr<Mesh>& mesh, const
     VkPushConstantRange mesh_range = gpu->shader3d->_push_constants[0][0].second;
     MeshDrawParameters mesh_parameters = {std::get<0>(coordinates_in_camera).to_vec4(),
                                           Matrix(std::get<1>(coordinates_in_camera).inverse()).to_mat3(),
-                                          vec4({camera.field_of_view, static_cast<float>(color.width())/color.height(), camera.near_plane, camera.far_plane}),
+                                          vec4({camera.horizontal_length, camera.horizontal_length*static_cast<float>(color.height())/color.width(), camera.near_plane_distance, camera.far_plane_distance}),
                                           static_cast<float>(std::get<2>(coordinates_in_camera))};
     vkCmdPushConstants(_vk_command_buffer, gpu->shader3d->_pipeline_layouts[0], mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &mesh_parameters);
     // send a command to command buffer

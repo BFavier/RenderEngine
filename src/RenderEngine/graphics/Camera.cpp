@@ -2,23 +2,24 @@
 #include <cmath>  // for tan
 using namespace RenderEngine;
 
-Camera::Camera(float _field_of_view, Vector _position, Quaternion _orientation, double _scale, Referential* _parent) :
-    Referential(_position, _orientation, _scale, _parent), field_of_view(_field_of_view)
+Camera::Camera(float _horizontal_field_of_view, float _near_plane, float _far_plane,
+               Vector _position, Quaternion _orientation, double _scale, Referential* _parent) :
+    Referential(_position, _orientation, _scale, _parent)
 {
+    near_plane_distance = _near_plane;
+    far_plane_distance = _far_plane;
+    horizontal_length = 2.0 * std::tan(_horizontal_field_of_view / 2.0) * _near_plane;
+}
+
+Camera::Camera(float _horizontal_span, float _far_plane,
+               Vector _position, Quaternion _orientation, double _scale, Referential* _parent) :
+    Referential(_position, _orientation, _scale, _parent)
+{
+    near_plane_distance = 0.;
+    far_plane_distance = _far_plane;
+    horizontal_length = _horizontal_span;
 }
 
 Camera::~Camera()
 {
-}
-
-float Camera::focal_length() const
-{
-    if (field_of_view > 0.0 && field_of_view < 180.0)
-    {
-        return static_cast<float>(std::max(1.0, 1.0) / 2.0 / tan(field_of_view/2.0 * PI/180.));
-    }
-    else
-    {
-        return 0.0f;
-    }
 }

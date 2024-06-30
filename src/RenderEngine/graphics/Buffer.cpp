@@ -1,4 +1,5 @@
 #include <RenderEngine/graphics/Buffer.hpp>
+#include <RenderEngine/utilities/Macro.hpp>
 using namespace RenderEngine;
 
 

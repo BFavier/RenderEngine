@@ -2,7 +2,6 @@
 #include <RenderEngine/utilities/External.hpp>
 #include <RenderEngine/graphics/ImageFormat.hpp>
 #include <RenderEngine/graphics/shaders/Types.hpp>
-#include <RenderEngine/utilities/Macro.hpp>
 #include <map>
 #include <vector>
 #include <memory>

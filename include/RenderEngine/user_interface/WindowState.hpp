@@ -34,8 +34,6 @@ namespace RenderEngine
         GLFWwindow* _glfw_window;
         VkSurfaceKHR _vk_surface;
     public:
-        void _set_unchanged();
-    public:
         static void _window_resize_callback(GLFWwindow* window, int width, int height);
         static void _mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
         static void _mouse_position_callback(GLFWwindow* window, double xpos, double ypos);

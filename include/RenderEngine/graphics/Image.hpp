@@ -1,6 +1,5 @@
 # pragma once
 #include <RenderEngine/utilities/External.hpp>
-#include <RenderEngine/utilities/Macro.hpp>
 #include <RenderEngine/graphics/GPU.hpp>
 #include <RenderEngine/graphics/ImageFormat.hpp>
 #include <RenderEngine/graphics/Buffer.hpp>

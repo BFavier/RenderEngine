@@ -1,5 +1,6 @@
 #include <RenderEngine/user_interface/Mouse.hpp>
 #include <RenderEngine/user_interface/Window.hpp>
+#include <RenderEngine/utilities/Macro.hpp>
 using namespace RenderEngine;
 
 Mouse::Mouse(const Window& window) : _window(window)

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <RenderEngine/render_engine.hpp>
+#include <RenderEngine/utilities/Macro.hpp>  // For PI
 #include <vector>
 #include <iostream>
 using namespace RenderEngine;
@@ -23,8 +24,10 @@ int main()
              {"quad", Face::quad(Vector(1., 0., 1.), Vector(-1., 0., 1.), Vector(-1., 0., -1.), Vector(1., 0., -1.), Color(1.0, 1.0, 1.0, 1.0))}});
         Model cube(meshes["cube"], Vector(0., -1., 0.));
         Model floor(meshes["quad"], Vector(0., 0., 0.), Quaternion(), 5.0);
-        Referential yaw(Vector(0., 0., -1.), Quaternion(), 1.0);  // yaw only rotates around the global Y axis
-        Camera camera(45.0, Vector(0., -1.0, 0.), Quaternion(), 1.0, &yaw); // the camera only pitches around yaw's X axis
+        Referential yaw(Vector(0., -1.0, -1.), Quaternion(), 1.0);  // yaw only rotates around the global Y axis
+        Referential pitch(Vector(), Quaternion(), 1.0, &yaw);  // pitch only rotates around the yaw's X axis
+        Camera camera(PI/2, 0.1, 1000., Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
+        Camera ortho_camera(1.0, 1000., Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
         while(!window.closing())
         {
             double dt = timer.dt();
@@ -68,8 +71,8 @@ int main()
             }
             if (mouse.buttons().at("LEFT CLICK").down)
             {
-                yaw.orientation = yaw.orientation * Quaternion(mouse.dx_rel()*180, { 0.0, 1.0, 0.0 });
-                camera.orientation = camera.orientation * Quaternion(mouse.dy_rel()*180, { -1.0, 0.0, 0.0 });
+                yaw.orientation = yaw.orientation * Quaternion(mouse.dx_rel()*PI, Vector(0.0, 1.0, 0.0));
+                pitch.orientation = pitch.orientation * Quaternion(mouse.dy_rel()*PI, Vector(-1.0, 0.0, 0.0));
             }
             if (keyboard.keys().at("PRINT SCREEN").was_released)
             {
@@ -86,8 +89,8 @@ int main()
             {
                 frame->clear(Color(0.1, 0.0, 0.3, 1.0));
                 // frame->set_view(camera);
-                frame->draw(camera, cube.mesh, cube.coordinates_in(camera), true);
-                frame->draw(camera, floor.mesh, floor.coordinates_in(camera), false);
+                frame->draw(ortho_camera, cube.mesh, cube.coordinates_in(camera), true);
+                frame->draw(ortho_camera, floor.mesh, floor.coordinates_in(camera), false);
             }
             window.update();
         }
