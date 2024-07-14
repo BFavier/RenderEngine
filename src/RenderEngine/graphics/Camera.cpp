@@ -2,24 +2,38 @@
 #include <cmath>  // for tan
 using namespace RenderEngine;
 
-Camera::Camera(float _horizontal_field_of_view, float _near_plane, float _far_plane,
-               Vector _position, Quaternion _orientation, double _scale, Referential* _parent) :
-    Referential(_position, _orientation, _scale, _parent)
-{
-    near_plane_distance = _near_plane;
-    far_plane_distance = _far_plane;
-    horizontal_length = 2.0 * std::tan(_horizontal_field_of_view / 2.0) * _near_plane;
-}
 
-Camera::Camera(float _horizontal_span, float _far_plane,
-               Vector _position, Quaternion _orientation, double _scale, Referential* _parent) :
-    Referential(_position, _orientation, _scale, _parent)
+Camera::Camera(float _horizontal_length, float _near_plane_distance, float _far_plane_distance,
+               Vector position, Quaternion orientation, double scale, Referential* parent) :
+    Referential(position, orientation, scale, parent)
 {
-    near_plane_distance = 0.;
-    far_plane_distance = _far_plane;
-    horizontal_length = _horizontal_span;
+    horizontal_length = _horizontal_length;
+    near_plane_distance = _near_plane_distance;
+    far_plane_distance = _far_plane_distance;
 }
 
 Camera::~Camera()
+{
+}
+
+PerspectiveCamera::PerspectiveCamera(float horizontal_field_of_view, float near_plane_distance, float far_plane_distance,
+                                     Vector position, Quaternion orientation, double scale, Referential* _parent) :
+    Camera(2.0 * std::tan(horizontal_field_of_view / 2.0) * near_plane_distance, near_plane_distance, far_plane_distance,
+           position, orientation, scale, _parent)
+{
+}
+
+PerspectiveCamera::~PerspectiveCamera()
+{
+}
+
+OrthographicCamera::OrthographicCamera(float horizontal_length, float far_plane_distance,
+               Vector position, Quaternion orientation, double scale, Referential* parent) :
+    Camera(horizontal_length, 0.0, far_plane_distance,
+           position, orientation, scale, parent)
+{
+}
+
+OrthographicCamera::~OrthographicCamera()
 {
 }
