@@ -95,8 +95,8 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
     }
     // initialize shader
     shader3d = new Shader3D(this);
-    shader_draw_image = new DemoShader(this);
-    shadow_mapping = new ShadowMapping(this);
+    shader_draw_image = new ShaderDemo(this);
+    shadow_mapping = new ShaderShadow(this);
 }
 
 GPU::~GPU()

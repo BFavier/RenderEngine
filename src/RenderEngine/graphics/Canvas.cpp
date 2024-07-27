@@ -172,10 +172,10 @@ void Canvas::_initialize_recording()
         throw std::runtime_error("failed to begin recording command buffer!");
     }
     // bind the successive pipelines
-    for (unsigned int i = 0; i < gpu->shader3d->_pipelines.size(); i++)
-    {
-        vkCmdBindPipeline(_vk_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipelines[i]);
-    }
+    // for (unsigned int i = 0; i < gpu->shader3d->_pipelines.size(); i++)
+    // {
+    //     vkCmdBindPipeline(_vk_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipelines[0]);
+    // }
     // set viewport and scissor
     VkViewport viewport{};
     viewport.x = 0.0f;
@@ -237,7 +237,7 @@ void Canvas::clear(Color _color)
     VkImageSubresourceRange material_range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, color.mip_levels_count(), 0, 1};
     vkCmdClearColorImage(_vk_command_buffer, material._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_material, 1, &material_range);
     // Clear depth buffer
-    VkClearDepthStencilValue clear_depth = {0.f, 0};
+    VkClearDepthStencilValue clear_depth = {1.f, 0};
     VkImageSubresourceRange depth_range = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, color.mip_levels_count(), 0, 1};
     vkCmdClearDepthStencilImage(_vk_command_buffer, depth_buffer._vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_depth, 1, &depth_range);
 }
@@ -301,12 +301,12 @@ void Canvas::draw(const Camera& camera, const std::shared_ptr<Mesh>& mesh, const
     std::vector<VkDeviceSize> offsets(vertex_buffers.size(), mesh->_offset);
     vkCmdBindVertexBuffers(_vk_command_buffer, 0, vertex_buffers.size(), vertex_buffers.data(), offsets.data());
     // set mesh scale/position/rotation
-    VkPushConstantRange mesh_range = gpu->shader3d->_push_constants[0][0].second;
+    VkPushConstantRange mesh_range = gpu->shader3d->_push_constants.at("params");
     MeshDrawParameters mesh_parameters = {std::get<0>(coordinates_in_camera).to_vec4(),
                                           Matrix(std::get<1>(coordinates_in_camera).inverse()).to_mat3(),
                                           vec4({camera.horizontal_length, camera.horizontal_length*static_cast<float>(color.height())/color.width(), camera.near_plane_distance, camera.far_plane_distance}),
                                           static_cast<float>(std::get<2>(coordinates_in_camera))};
-    vkCmdPushConstants(_vk_command_buffer, gpu->shader3d->_pipeline_layouts[0], mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &mesh_parameters);
+    vkCmdPushConstants(_vk_command_buffer, gpu->shader3d->_pipeline_layout, mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &mesh_parameters);
     // send a command to command buffer
     vkCmdDraw(_vk_command_buffer, mesh->bytes_size()/sizeof(Vertex), 1, 0, 0);
 }
@@ -373,6 +373,7 @@ bool Canvas::is_rendering() const
 
 void Canvas::_start_render_pass_recording()
 {
+    vkCmdBindPipeline(_vk_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, gpu->shader3d->_pipeline);
     // transition layouts
     color._transition_to_layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _vk_command_buffer);
     normal._transition_to_layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, _vk_command_buffer);

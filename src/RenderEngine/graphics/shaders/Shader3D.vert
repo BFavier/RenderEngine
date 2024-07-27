@@ -14,7 +14,7 @@ layout(push_constant, std430) uniform MeshDrawParameters
 	mat3 mesh_rotation;
     vec4 camera_parameters;
     float mesh_scale;
-} mp;
+} params;
 
 layout(set=0, binding=0, std430) uniform CameraParameters
 {
@@ -32,17 +32,17 @@ layout(location = 2) out vec3 frag_material;
 void main()
 {
     // mesh coords to world coords
-    vec3 position = vec3(mp.mesh_position) + mp.mesh_rotation * (mp.mesh_scale * vertex_position);
-    vec3 normal = mp.mesh_rotation * vertex_normal;
+    vec3 position = vec3(params.mesh_position) + params.mesh_rotation * (params.mesh_scale * vertex_position);
+    vec3 normal = params.mesh_rotation * vertex_normal;
 
     // output in clip coords: normalised device coordinates = (x_clip, y_clip, z_clip) / w_clip
     /*
-    float field_of_view = mp.camera_parameters.x;
+    float field_of_view = params.camera_parameters.x;
     */
-    float near_plane_width = mp.camera_parameters.x;
-    float near_plane_height = mp.camera_parameters.y;
-    float near_plane_distance = mp.camera_parameters.z;
-    float far_plane_distance = mp.camera_parameters.w;
+    float near_plane_width = params.camera_parameters.x;
+    float near_plane_height = params.camera_parameters.y;
+    float near_plane_distance = params.camera_parameters.z;
+    float far_plane_distance = params.camera_parameters.w;
     if (near_plane_distance > 0.)
     {
         gl_Position = vec4(position.x * near_plane_distance * 2 / near_plane_width,

@@ -18,10 +18,9 @@ add_executable(${PROJECT_NAME}
     src/RenderEngine/graphics/Buffer.cpp
     src/RenderEngine/graphics/SwapChain.cpp
     src/RenderEngine/graphics/shaders/Shader.cpp
-    src/RenderEngine/graphics/shaders/ComputeShader.cpp
-    src/RenderEngine/graphics/shaders/implementations/DemoShader.cpp
-    src/RenderEngine/graphics/shaders/implementations/Shader3D.cpp
-    src/RenderEngine/graphics/shaders/implementations/ShadowMapping.cpp
+    src/RenderEngine/graphics/shaders/Shader3D.cpp
+    src/RenderEngine/graphics/shaders/ShaderDemo.cpp
+    src/RenderEngine/graphics/shaders/ShaderShadow.cpp
     src/RenderEngine/graphics/model/UV.cpp
     src/RenderEngine/graphics/model/Material.cpp
     src/RenderEngine/graphics/model/Face.cpp

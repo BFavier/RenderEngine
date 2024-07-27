@@ -1,14 +1,10 @@
 #pragma once
 #include <RenderEngine/utilities/External.hpp>
-#include <RenderEngine/graphics/ImageFormat.hpp>
 #include <RenderEngine/graphics/shaders/Types.hpp>
+#include <map>
 #include <vector>
 #include <memory>
 #include <string>
-
-// An exemple of shader wilth multiple subpasses :
-// https://github.com/SaschaWillems/Vulkan/blob/master/examples/subpasses/subpasses.cpp
-// https://github.com/SaschaWillems/Vulkan/tree/master/shaders/glsl/subpasses
 
 namespace RenderEngine
 {
@@ -17,42 +13,52 @@ namespace RenderEngine
     class Shader
     // A Shader is a program with inputs and outputs on the GPU. It is made of a succession of sub-passes, each made of a pipeline of stages
     {
+    friend class Canvas; // Canvas need access to pipeline
     public: // This object is non copyable
         Shader() = delete;
         Shader(const Shader& other) = delete;
         const Shader& operator=(const Shader& other) = delete;
-    public:
-        Shader(const GPU* gpu,
-               const std::vector<std::vector<std::pair<std::string, VkVertexInputBindingDescription>>>& vertex_buffer_bindings, // for each subpass, for each binding, the name and bytes-size of the vertex buffer
-               const std::vector<std::vector<std::pair<std::string, VkVertexInputAttributeDescription>>>& vertex_buffer_attributes, // for each subpass, for each vertex input, it's description
-               const std::vector<std::pair<std::string, ImageFormat>>& attachments,  // Description of all attachments (VkImage objects) that are written to in fragment shader stage (excluding depth buffer)
-               const std::vector<std::vector<std::string>>& input_attachments, // for each subpass, the description of all input attachments (outputs from another subpass)
-               const std::vector<std::vector<std::string>>& output_attachments, // for each subpass the description of all output attachments (VkImage objects that are written to, excepted depth buffer)
-               const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& descriptor_sets, // for each subpass, for each layout set, descriptor of all bindings (textures, Uniform Buffer Objects, ...)
-               const std::vector<std::vector<std::pair<std::string, VkPushConstantRange>>>& push_constants, // for each subpass, definition of all push constants.
-               const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode // for each subpass, for each shader stage, the bytecode of the compiled spirv file
-               );
         ~Shader();
-    public:
+    protected:
+        Shader(const GPU* gpu,
+               const std::vector<std::pair<std::string, VkVertexInputAttributeDescription>>& vertex_buffers,
+               const std::vector<std::pair<std::string, VkFormat>>& input_attachments,
+               const std::vector<std::pair<std::string, VkFormat>>& output_attachments,
+               const std::vector<std::map<std::string, VkDescriptorSetLayoutBinding>>& descriptor_sets, // for each layout set, descriptor of all bindings (textures, Uniform Buffer Objects, ...)
+               const std::map<std::string, VkPushConstantRange>& push_constants, // definition of all push constants.
+               const std::map<VkShaderStageFlagBits, std::vector<uint8_t>> shader_stages_bytecode // the bytecode of the compiled spirv file
+               );
+    protected:
+        const GPU* _gpu = nullptr;
         VkRenderPass _render_pass = VK_NULL_HANDLE;
-        std::vector<VkPipeline> _pipelines;  // pipeline for each subpass
-        std::vector<VkPipelineLayout> _pipeline_layouts; // pipeline layout for each subpass
-        std::vector<std::vector<std::pair<std::string, VkDescriptorType>>> _bindings; // For each subpass, the list of all unique bindings names and types
-        std::vector<std::pair<std::string, ImageFormat>> _attachments; // The list of all unique color attachments names and types
-        std::vector<std::vector<std::pair<std::string, VkPushConstantRange>>> _push_constants;  // for each subpass, the list of (push constant name, description) pairs
+        VkPipeline _pipeline = VK_NULL_HANDLE;  // pipeline
+        VkPipelineLayout _pipeline_layout = VK_NULL_HANDLE; // pipeline layout
+        VkPipelineBindPoint _bind_point;
+        std::map<VkShaderStageFlagBits, VkShaderModule> _modules;  // shader modules (one for each stage)
+        std::vector<std::pair<std::string, VkFormat>> _input_attachments;  // attachment images as inputs (texture, pixel read, ...)
+        std::vector<std::pair<std::string, VkFormat>> _output_attachments;  // attachment images as outputs (color, ...)
+        std::vector<VkDescriptorSetLayout> _descriptor_set_layouts;  // Descriptor sets (Uniform Buffer Objects, SSBO, ...)
+        std::map<std::string, VkPushConstantRange> _push_constants; // The list of (push constant name, description) pairs
     protected:
-        const GPU* gpu = nullptr;
-        std::vector<std::vector<std::pair<VkShaderStageFlagBits, VkShaderModule>>> _modules; // for each subpass, one or more stage modules
-        std::vector<std::vector<VkDescriptorSetLayout>> _descriptor_set_layouts; // for each subpass, one or more descriptor set layout
-    protected:
-        void _create_render_pass(const std::vector<std::vector<std::string>>& input_attachments,
-                                 const std::vector<std::vector<std::string>>& output_attachments);
-        void _create_pipelines(const std::vector<std::vector<std::pair<std::string, VkVertexInputBindingDescription>>>& vertex_buffer_bindings,
-                               const std::vector<std::vector<std::pair<std::string, VkVertexInputAttributeDescription>>>& vertex_buffer_attributes,
-                               const std::vector<std::vector<std::vector<std::pair<std::string, VkDescriptorSetLayoutBinding>>>>& descriptors_sets,
-                               const std::vector<std::vector<std::pair<std::string, VkPushConstantRange>>>& push_constants,
-                               const std::vector<std::vector<std::pair<VkShaderStageFlagBits, std::vector<uint8_t>>>> stages_bytecode);
-    public:
-        static VkShaderModule code_to_module(const GPU& gpu, const std::vector<uint8_t>& code);
+        static VkRenderPass _create_render_pass(const GPU& gpu,
+                                                const std::vector<std::pair<std::string, VkFormat>>& input_attachments,
+                                                const std::vector<std::pair<std::string, VkFormat>>& output_attachments);
+        static std::vector<VkDescriptorSetLayout> _create_descriptor_set_layouts(const GPU& gpu,
+                                                                                 const std::vector<std::map<std::string, VkDescriptorSetLayoutBinding>>& descriptors_sets);
+        static VkPipelineLayout _create_pipeline_layout(const GPU& gpu,
+                                                    const std::map<std::string, VkPushConstantRange>& push_constants,
+                                                    const std::vector<VkDescriptorSetLayout>& descriptor_set_layouts);
+        static std::map<VkShaderStageFlagBits, VkShaderModule> _create_modules(const GPU& gpu,
+                                                    const std::map<VkShaderStageFlagBits, std::vector<uint8_t>> shader_stages_bytecode);
+        static VkPipeline _create_graphics_pipeline(const GPU& gpu,
+                               const std::vector<std::pair<std::string, VkVertexInputAttributeDescription>>& vertex_buffer,
+                               const std::vector<std::pair<std::string, VkFormat>>& output_attachments,
+                               const std::map<VkShaderStageFlagBits, VkShaderModule>& modules,
+                               const VkPipelineLayout& pipeline_layout,
+                               const VkRenderPass& render_pass);
+        static VkPipeline _create_compute_pipeline(const GPU& gpu,
+                               const VkPipelineLayout& pipeline_layout,
+                               const std::map<VkShaderStageFlagBits, VkShaderModule>& modules);
+        static VkShaderModule _code_to_module(const GPU& gpu, const std::vector<uint8_t>& code);
     };
 }

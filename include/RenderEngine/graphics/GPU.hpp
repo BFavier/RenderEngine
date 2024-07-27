@@ -5,9 +5,9 @@
 #include <string>
 #include <optional>
 #include <RenderEngine/utilities/External.hpp>
-#include <RenderEngine/graphics/shaders/implementations/Shader3D.hpp>
-#include <RenderEngine/graphics/shaders/implementations/DemoShader.hpp>
-#include <RenderEngine/graphics/shaders/implementations/ShadowMapping.hpp>
+#include <RenderEngine/graphics/shaders/Shader3D.hpp>
+#include <RenderEngine/graphics/shaders/ShaderDemo.hpp>
+#include <RenderEngine/graphics/shaders/ShaderShadow.hpp>
 
 namespace RenderEngine
 {
@@ -60,8 +60,8 @@ namespace RenderEngine
         std::set<std::string> _enabled_extensions;
         VkDevice _logical_device = VK_NULL_HANDLE;
         Shader3D* shader3d = nullptr;
-        DemoShader* shader_draw_image = nullptr;
-        ShadowMapping* shadow_mapping = nullptr;
+        ShaderDemo* shader_draw_image = nullptr;
+        ShaderShadow* shadow_mapping = nullptr;
     protected:
         // returns the index of the queue family selected for 'queue_type' purpose. Modifies the 'selected_families_count'.
         std::optional<uint32_t> _select_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,  // all available queue families
