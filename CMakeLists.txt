@@ -13,6 +13,7 @@ add_executable(${PROJECT_NAME}
     src/stb/stb_image_resize.c
     src/RenderEngine/graphics/Buffer.cpp
     src/RenderEngine/graphics/Canvas.cpp
+    src/RenderEngine/graphics/Color.cpp
     src/RenderEngine/graphics/GPU.cpp
     src/RenderEngine/graphics/Image.cpp
     src/RenderEngine/graphics/Buffer.cpp
