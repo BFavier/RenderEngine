@@ -80,7 +80,7 @@ int main()
                 if (frame != nullptr)
                 {
                     frame->wait_completion();
-                    frame->images.at("normal")->save_to_disk("screenshot.png");
+                    frame->images.at("color")->save_to_disk("screenshot.png");
                     std::cout << "screenshot saved." << std::endl;
                 }
             }

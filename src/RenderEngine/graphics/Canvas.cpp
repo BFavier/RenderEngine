@@ -26,7 +26,7 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t _width, uint32_t _heig
 
 Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const VkImage& vk_image, uint32_t _width, uint32_t _height, AntiAliasing sample_count) :
     gpu(_gpu),
-    images({{"color", std::make_shared<Image>(_gpu, ImageFormat::RGBA, _width, _height, false)},
+    images({{"color", std::make_shared<Image>(_gpu, vk_image, nullptr, ImageFormat::RGBA, _width, _height, false)},
             {"normal", std::make_shared<Image>(_gpu, ImageFormat::NORMAL, _width, _height, false)},
             {"material", std::make_shared<Image>(_gpu, ImageFormat::MATERIAL, _width, _height, false)},
             {"depth", std::make_shared<Image>(_gpu, ImageFormat::DEPTH, _width, _height, false)}}),
