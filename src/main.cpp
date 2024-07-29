@@ -76,11 +76,11 @@ int main()
             }
             if (keyboard.keys().at("PRINT SCREEN").was_released)
             {
-                Canvas* frame = window.current_frame();
+                Canvas* frame = window.next_frame();
                 if (frame != nullptr)
                 {
                     frame->wait_completion();
-                    frame->normal.save_to_disk("screenshot.png");
+                    frame->images.at("normal")->save_to_disk("screenshot.png");
                     std::cout << "screenshot saved." << std::endl;
                 }
             }
@@ -88,7 +88,6 @@ int main()
             if (frame != nullptr)
             {
                 frame->clear(Color(0.1, 0.0, 0.3, 1.0));
-                // frame->set_view(camera);
                 frame->draw(camera, cube.mesh, cube.coordinates_in(camera), true);
                 frame->draw(camera, floor.mesh, floor.coordinates_in(camera), false);
             }

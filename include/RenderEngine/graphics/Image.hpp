@@ -14,6 +14,7 @@ namespace RenderEngine
     // An image is a collection of pixels stored on a gpu, with a width, a height, and a color format
     class Image
     {
+        friend class SwapChain;
         friend class Canvas;
         friend class Window;
     public: // This class is non copyable
@@ -23,9 +24,9 @@ namespace RenderEngine
     public:
         // Load an image from file
         Image(const std::shared_ptr<GPU>& gpu, const std::string& file_path,
-              std::optional<ImageFormat> requested_format=std::nullopt,
-              std::optional<uint32_t> resized_width=std::nullopt,
-              std::optional<uint32_t> resized_height=std::nullopt);
+              ImageFormat format,
+              const std::optional<uint32_t>& resized_width=std::nullopt,
+              const std::optional<uint32_t>& resized_height=std::nullopt);
         // create an image from dimensions and format
         Image(const std::shared_ptr<GPU>& gpu, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped=true, AntiAliasing sample_count=AntiAliasing::X1);
         // Create an image view from an existing VkImage, if vk_device_memory==nullptr, the vk_image won't be destroyed by Image destructor (it is understood to be owned by the swapchain)
@@ -53,10 +54,12 @@ namespace RenderEngine
         static void _bind_image_to_memory(const std::shared_ptr<GPU>& gpu, const VkImage& vk_image, const std::shared_ptr<VkDeviceMemory>& vk_device_memory, std::size_t offset);
         // return the mip levels count for an image of given width/height
         static uint32_t _mip_levels_count(uint32_t width, uint32_t height);
+        // returns the source layout attributes for a given layout transition
+        static std::tuple<VkAccessFlagBits, VkPipelineStageFlagBits> _source_layout_attributes(VkImageLayout layout);
+        // returns the destination layout attributes for a given layout transition
+        static std::tuple<VkAccessFlagBits, VkPipelineStageFlagBits> _destination_layout_attributes(VkImageLayout layout);
         void _create_vk_sampler();
         void _create_vk_image_view();
-        void _transition_to_layout(VkImageLayout new_layout, VkCommandBuffer command_buffer);
-        void _fill_layout_attributes(VkImageLayout new_layout, uint32_t& queue_family_index, VkAccessFlags& acces_mask, VkPipelineStageFlags& stage) const;
         VkImageAspectFlags _get_aspect_mask() const;
         VkCommandBuffer _begin_single_time_commands();
         void _end_single_time_commands(VkCommandBuffer commandBuffer);
@@ -65,8 +68,6 @@ namespace RenderEngine
         uint32_t height() const;
         ImageFormat format() const;
         uint32_t mip_levels_count() const;
-        uint32_t channel_count() const;
-        size_t channel_bytes_size() const;
         void save_to_disk(const std::string& file_path);
         void upload_data(const std::vector<uint8_t>& pixels);
         std::vector<uint8_t> download_data();
@@ -74,10 +75,11 @@ namespace RenderEngine
         static std::vector<std::shared_ptr<Image>> bulk_allocate_images(const std::shared_ptr<GPU>& gpu, uint32_t n_images, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped=true);
         static std::vector<std::shared_ptr<Image>> bulk_load_images(const std::shared_ptr<GPU>& gpu, const std::vector<std::string>& file_paths, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped=true);
         static std::map<std::string, std::shared_ptr<Image>> bulk_load_images(const std::shared_ptr<GPU>& gpu, const std::map<std::string, std::string>& file_paths, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped=true);
-        static std::tuple<std::vector<uint8_t>, uint32_t, uint32_t, ImageFormat> read_pixels_from_file(const std::string& file_path, const std::optional<ImageFormat>& requested_format = {});
-        static std::vector<uint8_t> resize_pixels(const std::vector<uint8_t>& pixels, ImageFormat format, uint32_t width, uint32_t height, uint32_t new_width, uint32_t new_height);
-        static void save_pixels_to_file(const std::string& file_path, const std::vector<uint8_t>& pixels, uint32_t& width, uint32_t& height, ImageFormat format);
-        static uint8_t format_channel_count(const ImageFormat& format);
-        static size_t format_channel_bytessize(const ImageFormat& format);
+        static std::tuple<std::vector<uint8_t>, uint32_t, uint32_t> read_pixels_from_file(const std::string& file_path);
+        static std::tuple<std::vector<float>, uint32_t, uint32_t> read_float_pixels_from_file(const std::string& file_path);
+        static std::vector<uint8_t> resize_pixels(const std::vector<uint8_t>& pixels, const std::pair<uint32_t, uint32_t>& width_height, const std::pair<uint32_t, uint32_t>& new_width_height);
+        static std::vector<float> resize_float_pixels(const std::vector<float>& pixels, const std::pair<uint32_t, uint32_t>& width_height, const std::pair<uint32_t, uint32_t>& new_width_height);
+        static void save_pixels_to_file(const std::string& file_path, const std::vector<uint8_t>& pixels, uint32_t& width, uint32_t& height);
+        static void save_float_pixels_to_file(const std::string& file_path, const std::vector<float>& pixels, uint32_t& width, uint32_t& height);
     };
 }

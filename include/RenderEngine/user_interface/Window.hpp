@@ -35,8 +35,6 @@ namespace RenderEngine
         Keyboard keyboard;
         Mouse mouse;
     public:
-        ///< Returns the currently displayed frame. Returns nullptr if 'update' was not called yet since swap chain was recreated (window minimized, window resized, ...).
-        Canvas* current_frame();
         ///< Returns the next frame that will be displayed at the next call of 'update'. Returns nullptr if there is no framebuffer (window is minimized).
         Canvas* next_frame();
         ///< Update the window's display, and the window's inputs states (keyboard and mouse)

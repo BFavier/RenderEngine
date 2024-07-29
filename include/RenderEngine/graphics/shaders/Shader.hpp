@@ -30,19 +30,20 @@ namespace RenderEngine
                );
     protected:
         const GPU* _gpu = nullptr;
-        VkRenderPass _render_pass = VK_NULL_HANDLE;
-        VkPipeline _pipeline = VK_NULL_HANDLE;  // pipeline
-        VkPipelineLayout _pipeline_layout = VK_NULL_HANDLE; // pipeline layout
-        VkPipelineBindPoint _bind_point;
+        VkRenderPass _vk_render_pass = VK_NULL_HANDLE;
+        VkPipeline _vk_pipeline = VK_NULL_HANDLE;  // pipeline
+        VkPipelineLayout _vk_pipeline_layout = VK_NULL_HANDLE; // pipeline layout
+        VkPipelineBindPoint _vk_pipeline_bind_point;
         std::map<VkShaderStageFlagBits, VkShaderModule> _modules;  // shader modules (one for each stage)
         std::vector<std::pair<std::string, VkFormat>> _input_attachments;  // attachment images as inputs (texture, pixel read, ...)
         std::vector<std::pair<std::string, VkFormat>> _output_attachments;  // attachment images as outputs (color, ...)
+        std::map<std::string, VkImageLayout> _final_layouts;  // final layouts
         std::vector<VkDescriptorSetLayout> _descriptor_set_layouts;  // Descriptor sets (Uniform Buffer Objects, SSBO, ...)
         std::map<std::string, VkPushConstantRange> _push_constants; // The list of (push constant name, description) pairs
     protected:
-        static VkRenderPass _create_render_pass(const GPU& gpu,
-                                                const std::vector<std::pair<std::string, VkFormat>>& input_attachments,
-                                                const std::vector<std::pair<std::string, VkFormat>>& output_attachments);
+        static std::tuple<VkRenderPass, std::map<std::string, VkImageLayout>> _create_render_pass(const GPU& gpu,
+                                                                                                  const std::vector<std::pair<std::string, VkFormat>>& input_attachments,
+                                                                                                  const std::vector<std::pair<std::string, VkFormat>>& output_attachments);
         static std::vector<VkDescriptorSetLayout> _create_descriptor_set_layouts(const GPU& gpu,
                                                                                  const std::vector<std::map<std::string, VkDescriptorSetLayoutBinding>>& descriptors_sets);
         static VkPipelineLayout _create_pipeline_layout(const GPU& gpu,

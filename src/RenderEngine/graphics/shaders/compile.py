@@ -7,6 +7,7 @@ from typing import Iterable
 GLSLC = "glslc.exe"
 PATH = pathlib.Path(__file__).parent
 STAGES = {".vert": "VK_SHADER_STAGE_VERTEX_BIT",
+          ".geom": "VK_SHADER_STAGE_GEOMETRY_BIT",
           ".frag": "VK_SHADER_STAGE_FRAGMENT_BIT",
           ".comp": "VK_SHADER_STAGE_COMPUTE_BIT"}
 DESCRIPTOR_TYPE = {

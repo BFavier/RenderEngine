@@ -28,10 +28,8 @@ namespace RenderEngine
         VkSwapchainKHR _vk_swap_chain;
     public:
         void present_next_frame(); // present the next frame to screen
-        Canvas* get_current_frame(); // Return the current frame.
         Canvas& get_next_frame(); // Return the next frame. Acquire it if it wasn't already.
     protected:
-        int _frame_index_current = -1;
         int _frame_index_next = -1;
     };
 }

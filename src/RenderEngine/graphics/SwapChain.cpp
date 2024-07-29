@@ -168,40 +168,23 @@ SwapChain::~SwapChain()
 
 void SwapChain::present_next_frame()
 {
-    // TODO
-    // Make sure that the current frame is rendered before swapping to next frame,
-    // otherwise semaphores might be reused when they have not been signaled yet,
-    // which alerts validation layers and might create issues
-    Canvas* current_frame = get_current_frame();
-    if (current_frame != nullptr)
-    {
-        current_frame->wait_completion();
-    }
-    // present the next frame
     Canvas& next_frame = get_next_frame();
     uint32_t i = static_cast<uint32_t>(_frame_index_next);
+    VkResult result = VK_INCOMPLETE;
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = next_frame.is_rendering() ? 1 : 0;
-    presentInfo.pWaitSemaphores = next_frame.is_rendering() ? &next_frame._rendered_semaphore : nullptr;
+    presentInfo.pWaitSemaphores = next_frame.is_rendering() ? &next_frame._vk_rendered_semaphore : nullptr;
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &_vk_swap_chain;
     presentInfo.pImageIndices = &i;
-    presentInfo.pResults = nullptr; // Optional
+    presentInfo.pResults = &result; // Optional
     vkQueuePresentKHR(std::get<1>(gpu->_present_queue.value()), &presentInfo);
-    // updating indexes
-    _frame_index_current = _frame_index_next;
-    _frame_index_next = -1;
-}
-
-
-Canvas* SwapChain::get_current_frame()
-{
-    if (_frame_index_current < 0)
+    if (result != VK_SUCCESS)
     {
-        return nullptr;
+        THROW_ERROR("Failed to present swapchaoin image to screen with VkResult code : " + std::to_string(result));
     }
-    return frames[_frame_index_current];
+    _frame_index_next = -1; // a new frame must be queried by get_next_frame
 }
 
 
@@ -212,7 +195,7 @@ Canvas& SwapChain::get_next_frame()
         uint32_t i = std::numeric_limits<uint32_t>::max();
         VkSemaphore semaphore = frame_available_semaphores.front();
         vkAcquireNextImageKHR(gpu->_logical_device, _vk_swap_chain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &i);
-        frames[i]->_dependencies.insert(semaphore);
+        frames[i]->_wait_semaphores.insert(semaphore);
         frame_available_semaphores.pop();
         frame_available_semaphores.push(semaphore);
         _frame_index_next = static_cast<int>(i);
