@@ -35,9 +35,9 @@ namespace RenderEngine
         Keyboard keyboard;
         Mouse mouse;
     public:
-        ///< Returns the next frame that will be displayed at the next call of 'update'. Returns nullptr if there is no framebuffer (window is minimized).
-        Canvas* next_frame();
-        ///< Update the window's display, and the window's inputs states (keyboard and mouse)
+        ///< Returns the current frame of the swapchain to render to. This frame will be queued for display at the next call of 'update'. Returns nullptr if there is no framebuffer (window is minimized, ...).
+        Canvas* get_frame();
+        ///< Starts the rendering of the current swap chain's frame and queue it for display on screen. Also update the window's inputs states (keyboard and mouse)
         void update();
         ///< Get the x position of the window in the screen
         int x() const;
@@ -45,18 +45,18 @@ namespace RenderEngine
         int y() const;
         ///< Move the window to the given position on it's screen
         void move(int x, int y);
-        ///< Get the width of the screen the window is on
+        ///< Get the width of the screen the window is on (in pixels)
         unsigned int screen_width() const;
-        ///< Get the height of the screen the window is on
+        ///< Get the height of the screen the window is on (in pixels)
         unsigned int screen_height() const;
-        ///< Get the widht of the window
+        ///< Get the widht of the window (in pixels)
         unsigned int width() const;
-        ///< Get the height of the window
+        ///< Get the height of the window (in pixels)
         unsigned int height() const;
         ///< Resize the window to the given width and height
         void resize(unsigned int width, unsigned int height);
         ///< Returns true if the window is in fullscreen
-        bool full_screen() const;
+        bool is_full_screen() const;
         ///< Set whether the window should be in full screen
         void full_screen(bool enabled);
         ///< Request the window to close
@@ -72,19 +72,19 @@ namespace RenderEngine
         ///< Make this window the currently selected window
         void focus();
         ///< Returns true if the window is resizable by the user
-        bool resizable();
+        bool is_resizable();
         ///< Make the window resizable by the user or not
         void resizable(bool resizable);
         ///< Returns true if the window has borders
-        bool borders();
+        bool has_borders();
         ///< Enable or disable the borders of the window
         void borders(bool borders);
         ///< Returns true if the window is transparent (it can been see through when the alpha of the image displayed is inferior to 1.)
-        bool transparent();
+        bool is_transparent();
         ///< Set whether the window is transparent or not
         void transparent(bool transparent);
         ///< Returns true if the vertical syncing is enabled (limits the FPS to monitor's refresh rate)
-        bool vsync() const;
+        bool vsync_is_enabled() const;
         ///< Enables or disable vertical syncing
         void vsync(bool enabled);
     public:

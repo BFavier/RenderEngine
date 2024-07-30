@@ -34,24 +34,24 @@ Window::~Window()
 }
 
 
-Canvas* Window::next_frame()
+Canvas* Window::get_frame()
 {
     if (_swap_chain == nullptr)
     {
         return nullptr;
     }
-    return &_swap_chain->get_next_frame();
+    return &_swap_chain->get_frame();
 }
 
 
 void Window::update()
 {
     // get the back frame and present it
-    Canvas* frame = next_frame();
+    Canvas* frame = get_frame();
     if (frame != nullptr)
     {
         frame->render();
-        _swap_chain->present_next_frame();
+        _swap_chain->present_frame();
     }
     // polling events (might delete swap chain by window resizing callback function)
     _set_unchanged();
@@ -206,7 +206,7 @@ void Window::resize(unsigned int width, unsigned int height)
     _delete_swapchain();
 }
 
-bool Window::full_screen() const
+bool Window::is_full_screen() const
 {
     return _window_full_screen;
 }
@@ -265,7 +265,7 @@ void Window::focus()
     glfwFocusWindow(_glfw_window);
 }
 
-bool Window::resizable()
+bool Window::is_resizable()
 {
     return glfwGetWindowAttrib(_glfw_window, GLFW_RESIZABLE);
 }
@@ -275,7 +275,7 @@ void Window::resizable(bool resizable)
     glfwSetWindowAttrib(_glfw_window, GLFW_RESIZABLE, resizable);
 }
 
-bool Window::borders()
+bool Window::has_borders()
 {
     return glfwGetWindowAttrib(_glfw_window, GLFW_DECORATED);
 }
@@ -285,7 +285,7 @@ void Window::borders(bool borders)
     glfwSetWindowAttrib(_glfw_window, GLFW_DECORATED, borders);
 }
 
-bool Window::transparent()
+bool Window::is_transparent()
 {
     return glfwGetWindowAttrib(_glfw_window, GLFW_TRANSPARENT_FRAMEBUFFER);
 }
@@ -295,7 +295,7 @@ void Window::transparent(bool transparent)
     glfwSetWindowAttrib(_glfw_window, GLFW_TRANSPARENT_FRAMEBUFFER, transparent);
 }
 
-bool Window::vsync() const
+bool Window::vsync_is_enabled() const
 {
     return _window_vsync;
 }

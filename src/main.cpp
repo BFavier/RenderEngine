@@ -76,7 +76,7 @@ int main()
             }
             if (keyboard.keys().at("PRINT SCREEN").was_released)
             {
-                Canvas* frame = window.next_frame();
+                Canvas* frame = window.get_frame();
                 if (frame != nullptr)
                 {
                     frame->wait_completion();
@@ -84,7 +84,7 @@ int main()
                     std::cout << "screenshot saved." << std::endl;
                 }
             }
-            Canvas* frame = window.next_frame();
+            Canvas* frame = window.get_frame();
             if (frame != nullptr)
             {
                 frame->clear(Color(0.1, 0.0, 0.3, 1.0));
