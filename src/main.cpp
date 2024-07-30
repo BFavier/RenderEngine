@@ -28,6 +28,7 @@ int main()
         Referential pitch(Vector(), Quaternion(), 1.0, &yaw);  // pitch only rotates around the yaw's X axis
         PerspectiveCamera camera(PI/2, 0.1, 1000., Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
         OrthographicCamera ortho_camera(5.0, 1000., Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
+        DirectionalLight light(Color(1.0, 1.0, 1.0, 1.0), 1.0, 10.0, 10.0, Vector(), Quaternion(), 1.0, &pitch);
         while(!window.closing())
         {
             double dt = timer.dt();
@@ -87,9 +88,10 @@ int main()
             Canvas* frame = window.get_frame();
             if (frame != nullptr)
             {
-                frame->clear(Color(0.1, 0.0, 0.3, 1.0));
+                frame->clear(Color(0.1f, 0.0f, 0.3f, 1.0f));
                 frame->draw(camera, cube.mesh, cube.coordinates_in(camera), true);
                 frame->draw(camera, floor.mesh, floor.coordinates_in(camera), false);
+                frame->light(camera, light, light.coordinates_in(camera));
             }
             window.update();
         }

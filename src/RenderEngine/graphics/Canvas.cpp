@@ -86,7 +86,7 @@ void Canvas::clear(Color _color)
 }
 
 
-void Canvas::draw(const Camera& camera, const std::shared_ptr<Mesh>& mesh, const std::tuple<Vector, Quaternion, double>& coordinates_in_camera, bool cull_back_faces)
+void Canvas::draw(const Camera& camera, const std::shared_ptr<Mesh>& mesh, const std::tuple<Vector, Quaternion, double>& mesh_coordinates_in_camera, bool cull_back_faces)
 {
     wait_completion();
     _record_commands();
@@ -103,13 +103,36 @@ void Canvas::draw(const Camera& camera, const std::shared_ptr<Mesh>& mesh, const
     vkCmdBindVertexBuffers(_vk_command_buffer, 0, vertex_buffers.size(), vertex_buffers.data(), offsets.data());
     // set mesh scale/position/rotation
     VkPushConstantRange mesh_range = shader->_push_constants.at("params");
-    MeshDrawParameters mesh_parameters = {std::get<0>(coordinates_in_camera).to_vec4(),
-                                          Matrix(std::get<1>(coordinates_in_camera).inverse()).to_mat3(),
+    MeshDrawParameters mesh_parameters = {std::get<0>(mesh_coordinates_in_camera).to_vec4(),
+                                          Matrix(std::get<1>(mesh_coordinates_in_camera).inverse()).to_mat3(),
                                           vec4({camera.horizontal_length, camera.horizontal_length*static_cast<float>(height)/width, camera.near_plane_distance, camera.far_plane_distance}),
-                                          static_cast<float>(std::get<2>(coordinates_in_camera))};
+                                          static_cast<float>(std::get<2>(mesh_coordinates_in_camera))};
     vkCmdPushConstants(_vk_command_buffer, shader->_vk_pipeline_layout, mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &mesh_parameters);
     // send a command to command buffer
     vkCmdDraw(_vk_command_buffer, mesh->bytes_size()/sizeof(Vertex), 1, 0, 0);
+    // register layout transitions
+    for (std::pair<std::string, VkImageLayout> layout : shader->_final_layouts)
+    {
+        images.at(layout.first)->_current_layout = layout.second;
+    }
+}
+
+
+void Canvas::light(const Camera& camera, const Light& light, const std::tuple<Vector, Quaternion, double>& light_coordinates_in_camera)
+{
+    wait_completion();
+    _record_commands();
+    Shader* shader = gpu->_shaders.at("Demo");
+    _bind_shader(shader);
+    // // set mesh scale/position/rotation
+    // VkPushConstantRange mesh_range = shader->_push_constants.at("params");
+    // MeshDrawParameters mesh_parameters = {std::get<0>(light_coordinates_in_camera).to_vec4(),
+    //                                       Matrix(std::get<1>(light_coordinates_in_camera).inverse()).to_mat3(),
+    //                                       vec4({camera.horizontal_length, camera.horizontal_length*static_cast<float>(height)/width, camera.near_plane_distance, camera.far_plane_distance}),
+    //                                       static_cast<float>(std::get<2>(light_coordinates_in_camera))};
+    // vkCmdPushConstants(_vk_command_buffer, shader->_vk_pipeline_layout, mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &mesh_parameters);
+    // send a command to command buffer
+    vkCmdDraw(_vk_command_buffer, 3, 1, 0, 0);
     // register layout transitions
     for (std::pair<std::string, VkImageLayout> layout : shader->_final_layouts)
     {
@@ -388,6 +411,11 @@ void Canvas::_command_barrier(const std::map<std::string, VkImageLayout>& new_im
             layout_transitions.push_back(transition);
             image->_current_layout = new_image_layout.second;
         }
+    }
+    if (source_stage == 0 && destination_stage == 0)
+    {
+        source_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        destination_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     }
     vkCmdPipelineBarrier(
         _vk_command_buffer,

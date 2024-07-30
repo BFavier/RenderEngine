@@ -7,6 +7,7 @@
 #include <RenderEngine/geometry/Vector.hpp>
 #include <RenderEngine/geometry/Matrix.hpp>
 #include <RenderEngine/graphics/Camera.hpp>
+#include <RenderEngine/graphics/Light.hpp>
 #include <RenderEngine/graphics/Color.hpp>
 #include <memory>
 
@@ -49,7 +50,8 @@ namespace RenderEngine
             // Buffer* _camera_view = nullptr;
         public:
             void clear(Color color);  // Clear the color image to the given color. Also clear other images (depth buffer, ...)
-            void draw(const Camera& camera, const std::shared_ptr<Mesh>& mesh, const std::tuple<Vector, Quaternion, double>& coordinates_in_camera, bool cull_back_faces);  // Record objects to draw in the command buffer. Rendering only starts once the 'render' method is called.
+            void draw(const Camera& camera, const std::shared_ptr<Mesh>& mesh, const std::tuple<Vector, Quaternion, double>& mesh_coordinates_in_camera, bool cull_back_faces);  // Record objects to draw in the command buffer. Rendering only starts once the 'render' method is called.
+            void light(const Camera& camera, const Light& light, const std::tuple<Vector, Quaternion, double>& light_coordinates_in_camera);  // light the scene
             void render();  // Send the command buffers to GPU. Does nothing if the canvas is not in recording state, or already in rendering state. This command is asynchrone, and completion is garanteed only once 'wait_completion' is called.
             void wait_completion();  // blocks on CPU side until the rendering on GPU is complete
             bool is_recording() const;  // returns whether the render function was called already

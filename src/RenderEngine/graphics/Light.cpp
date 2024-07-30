@@ -24,7 +24,7 @@ PointLight::~PointLight()
 
 DirectionalLight::DirectionalLight(Color _color, double _luminance,
                                    float horizontal_length, float far_plane_distance,
-                                   Vector _position = {0., 0., 0.}, Quaternion _orientation = {}, double _scale=1.0, Referential* _parent = nullptr) :
+                                   Vector _position, Quaternion _orientation, double _scale, Referential* _parent) :
     Light(_color, _luminance), OrthographicCamera(horizontal_length, far_plane_distance, _position, _orientation, _scale, _parent)
 {
 }
