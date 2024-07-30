@@ -24,14 +24,12 @@ namespace RenderEngine
     public:
         std::shared_ptr<GPU> gpu;
         std::vector<Canvas*> frames;
-        std::queue<VkSemaphore> frame_available_semaphores;
-        VkSwapchainKHR _vk_swap_chain;
     public:
-        void present_next_frame(); // present the next frame to screen
-        Canvas* get_current_frame(); // Return the current frame.
-        Canvas& get_next_frame(); // Return the next frame. Acquire it if it wasn't already.
+        void present_frame(); // Queue the frame for presentation to screen.
+        Canvas& get_frame(); // Returns the frame to render to.
     protected:
-        int _frame_index_current = -1;
         int _frame_index_next = -1;
+        std::queue<std::pair<VkSemaphore, int>> _frame_available_semaphores; // a queue of (semaphore, previous frame index) pairs. The semaphore is used to wait the acquisition of a frame. The frame index is the index of the previous frame that was acquired using the semaphore.
+        VkSwapchainKHR _vk_swap_chain;
     };
 }

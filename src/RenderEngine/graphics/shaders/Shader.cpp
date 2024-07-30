@@ -15,26 +15,26 @@ Shader::Shader(const GPU* gpu,
     _push_constants = push_constants;
     _input_attachments = input_attachments;
     _output_attachments = output_attachments;
-    _render_pass = _create_render_pass(*gpu, input_attachments, output_attachments);
+    std::tie(_vk_render_pass, _final_layouts) = _create_render_pass(*gpu, input_attachments, output_attachments);
     _descriptor_set_layouts = _create_descriptor_set_layouts(*gpu, descriptor_sets);
     _modules = _create_modules(*gpu, shader_stages_bytecode);
-    _pipeline_layout = _create_pipeline_layout(*gpu, push_constants, _descriptor_set_layouts);
+    _vk_pipeline_layout = _create_pipeline_layout(*gpu, push_constants, _descriptor_set_layouts);
     if (_modules.find(VK_SHADER_STAGE_COMPUTE_BIT) != _modules.end())
     {
-        _bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
-        _pipeline = _create_compute_pipeline(*gpu, _pipeline_layout, _modules);
+        _vk_pipeline_bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
+        _vk_pipeline = _create_compute_pipeline(*gpu, _vk_pipeline_layout, _modules);
     }
     else
     {
-        _bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        _pipeline = _create_graphics_pipeline(*gpu, vertex_buffers, output_attachments, _modules, _pipeline_layout, _render_pass);
+        _vk_pipeline_bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        _vk_pipeline = _create_graphics_pipeline(*gpu, vertex_buffers, output_attachments, _modules, _vk_pipeline_layout, _vk_render_pass);
     }
 }
 
 Shader::~Shader()
 {
-    vkDestroyPipeline(_gpu->_logical_device, _pipeline, nullptr);
-    vkDestroyPipelineLayout(_gpu->_logical_device, _pipeline_layout, nullptr);
+    vkDestroyPipeline(_gpu->_logical_device, _vk_pipeline, nullptr);
+    vkDestroyPipelineLayout(_gpu->_logical_device, _vk_pipeline_layout, nullptr);
     for (const VkDescriptorSetLayout& desc : _descriptor_set_layouts)
     {
         vkDestroyDescriptorSetLayout(_gpu->_logical_device, desc, nullptr);
@@ -43,15 +43,16 @@ Shader::~Shader()
     {
         vkDestroyShaderModule(_gpu->_logical_device, module.second, nullptr);
     }
-    vkDestroyRenderPass(_gpu->_logical_device, _render_pass, nullptr);
+    vkDestroyRenderPass(_gpu->_logical_device, _vk_render_pass, nullptr);
 }
 
 
-VkRenderPass Shader::_create_render_pass(const GPU& gpu,
-                                            const std::vector<std::pair<std::string, VkFormat>>& input_attachments,
-                                            const std::vector<std::pair<std::string, VkFormat>>& output_attachments)
+std::tuple<VkRenderPass, std::map<std::string, VkImageLayout>> Shader::_create_render_pass(const GPU& gpu,
+                                                                                           const std::vector<std::pair<std::string, VkFormat>>& input_attachments,
+                                                                                           const std::vector<std::pair<std::string, VkFormat>>& output_attachments)
 {
     // Creating input/output attachment descriptions
+    std::map<std::string, VkImageLayout> output_layouts;
     std::vector<VkAttachmentDescription> attachments;
     {
         // input attachments
@@ -60,13 +61,14 @@ VkRenderPass Shader::_create_render_pass(const GPU& gpu,
             VkAttachmentDescription attachment{};
             attachment.format = static_cast<VkFormat>(att.second);
             attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;  // VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_LOAD_OP_CLEAR
-            attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;  // VK_ATTACHMENT_STORE_OP_DONT_CARE
+            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+            attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
             attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // VK_IMAGE_LAYOUT_UNDEFINED;
-            attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED
+            attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             attachments.push_back(attachment);
+            output_layouts[att.first] = attachment.finalLayout;
         }
         // output (color) attachments
         for (const std::pair<std::string, VkFormat>& att : output_attachments)
@@ -74,25 +76,27 @@ VkRenderPass Shader::_create_render_pass(const GPU& gpu,
             VkAttachmentDescription attachment{};
             attachment.format = static_cast<VkFormat>(att.second);
             attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;  // VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_LOAD_OP_CLEAR
-            attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;  // VK_ATTACHMENT_STORE_OP_DONT_CARE
+            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+            attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
             attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // VK_IMAGE_LAYOUT_UNDEFINED;
-            attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED
+            attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             attachments.push_back(attachment);
+            output_layouts[att.first] = attachment.finalLayout;
         }
         // Depth attachments
         VkAttachmentDescription attachment{};
         attachment.format = gpu.depth_format().second;
         attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; // VK_IMAGE_LAYOUT_UNDEFINED;
+        attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         attachments.push_back(attachment);
+        output_layouts["depth"] = attachment.finalLayout;
     }
     // Creating attachment references
     std::vector<VkAttachmentReference> color_attachment_refs;
@@ -114,15 +118,15 @@ VkRenderPass Shader::_create_render_pass(const GPU& gpu,
     }
     // Creating attachment dependencies
     std::vector<VkSubpassDependency> dependencies; // https://www.reddit.com/r/vulkan/comments/s80reu/subpass_dependencies_what_are_those_and_why_do_i/
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = VK_ACCESS_NONE;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-	dependency.dependencyFlags = 0;
-    dependencies.push_back(dependency);
+        // VkSubpassDependency dependency{};
+        // dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        // dependency.dstSubpass = 0;
+        // dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        // dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        // dependency.srcAccessMask = VK_ACCESS_NONE;
+        // dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        // dependency.dependencyFlags = 0;
+        // dependencies.push_back(dependency);
     // Creating subpasses
     VkSubpassDescription subpass{};
     subpass.flags = 0;
@@ -149,7 +153,7 @@ VkRenderPass Shader::_create_render_pass(const GPU& gpu,
     {
         throw std::runtime_error("failed to create render pass!");
     }
-    return render_pass;
+    return std::make_tuple(render_pass, output_layouts);
 }
 
 std::vector<VkDescriptorSetLayout> Shader::_create_descriptor_set_layouts(const GPU& gpu,
@@ -167,7 +171,7 @@ std::vector<VkDescriptorSetLayout> Shader::_create_descriptor_set_layouts(const 
         }
         VkDescriptorSetLayoutCreateInfo desc_set_info{};
         desc_set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        desc_set_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR;
+        desc_set_info.flags = (i == 0) ? VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR : 0;
         desc_set_info.bindingCount = bindings_desc.size();
         desc_set_info.pBindings = bindings_desc.data();
         if (vkCreateDescriptorSetLayout(gpu._logical_device, &desc_set_info, nullptr, &descriptor_set_layouts[i]) != VK_SUCCESS)

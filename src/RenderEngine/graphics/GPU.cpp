@@ -94,16 +94,17 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
         _present_queue = _query_queue_handle(present_family, selected_families_count);
     }
     // initialize shader
-    shader3d = new Shader3D(this);
-    shader_draw_image = new ShaderDemo(this);
-    shadow_mapping = new ShaderShadow(this);
+    _shaders["3D"] = new Shader3D(this);
+    _shaders["Demo"] = new ShaderDemo(this);
+    _shaders["Shadow"] = new ShaderShadow(this);
 }
 
 GPU::~GPU()
 {
-    delete shadow_mapping;
-    delete shader3d;
-    delete shader_draw_image;
+    for (std::pair<std::string, Shader*> shader : _shaders)
+    {
+        delete shader.second;
+    }
     bool graphics_queue_is_present_queue = (_graphics_queue == _present_queue);
     if (_graphics_queue.has_value())
     {

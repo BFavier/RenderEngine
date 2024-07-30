@@ -48,12 +48,12 @@ SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : g
     std::vector<VkPresentModeKHR> supported_present_modes(n_present_modes);
     vkGetPhysicalDeviceSurfacePresentModesKHR(gpu->_physical_device, surface, &n_present_modes, supported_present_modes.data());
     VkPresentModeKHR present_mode;
-    if (!window.vsync() &&
+    if (!window.vsync_is_enabled() &&
         (std::find(supported_present_modes.begin(), supported_present_modes.end(), VK_PRESENT_MODE_IMMEDIATE_KHR) != supported_present_modes.end()))
     {
         present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
     }
-    else if (window.vsync() &&
+    else if (window.vsync_is_enabled() &&
         (std::find(supported_present_modes.begin(), supported_present_modes.end(), VK_PRESENT_MODE_MAILBOX_KHR) != supported_present_modes.end()))
     {
         present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
@@ -145,17 +145,17 @@ SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : g
         {
             THROW_ERROR("failed to create VkSemaphore");
         }
-        frame_available_semaphores.push(semaphore);
+        _frame_available_semaphores.push(std::make_pair(semaphore, -1));
     }
 }
 
 SwapChain::~SwapChain()
 {
     vkDeviceWaitIdle(gpu->_logical_device);
-    while (frame_available_semaphores.size() > 0)
+    while (_frame_available_semaphores.size() > 0)
     {
-        vkDestroySemaphore(gpu->_logical_device, frame_available_semaphores.front(), nullptr);
-        frame_available_semaphores.pop();
+        vkDestroySemaphore(gpu->_logical_device, _frame_available_semaphores.front().first, nullptr);
+        _frame_available_semaphores.pop();
     }
     for (Canvas* canvas : frames)
     {
@@ -166,55 +166,44 @@ SwapChain::~SwapChain()
 }
 
 
-void SwapChain::present_next_frame()
+void SwapChain::present_frame()
 {
-    // TODO
-    // Make sure that the current frame is rendered before swapping to next frame,
-    // otherwise semaphores might be reused when they have not been signaled yet,
-    // which alerts validation layers and might create issues
-    Canvas* current_frame = get_current_frame();
-    if (current_frame != nullptr)
-    {
-        current_frame->wait_completion();
-    }
-    // present the next frame
-    Canvas& next_frame = get_next_frame();
+    Canvas& next_frame = get_frame();
     uint32_t i = static_cast<uint32_t>(_frame_index_next);
+    VkResult result = VK_INCOMPLETE;
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = next_frame.is_rendering() ? 1 : 0;
-    presentInfo.pWaitSemaphores = next_frame.is_rendering() ? &next_frame._rendered_semaphore : nullptr;
+    presentInfo.pWaitSemaphores = next_frame.is_rendering() ? &next_frame._vk_rendered_semaphore : nullptr;
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &_vk_swap_chain;
     presentInfo.pImageIndices = &i;
-    presentInfo.pResults = nullptr; // Optional
+    presentInfo.pResults = &result; // Optional
     vkQueuePresentKHR(std::get<1>(gpu->_present_queue.value()), &presentInfo);
-    // updating indexes
-    _frame_index_current = _frame_index_next;
-    _frame_index_next = -1;
-}
-
-
-Canvas* SwapChain::get_current_frame()
-{
-    if (_frame_index_current < 0)
+    if (result != VK_SUCCESS)
     {
-        return nullptr;
+        THROW_ERROR("Failed to present swapchaoin image to screen with VkResult code : " + std::to_string(result));
     }
-    return frames[_frame_index_current];
+    _frame_index_next = -1; // a new frame must be queried by get_next_frame
 }
 
 
-Canvas& SwapChain::get_next_frame()
+Canvas& SwapChain::get_frame()
 {
     if (_frame_index_next < 0)
     {
         uint32_t i = std::numeric_limits<uint32_t>::max();
-        VkSemaphore semaphore = frame_available_semaphores.front();
+        int i_waited_frame;
+        VkSemaphore semaphore;
+        std::tie(semaphore, i_waited_frame) = _frame_available_semaphores.front();
+        if (i_waited_frame >= 0)
+        {
+            frames[i_waited_frame]->wait_completion(); // otherwise we might try to signal a semaphore that was previously signaled, and not yet waited on.
+        }
         vkAcquireNextImageKHR(gpu->_logical_device, _vk_swap_chain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &i);
-        frames[i]->_dependencies.insert(semaphore);
-        frame_available_semaphores.pop();
-        frame_available_semaphores.push(semaphore);
+        frames[i]->_wait_semaphores.insert(semaphore);
+        _frame_available_semaphores.pop();
+        _frame_available_semaphores.push(std::make_pair(semaphore, static_cast<int>(i)));
         _frame_index_next = static_cast<int>(i);
     }
     return *frames[_frame_index_next];

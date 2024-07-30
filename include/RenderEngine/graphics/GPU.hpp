@@ -17,8 +17,13 @@ namespace RenderEngine
     {
     // A GPU is a piece of hardware to perform rendering calculations onto. There can be several GPUs on a single computer.
 
+    friend class Window;
+    friend class Image;
+    friend class SwapChain;
+    friend class Shader;
     friend class Internal;
-
+    friend class Canvas;
+    friend class Buffer;
     public:
         enum Type {DISCRETE_GPU=VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU,
                    INTEGRATED_GPU=VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU,
@@ -49,7 +54,7 @@ namespace RenderEngine
         std::pair<VkImageTiling, VkFormat> depth_format() const;
         // Return whether dynamicaly changing face culling is supported
         bool dynamic_culling_supported() const;
-    public:
+    protected:
         VkPhysicalDevice _physical_device = VK_NULL_HANDLE;
         VkPhysicalDeviceProperties _device_properties{};
         VkPhysicalDeviceFeatures _device_features{};
@@ -59,9 +64,7 @@ namespace RenderEngine
         std::optional<std::tuple<uint32_t, VkQueue, VkCommandPool>> _present_queue; // (queue family, VkQueue, VkCOmmandPool)
         std::set<std::string> _enabled_extensions;
         VkDevice _logical_device = VK_NULL_HANDLE;
-        Shader3D* shader3d = nullptr;
-        ShaderDemo* shader_draw_image = nullptr;
-        ShaderShadow* shadow_mapping = nullptr;
+        std::map<std::string, Shader*> _shaders;
     protected:
         // returns the index of the queue family selected for 'queue_type' purpose. Modifies the 'selected_families_count'.
         std::optional<uint32_t> _select_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,  // all available queue families

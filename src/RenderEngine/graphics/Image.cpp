@@ -7,28 +7,34 @@
 
 using namespace RenderEngine;
 
-Image::Image(const std::shared_ptr<GPU>& gpu, const std::string& file_path, std::optional<ImageFormat> requested_format,
-             std::optional<uint32_t> resized_width, std::optional<uint32_t> resized_height) : _gpu(gpu)
+Image::Image(const std::shared_ptr<GPU>& gpu, const std::string& file_path, ImageFormat format,
+             const std::optional<uint32_t>& resized_width, const std::optional<uint32_t>& resized_height) : _gpu(gpu)
 {
     std::vector<uint8_t> pixels;
-    std::tie(pixels, _width, _height, _format) = read_pixels_from_file(file_path, requested_format);
+    std::tie(pixels, _width, _height) = read_pixels_from_file(file_path);
     if (resized_width.has_value() || resized_height.has_value())
     {
+        uint32_t _rwidth, _rheight;
         if (!resized_width.has_value())
         {
-            resized_width = (_width * resized_height.value()) / _height;
+            _rwidth = _width * (resized_height.value() / _height);
+            _rheight = resized_height.value();
         }
         if (!resized_height.has_value())
         {
-            resized_height = (_height * resized_width.value()) / _width;
+            _rwidth = resized_width.value();
+            _rheight = _height * (resized_width.value() / _width);
         }
         if (_width != resized_width.value() || _height != resized_height.value())
         {
-            pixels = Image::resize_pixels(pixels, _format, _width, _height, resized_width.value(), resized_height.value());
-            _width = resized_width.value();
-            _height = resized_height.value();
+            _rwidth = resized_width.value();
+            _rheight = resized_height.value();
         }
+        pixels = Image::resize_pixels(pixels, {_width, _height}, {_rwidth, _rheight});
+        _width = _rwidth;
+        _height = _rheight;
     }
+    _format = format;
     _mip_levels = _mip_levels_count(_width, _height);
     _vk_image = _create_vk_image(gpu, _width, _height, _format, _mip_levels, AntiAliasing::X1);
     _vk_device_memory = std::get<0>(_allocate_vk_device_memory(gpu, _vk_image, 1));
@@ -94,16 +100,6 @@ ImageFormat Image::format() const
 uint32_t Image::mip_levels_count() const
 {
     return _mip_levels;
-}
-
-uint32_t Image::channel_count() const
-{
-    return Image::format_channel_count(_format);
-}
-
-size_t Image::channel_bytes_size() const
-{
-    return Image::format_channel_bytessize(_format);
 }
 
 VkImage Image::_create_vk_image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, ImageFormat format, uint32_t mip_levels, AntiAliasing sample_count)
@@ -237,30 +233,6 @@ void Image::_create_vk_image_view()
     }
 }
 
-uint8_t Image::format_channel_count(const ImageFormat& format)
-{
-    if (format == ImageFormat::GRAY) {return 1;}
-    else if (format == ImageFormat::RGBA) {return 4;}
-    else if (format == ImageFormat::NORMAL) { return 4; }
-    else if (format == ImageFormat::MATERIAL) { return 4; }
-    else if (format == ImageFormat::FLOAT3) {return 3;}
-    else if (format == ImageFormat::FLOAT4) {return 4;}
-    else if (format == ImageFormat::DEPTH) {return 1;}
-    else {THROW_ERROR("Unknown format '" + std::to_string(format) + "'.");}
-}
-
-size_t Image::format_channel_bytessize(const ImageFormat& format)
-{
-    if (format == ImageFormat::GRAY) {return 1;}
-    else if (format == ImageFormat::RGBA) {return 1;}
-    else if (format == ImageFormat::NORMAL) { return 1; }
-    else if (format == ImageFormat::MATERIAL) { return 1; }
-    else if (format == ImageFormat::FLOAT3) {return 4;}
-    else if (format == ImageFormat::FLOAT4) {return 4;}
-    else if (format == ImageFormat::DEPTH) {return 4;}
-    else {THROW_ERROR("Unknown format '" + std::to_string(format) + "'.");}
-}
-
 std::vector<std::shared_ptr<Image>> Image::bulk_allocate_images(const std::shared_ptr<GPU>& gpu, uint32_t n_images, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped)
 {
     std::vector<std::shared_ptr<Image>> images;
@@ -295,11 +267,10 @@ std::vector<std::shared_ptr<Image>> Image::bulk_load_images(const std::shared_pt
     {
         std::vector<uint8_t> pixels;
         uint32_t r_width, r_height;
-        ImageFormat _f;
-        std::tie(pixels, r_width, r_height, _f) = Image::read_pixels_from_file(file_paths[i], format);
+        std::tie(pixels, r_width, r_height) = Image::read_pixels_from_file(file_paths[i]);
         if (r_width != width || r_height != height)
         {
-            pixels = Image::resize_pixels(pixels, format, r_width, r_height, width, height);
+            pixels = Image::resize_pixels(pixels, {r_width, r_height}, {width, height});
         }
         images[i]->upload_data(pixels);
     }
@@ -324,88 +295,59 @@ std::map<std::string, std::shared_ptr<Image>> Image::bulk_load_images(const std:
     return resources;
 }
 
-std::tuple<std::vector<uint8_t>, uint32_t, uint32_t, ImageFormat> Image::read_pixels_from_file(const std::string& file_path, const std::optional<ImageFormat>& read_format)
+std::tuple<std::vector<uint8_t>, uint32_t, uint32_t> Image::read_pixels_from_file(const std::string& file_path)
 {
-    //TODO : improve the image format handling
-    ImageFormat format;
-    int i_width, i_height, n_channels, n_required_channels;
-    if (read_format.has_value())
-    {
-        format = read_format.value();
-        if (format != ImageFormat::GRAY && format != ImageFormat::RGBA)
-        {
-            THROW_ERROR("Reading pixels format '" + std::to_string(format) + "' from an image file is not supported.");
-        }
-        n_required_channels = Image::format_channel_count(format);
-    }
-    else
-    {
-        n_required_channels = 0;
-    }
-    uint8_t* img_data = stbi_load(file_path.c_str(), &i_width, &i_height, &n_channels, n_required_channels);
-    if (!read_format.has_value())
-    {
-        std::string upper_file_path = Utilities::to_upper(file_path);
-        if (Utilities::ends_with(upper_file_path, ".HDR") && n_channels == 3) {format = ImageFormat::FLOAT3;}
-        else if (Utilities::ends_with(upper_file_path, ".HDR") && n_channels == 4) {format = ImageFormat::FLOAT4;}
-        else if (n_channels == 4) {format = ImageFormat::RGBA;}
-        else if (n_channels == 3) {THROW_ERROR("Reading RGB image is not implemented, specify read_format=RGBA");format = ImageFormat::RGBA;}
-        else if (n_channels == 1) {format = ImageFormat::GRAY;}
-        else {THROW_ERROR("Unexpected number of channels in image file");}
-    }
-    else
-    {
-        format = read_format.value();
-    }
-    uint32_t bytes_size = Image::format_channel_bytessize(format);
-    // creating the vector of data
-    std::vector<uint8_t> pixels;
-    pixels.reserve(i_height * i_width * n_channels * bytes_size);
-    for (uint32_t i=0;i<i_height;i++)
-    {
-        for (uint32_t j=0;j<i_width;j++)
-        {
-            for (uint32_t k=0;k<n_channels;k++)
-            {
-                for (uint32_t l=0;l<bytes_size;l++)
-                {
-                    pixels.push_back(img_data[pixels.size()]);
-                }
-            }
-        }
-    }
+    int i_width, i_height, n_channels;
+    uint8_t* img_data = stbi_load(file_path.c_str(), &i_width, &i_height, &n_channels, 4);
+    std::vector<uint8_t> pixels(i_height * i_width * n_channels);
+    std::memcpy(pixels.data(), img_data, pixels.size());
     stbi_image_free(img_data);
-    return std::make_tuple(pixels, static_cast<uint32_t>(i_width), static_cast<uint32_t>(i_height), format);
+    return std::make_tuple(pixels, static_cast<uint32_t>(i_width), static_cast<uint32_t>(i_height));
 }
 
-std::vector<uint8_t> Image::resize_pixels(const std::vector<uint8_t>& pixels, ImageFormat format, uint32_t width, uint32_t height, uint32_t new_width, uint32_t new_height)
+std::tuple<std::vector<float>, uint32_t, uint32_t> Image::read_float_pixels_from_file(const std::string& file_path)
+{
+    int i_width, i_height, n_channels;
+    float* img_data = stbi_loadf(file_path.c_str(), &i_width, &i_height, &n_channels, 4);
+    std::vector<float> pixels(i_height * i_width * n_channels);
+    std::memcpy(pixels.data(), img_data, pixels.size());
+    stbi_image_free(img_data);
+    return std::make_tuple(pixels, static_cast<uint32_t>(i_width), static_cast<uint32_t>(i_height));
+}
+
+std::vector<uint8_t> Image::resize_pixels(const std::vector<uint8_t>& pixels, const std::pair<uint32_t, uint32_t>& width_height, const std::pair<uint32_t, uint32_t>& new_width_height)
 {
     int result;
-    std::vector<uint8_t> resized_pixels(new_width*new_height*format_channel_count(format)*format_channel_bytessize(format));
-    if (format == ImageFormat::GRAY || format == ImageFormat::RGBA)
+    std::vector<uint8_t> resized_pixels(new_width_height.first*new_width_height.second*4);
+    result = stbir_resize_uint8(pixels.data(), width_height.first, width_height.second, 0,
+                       resized_pixels.data(), new_width_height.first, new_width_height.second, 0,
+                       4);
+    if (result == 0)
     {
-        result = stbir_resize_uint8(pixels.data(), width, height, 0,
-                                    resized_pixels.data(), new_width, new_height, 0,
-                                    format_channel_count(format));
-    }
-    else if (format == ImageFormat::FLOAT3 || format == ImageFormat::FLOAT4)
-    {
-        result = stbir_resize_float(reinterpret_cast<const float*>(pixels.data()), width, height, 0,
-                                    reinterpret_cast<float*>(resized_pixels.data()), new_width, new_height, 0,
-                                    format_channel_count(format));
-    }
-    else
-    {
-        THROW_ERROR("Unsupported ImageFormat "+std::to_string(format));
+        THROW_ERROR("Failed to resize image.");
     }
     return resized_pixels;
 }
 
-void Image::save_pixels_to_file(const std::string& file_path, const std::vector<uint8_t>& pixels, uint32_t& width, uint32_t& height, ImageFormat format)
+std::vector<float> Image::resize_float_pixels(const std::vector<float>& pixels, const std::pair<uint32_t, uint32_t>& width_height, const std::pair<uint32_t, uint32_t>& new_width_height)
+{
+    int result;
+    std::vector<float> resized_pixels(new_width_height.first*new_width_height.second*4*sizeof(float));
+    result = stbir_resize_float(pixels.data(), width_height.first, width_height.second, 0,
+                       resized_pixels.data(), new_width_height.first, new_width_height.second, 0,
+                       4);
+    if (result == 0)
+    {
+        THROW_ERROR("Failed to resize image.");
+    }
+    return resized_pixels;
+}
+
+void Image::save_pixels_to_file(const std::string& file_path, const std::vector<uint8_t>& pixels, uint32_t& width, uint32_t& height)
 {
     std::string upper_file_path = Utilities::to_upper(file_path);
     int result;
-    unsigned int channels = Image::format_channel_count(format);
+    const unsigned int channels = 4;
     if (Utilities::ends_with(upper_file_path, ".PNG"))
     {
         result = stbi_write_png(file_path.c_str(), width, height, channels, pixels.data(), width * channels);
@@ -422,13 +364,9 @@ void Image::save_pixels_to_file(const std::string& file_path, const std::vector<
     {
         result = stbi_write_tga(file_path.c_str(), width, height, channels, pixels.data());
     }
-    else if (Utilities::ends_with(upper_file_path, ".HDR"))
-    {
-        result = stbi_write_hdr(file_path.c_str(), width, height, channels, reinterpret_cast<const float*>(pixels.data()));
-    }
     else
     {
-        THROW_ERROR("Unsupported image file extension");
+        THROW_ERROR("Unsupported image file extension '"+file_path+"' for uint8 image data. Supported extensions are [.png, .jpg/.jpeg, .bmp, .tga].");
     }
     if (result == 0)
     {
@@ -436,75 +374,108 @@ void Image::save_pixels_to_file(const std::string& file_path, const std::vector<
     }
 }
 
-void Image::_transition_to_layout(VkImageLayout new_layout, VkCommandBuffer command_buffer)
+void Image::save_float_pixels_to_file(const std::string& file_path, const std::vector<float>& pixels, uint32_t& width, uint32_t& height)
 {
-    if (new_layout == _current_layout)
+    std::string upper_file_path = Utilities::to_upper(file_path);
+    int result;
+    const unsigned int channels = 4;
+    if (Utilities::ends_with(upper_file_path, ".HDR"))
     {
-        return;
-    }
-    VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = _current_layout;
-    barrier.newLayout = new_layout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = _vk_image;
-    barrier.subresourceRange.aspectMask = _get_aspect_mask();
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = _mip_levels;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-    barrier.srcAccessMask = 0;  // will be modified later in the function
-    barrier.dstAccessMask = 0;  // will be modified later in the function
-    VkPipelineStageFlags source_stage;
-    VkPipelineStageFlags destination_stage;
-    _fill_layout_attributes(_current_layout, barrier.srcQueueFamilyIndex, barrier.srcAccessMask, source_stage);
-    _fill_layout_attributes(new_layout, barrier.dstQueueFamilyIndex, barrier.dstAccessMask, destination_stage);
-    vkCmdPipelineBarrier(
-        command_buffer,
-        source_stage, destination_stage,
-        VK_DEPENDENCY_BY_REGION_BIT,
-        0, nullptr,
-        0, nullptr,
-        1, &barrier
-    );
-}
-
-void Image::_fill_layout_attributes(VkImageLayout layout, uint32_t& queue_family_index, VkAccessFlags& acces_mask, VkPipelineStageFlags& stage) const
-{
-    if (layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-    {
-        acces_mask = VK_ACCESS_SHADER_WRITE_BIT;
-        stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    }
-    else if(layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-    {
-        acces_mask = VK_ACCESS_SHADER_READ_BIT;
-        stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    }
-    else if (layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-    {
-        acces_mask = VK_ACCESS_TRANSFER_READ_BIT;
-        stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    }
-    else if (layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-    {
-        acces_mask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    }
-    else if (layout == VK_IMAGE_LAYOUT_UNDEFINED)
-    {
-        acces_mask = 0;
-        stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    }
-    else if (layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-    {
-        acces_mask = VK_ACCESS_SHADER_WRITE_BIT;
-        stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        result = stbi_write_hdr(file_path.c_str(), width, height, channels, pixels.data());
     }
     else
     {
-        THROW_ERROR("Unexpected layout")
+        THROW_ERROR("Unsupported image file extension '"+file_path+"' for float image data. Only .hdr extension is supported.");
+    }
+    if (result == 0)
+    {
+        THROW_ERROR("Failed to write image.");
+    }
+}
+
+std::tuple<VkAccessFlagBits, VkPipelineStageFlagBits> Image::_source_layout_attributes(VkImageLayout layout)
+{
+    if (layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    {
+        // we wait to have finished writing in the last stage of the graphic pipeline before layout transition
+        return std::make_tuple(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    }
+    else if(layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+    {
+        // we wait to have finished reading in the last stage of the graphic pipeline before layout transition
+        return std::make_tuple(VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    }
+    else if (layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+    {
+        // we wait to have finished everything before layout transition
+        return std::make_tuple(VK_ACCESS_NONE, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+    }
+    else if (layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+    {
+        // we wait to have finished writing in the transfer stage before layout transition
+        return std::make_tuple(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    }
+    else if (layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+    {
+        // we wait to have finished reading in the transfer stage before layout transition
+        return std::make_tuple(VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    }
+    else if (layout == VK_IMAGE_LAYOUT_UNDEFINED)
+    {
+        // we wait to have finished whatever we were doing before layout transition
+        return std::make_tuple(VK_ACCESS_NONE, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+    }
+    else if (layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+    {
+        // we wait to have finished writing in the last stage of the graphic pipeline before layout transition
+        return std::make_tuple(VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+    }
+    else
+    {
+        THROW_ERROR("Unexpected layout "+std::to_string(layout));
+    }
+}
+
+std::tuple<VkAccessFlagBits, VkPipelineStageFlagBits> Image::_destination_layout_attributes(VkImageLayout layout)
+{
+    if (layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    {
+        // we wait for the layout transition before writing in the fragment stage
+        return std::make_tuple(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    }
+    else if(layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+    {
+        // we wait for the layout transition before reading in the fragment stage
+        return std::make_tuple(VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    }
+    else if (layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+    {
+        // we wait for the layout transition before doing anything
+        return std::make_tuple(VK_ACCESS_NONE, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+    }
+    else if (layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+    {
+        // we wait for the layout transition before writing in the transfer stage
+        return std::make_tuple(VK_ACCESS_TRANSFER_WRITE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    }
+    else if (layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+    {
+        // we wait for the layout transition before reading in the transfer stage
+        return std::make_tuple(VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    }
+    else if (layout == VK_IMAGE_LAYOUT_UNDEFINED)
+    {
+        // we wait for the layout transition before doing anything
+        return std::make_tuple(VK_ACCESS_NONE, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+    }
+    else if (layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+    {
+        // we wait for the layout transition before writing in the fragment stage
+        return std::make_tuple(VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
+    }
+    else
+    {
+        THROW_ERROR("Unexpected layout "+std::to_string(layout));
     }
 }
 
@@ -565,21 +536,49 @@ void Image::_end_single_time_commands(VkCommandBuffer commandBuffer)
 void Image::save_to_disk(const std::string& file_path)
 {
     std::vector<uint8_t> pixels = download_data();
-    Image::save_pixels_to_file(file_path, pixels, _width, _height, _format);
+    Image::save_pixels_to_file(file_path, pixels, _width, _height);
 }
 
 void Image::upload_data(const std::vector<uint8_t>& pixels)
 {
-    size_t image_size = width()*(height()*(channel_count()*channel_bytes_size()));
+    size_t image_size = width()*height()*4;
     if (pixels.size() != image_size)
     {
         THROW_ERROR("pixel vector has not the right size.")
     }
-    uint8_t n_channels = Image::format_channel_count(_format);
     Buffer staging_buffer(_gpu, image_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
     staging_buffer.upload(reinterpret_cast<const uint8_t*>(pixels.data()), staging_buffer.bytes_size(), 0);
-    VkCommandBuffer commandBuffer = _begin_single_time_commands();
-    _transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, commandBuffer);
+    VkCommandBuffer command_buffer = _begin_single_time_commands();
+    // transition image to transfer destination layout
+    VkImageLayout new_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    VkImageMemoryBarrier barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout = _current_layout;
+    barrier.newLayout = new_layout;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = _vk_image;
+    barrier.subresourceRange.aspectMask = _get_aspect_mask();
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = _mip_levels;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+    barrier.srcAccessMask = 0;  // will be modified later in the function
+    barrier.dstAccessMask = 0;  // will be modified later in the function
+    VkPipelineStageFlags source_stage;
+    VkPipelineStageFlags destination_stage;
+    std::tie(barrier.srcAccessMask, source_stage) = _source_layout_attributes(_current_layout);
+    std::tie(barrier.dstAccessMask, destination_stage) = _destination_layout_attributes(new_layout);
+    vkCmdPipelineBarrier(
+        command_buffer,
+        source_stage, destination_stage,
+        0, // VK_DEPENDENCY_BY_REGION_BIT
+        0, nullptr,
+        0, nullptr,
+        1, &barrier
+    );
+    _current_layout = new_layout;
+    // send copy command
     VkBufferImageCopy region{};
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
@@ -590,17 +589,45 @@ void Image::upload_data(const std::vector<uint8_t>& pixels)
     region.imageSubresource.layerCount = pixels.size() / image_size;
     region.imageOffset = {0, 0, 0};
     region.imageExtent = {width(), height(), 1};
-    vkCmdCopyBufferToImage(commandBuffer, staging_buffer._vk_buffer, _vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-    _end_single_time_commands(commandBuffer);
+    vkCmdCopyBufferToImage(command_buffer, staging_buffer._vk_buffer, _vk_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    _end_single_time_commands(command_buffer);
 }
 
 std::vector<uint8_t> Image::download_data()
 {
-    uint8_t n_channels = Image::format_channel_count(_format);
-    Buffer staging_buffer(_gpu, width()*height()*channel_count()*channel_bytes_size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+    Buffer staging_buffer(_gpu, width()*height()*4, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
     std::vector<uint8_t> pixels(staging_buffer.bytes_size());
-    VkCommandBuffer commandBuffer = _begin_single_time_commands();
-    _transition_to_layout(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, commandBuffer);
+    VkCommandBuffer command_buffer = _begin_single_time_commands();
+    // transition image to transfer destination layout
+    VkImageLayout new_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    VkImageMemoryBarrier barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout = _current_layout;
+    barrier.newLayout = new_layout;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = _vk_image;
+    barrier.subresourceRange.aspectMask = _get_aspect_mask();
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = _mip_levels;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+    barrier.srcAccessMask = 0;  // will be modified later in the function
+    barrier.dstAccessMask = 0;  // will be modified later in the function
+    VkPipelineStageFlags source_stage;
+    VkPipelineStageFlags destination_stage;
+    std::tie(barrier.srcAccessMask, source_stage) = _source_layout_attributes(_current_layout);
+    std::tie(barrier.dstAccessMask, destination_stage) = _destination_layout_attributes(new_layout);
+    vkCmdPipelineBarrier(
+        command_buffer,
+        source_stage, destination_stage,
+        0, // VK_DEPENDENCY_BY_REGION_BIT
+        0, nullptr,
+        0, nullptr,
+        1, &barrier
+    );
+    _current_layout = new_layout;
+    // send copy command
     VkBufferImageCopy region{};
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
@@ -611,8 +638,8 @@ std::vector<uint8_t> Image::download_data()
     region.imageSubresource.layerCount = 1;
     region.imageOffset = {0, 0, 0};
     region.imageExtent = {width(), height(), 1};
-    vkCmdCopyImageToBuffer(commandBuffer, _vk_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, staging_buffer._vk_buffer, 1, &region);
-    _end_single_time_commands(commandBuffer);
+    vkCmdCopyImageToBuffer(command_buffer, _vk_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, staging_buffer._vk_buffer, 1, &region);
+    _end_single_time_commands(command_buffer);
     staging_buffer.download(pixels.data(), staging_buffer.bytes_size(), 0);
     return pixels;
 }
