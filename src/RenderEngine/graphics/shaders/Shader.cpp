@@ -9,25 +9,29 @@ Shader::Shader(const GPU* gpu,
                const std::vector<std::pair<std::string, VkFormat>>& output_attachments,
                const std::vector<std::map<std::string, VkDescriptorSetLayoutBinding>>& descriptor_sets, // for each layout set, descriptor of all bindings (textures, Uniform Buffer Objects, ...)
                const std::map<std::string, VkPushConstantRange>& push_constants, // definition of all push constants.
-               const std::map<VkShaderStageFlagBits, std::vector<uint8_t>> shader_stages_bytecode // the bytecode of the compiled spirv file
+               const std::map<VkShaderStageFlagBits, std::vector<uint8_t>> shader_stages_bytecode, // the bytecode of the compiled spirv file
+               bool depth_test,
+               Blending blending
                ) : _gpu(gpu)
 {
     _push_constants = push_constants;
     _input_attachments = input_attachments;
     _output_attachments = output_attachments;
-    std::tie(_vk_render_pass, _final_layouts) = _create_render_pass(*gpu, input_attachments, output_attachments);
+    std::tie(_vk_render_pass, _final_layouts) = _create_render_pass(*gpu, input_attachments, output_attachments, depth_test);
     _descriptor_set_layouts = _create_descriptor_set_layouts(*gpu, descriptor_sets);
     _modules = _create_modules(*gpu, shader_stages_bytecode);
     _vk_pipeline_layout = _create_pipeline_layout(*gpu, push_constants, _descriptor_set_layouts);
     if (_modules.find(VK_SHADER_STAGE_COMPUTE_BIT) != _modules.end())
     {
+        _depth_test = false;
         _vk_pipeline_bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
         _vk_pipeline = _create_compute_pipeline(*gpu, _vk_pipeline_layout, _modules);
     }
     else
     {
+        _depth_test = depth_test;
         _vk_pipeline_bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        _vk_pipeline = _create_graphics_pipeline(*gpu, vertex_buffers, output_attachments, _modules, _vk_pipeline_layout, _vk_render_pass);
+        _vk_pipeline = _create_graphics_pipeline(*gpu, vertex_buffers, output_attachments, _modules, _vk_pipeline_layout, _vk_render_pass, depth_test, blending);
     }
 }
 
@@ -49,7 +53,8 @@ Shader::~Shader()
 
 std::tuple<VkRenderPass, std::map<std::string, VkImageLayout>> Shader::_create_render_pass(const GPU& gpu,
                                                                                            const std::vector<std::pair<std::string, VkFormat>>& input_attachments,
-                                                                                           const std::vector<std::pair<std::string, VkFormat>>& output_attachments)
+                                                                                           const std::vector<std::pair<std::string, VkFormat>>& output_attachments,
+                                                                                           bool depth_test)
 {
     // Creating input/output attachment descriptions
     std::map<std::string, VkImageLayout> output_layouts;
@@ -86,22 +91,25 @@ std::tuple<VkRenderPass, std::map<std::string, VkImageLayout>> Shader::_create_r
             output_layouts[att.first] = attachment.finalLayout;
         }
         // Depth attachments
-        VkAttachmentDescription attachment{};
-        attachment.format = gpu.depth_format().second;
-        attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        attachments.push_back(attachment);
-        output_layouts["depth"] = attachment.finalLayout;
+        if (depth_test)
+        {
+            VkAttachmentDescription attachment{};
+            attachment.format = gpu.depth_format().second;
+            attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+            attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+            attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+            attachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            attachments.push_back(attachment);
+            output_layouts["depth"] = attachment.finalLayout;
+        }
     }
     // Creating attachment references
     std::vector<VkAttachmentReference> color_attachment_refs;
     std::vector<VkAttachmentReference> input_attachment_refs;
-    VkAttachmentReference depth_buffer_ref;
+    std::optional<VkAttachmentReference> depth_buffer_ref;
     {
         // Input attachments
         for (uint32_t i=0; i<input_attachments.size(); i++)
@@ -114,19 +122,11 @@ std::tuple<VkRenderPass, std::map<std::string, VkImageLayout>> Shader::_create_r
             color_attachment_refs.push_back({i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
         }
         // Depth attachment
-        depth_buffer_ref = {static_cast<uint32_t>(attachments.size() - 1), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
+        if (depth_test)
+        {
+            depth_buffer_ref = {static_cast<uint32_t>(attachments.size() - 1), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
+        }
     }
-    // Creating attachment dependencies
-    std::vector<VkSubpassDependency> dependencies; // https://www.reddit.com/r/vulkan/comments/s80reu/subpass_dependencies_what_are_those_and_why_do_i/
-        // VkSubpassDependency dependency{};
-        // dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        // dependency.dstSubpass = 0;
-        // dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        // dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        // dependency.srcAccessMask = VK_ACCESS_NONE;
-        // dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        // dependency.dependencyFlags = 0;
-        // dependencies.push_back(dependency);
     // Creating subpasses
     VkSubpassDescription subpass{};
     subpass.flags = 0;
@@ -138,7 +138,7 @@ std::tuple<VkRenderPass, std::map<std::string, VkImageLayout>> Shader::_create_r
     subpass.pInputAttachments = input_attachment_refs.data(); // Array of attachments the fragment shader reads from
     subpass.preserveAttachmentCount = 0;
     subpass.pPreserveAttachments = nullptr; // Array of reserved attachment positions
-    subpass.pDepthStencilAttachment = &depth_buffer_ref;
+    subpass.pDepthStencilAttachment = (depth_buffer_ref.has_value()) ? &depth_buffer_ref.value() : nullptr;
     // Creating render pass
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -146,8 +146,8 @@ std::tuple<VkRenderPass, std::map<std::string, VkImageLayout>> Shader::_create_r
     renderPassInfo.pAttachments = attachments.data();
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
-    renderPassInfo.dependencyCount = dependencies.size();
-    renderPassInfo.pDependencies = dependencies.data();
+    renderPassInfo.dependencyCount = 0;
+    renderPassInfo.pDependencies = nullptr;
     VkRenderPass render_pass = VK_NULL_HANDLE;
     if (vkCreateRenderPass(gpu._logical_device, &renderPassInfo, nullptr, &render_pass) != VK_SUCCESS)
     {
@@ -222,7 +222,9 @@ VkPipeline Shader::_create_graphics_pipeline(const GPU& gpu,
                                const std::vector<std::pair<std::string, VkFormat>>& output_attachments,
                                const std::map<VkShaderStageFlagBits, VkShaderModule>& modules,
                                const VkPipelineLayout& pipeline_layout,
-                               const VkRenderPass& render_pass)
+                               const VkRenderPass& render_pass,
+                               bool depth_test,
+                               Blending blending)
 {
     // Staging shader modules
     std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
@@ -291,8 +293,8 @@ VkPipeline Shader::_create_graphics_pipeline(const GPU& gpu,
     // Setting the depth and stencil buffers
     VkPipelineDepthStencilStateCreateInfo depth_stencil{};
     depth_stencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depth_stencil.depthTestEnable = VK_TRUE;
-    depth_stencil.depthWriteEnable = VK_TRUE;
+    depth_stencil.depthTestEnable = depth_test ? VK_TRUE : VK_FALSE;
+    depth_stencil.depthWriteEnable = depth_test ? VK_TRUE : VK_FALSE;
     depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
     // Setting color blending
     std::vector<VkPipelineColorBlendAttachmentState> color_blending_attachments;
@@ -300,15 +302,46 @@ VkPipeline Shader::_create_graphics_pipeline(const GPU& gpu,
     {
         // There is always only one framebuffer to render to
         VkPipelineColorBlendAttachmentState color_blending_attachment{};
-        color_blending_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        color_blending_attachment.blendEnable = VK_TRUE;
-        color_blending_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-        color_blending_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        color_blending_attachment.colorBlendOp = VK_BLEND_OP_ADD;
-        color_blending_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        color_blending_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        color_blending_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
-        color_blending_attachments.push_back(color_blending_attachment);
+        if (blending == Blending::ALPHA)
+        {
+            color_blending_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+            color_blending_attachment.blendEnable = VK_TRUE;
+            color_blending_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            color_blending_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            color_blending_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+            color_blending_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            color_blending_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            color_blending_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+            color_blending_attachments.push_back(color_blending_attachment);
+        }
+        else if (blending == Blending::OVERWRITE)
+        {
+            color_blending_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+            color_blending_attachment.blendEnable = VK_TRUE;
+            color_blending_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            color_blending_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+            color_blending_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+            color_blending_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            color_blending_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+            color_blending_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+            color_blending_attachments.push_back(color_blending_attachment);
+        }
+        else if (blending == Blending::ADD)
+        {
+            color_blending_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+            color_blending_attachment.blendEnable = VK_TRUE;
+            color_blending_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            color_blending_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            color_blending_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+            color_blending_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            color_blending_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            color_blending_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+            color_blending_attachments.push_back(color_blending_attachment);
+        }
+        else
+        {
+            THROW_ERROR("Unexpected blending type code : "+std::to_string(blending));
+        }
     }
     VkPipelineColorBlendStateCreateInfo color_blending{};
     color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;

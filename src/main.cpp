@@ -91,7 +91,7 @@ int main()
                 frame->clear(Color(0.1f, 0.0f, 0.3f, 1.0f));
                 frame->draw(camera, cube.mesh, cube.coordinates_in(camera), true);
                 frame->draw(camera, floor.mesh, floor.coordinates_in(camera), false);
-                frame->light(camera, light, light.coordinates_in(camera));
+                // frame->light(camera, light, light.coordinates_in(camera));
             }
             window.update();
         }
