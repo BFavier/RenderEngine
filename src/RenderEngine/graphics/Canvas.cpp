@@ -138,7 +138,7 @@ void Canvas::light(const Camera& camera, const Light& light, const std::tuple<Ve
         VkWriteDescriptorSet descriptor_set_binding{};
         descriptor_set_binding.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptor_set_binding.dstSet = VK_NULL_HANDLE;
-        descriptor_set_binding.dstBinding = descriptors.size();
+        descriptor_set_binding.dstBinding = descriptor.second.binding;
         descriptor_set_binding.descriptorType = descriptor.second.descriptorType;
         descriptor_set_binding.descriptorCount = descriptor.second.descriptorCount;
         descriptor_set_binding.pBufferInfo = nullptr;

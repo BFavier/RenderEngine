@@ -61,5 +61,5 @@ void main()
     frag_normal = normal;
     frag_material = vertex_material;
 
-    //debugPrintfEXT("fragment coordinates is (x=%f, y=%f, z=%f) screen coordinates are (x=%f, y=%f, z=%f)\n", position.x, position.y, position.z, gl_Position.x, gl_Position.y, gl_Position.z);
+    //debugPrintfEXT("fragment normal is (x=%f, y=%f, z=%f)\n", frag_normal.x, frag_normal.y, frag_normal.z);
 }
