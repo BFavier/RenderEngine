@@ -44,6 +44,7 @@ namespace RenderEngine
         std::vector<std::pair<std::string, VkFormat>> _input_attachments;  // attachment images as inputs (texture, pixel read, ...)
         std::vector<std::pair<std::string, VkFormat>> _output_attachments;  // attachment images as outputs (color, ...)
         std::map<std::string, VkImageLayout> _final_layouts;  // final layouts
+        std::vector<std::map<std::string, VkDescriptorSetLayoutBinding>> _descriptor_sets;
         std::vector<VkDescriptorSetLayout> _descriptor_set_layouts;  // Descriptor sets (Uniform Buffer Objects, SSBO, ...)
         std::map<std::string, VkPushConstantRange> _push_constants; // The list of (push constant name, description) pairs
     protected:

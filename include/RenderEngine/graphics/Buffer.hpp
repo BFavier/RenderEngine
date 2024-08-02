@@ -1,6 +1,7 @@
 #pragma once
 #include <RenderEngine/utilities/External.hpp>
 #include <RenderEngine/graphics/GPU.hpp>
+#include <memory>
 
 namespace RenderEngine
 {

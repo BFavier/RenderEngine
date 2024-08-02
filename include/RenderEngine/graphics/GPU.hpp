@@ -5,9 +5,6 @@
 #include <string>
 #include <optional>
 #include <RenderEngine/utilities/External.hpp>
-#include <RenderEngine/graphics/shaders/Shader3D.hpp>
-#include <RenderEngine/graphics/shaders/ShaderDemo.hpp>
-#include <RenderEngine/graphics/shaders/ShaderShadow.hpp>
 
 namespace RenderEngine
 {

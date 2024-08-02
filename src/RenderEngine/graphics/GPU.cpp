@@ -3,6 +3,10 @@
 #include <set>
 #include <utility>
 #include <RenderEngine/user_interface/Window.hpp>
+#include <RenderEngine/graphics/shaders/Shader3D.hpp>
+#include <RenderEngine/graphics/shaders/ShaderDemo.hpp>
+#include <RenderEngine/graphics/shaders/ShaderShadow.hpp>
+#include <RenderEngine/graphics/shaders/ShaderLight.hpp>
 
 using namespace RenderEngine;
 
@@ -96,6 +100,7 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
     // initialize shader
     _shaders["3D"] = new Shader3D(this);
     _shaders["Demo"] = new ShaderDemo(this);
+    _shaders["Light"] = new ShaderLight(this);
     _shaders["Shadow"] = new ShaderShadow(this);
 }
 

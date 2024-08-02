@@ -9,6 +9,7 @@ using namespace RenderEngine;
 Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t _width, uint32_t _height, bool mip_maped, AntiAliasing sample_count) :
     gpu(_gpu),
     images({{"color", std::make_shared<Image>(_gpu, ImageFormat::RGBA, _width, _height, mip_maped)},
+            {"albedo", std::make_shared<Image>(_gpu, ImageFormat::RGBA, _width, _height, mip_maped)},
             {"normal", std::make_shared<Image>(_gpu, ImageFormat::NORMAL, _width, _height, mip_maped)},
             {"material", std::make_shared<Image>(_gpu, ImageFormat::MATERIAL, _width, _height, mip_maped)},
             {"depth", std::make_shared<Image>(_gpu, ImageFormat::DEPTH, _width, _height, false)}}),
@@ -27,6 +28,7 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t _width, uint32_t _heig
 Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const VkImage& vk_image, uint32_t _width, uint32_t _height, AntiAliasing sample_count) :
     gpu(_gpu),
     images({{"color", std::make_shared<Image>(_gpu, vk_image, nullptr, ImageFormat::RGBA, _width, _height, false)},
+            {"albedo", std::make_shared<Image>(_gpu, ImageFormat::RGBA, _width, _height, false)},
             {"normal", std::make_shared<Image>(_gpu, ImageFormat::NORMAL, _width, _height, false)},
             {"material", std::make_shared<Image>(_gpu, ImageFormat::MATERIAL, _width, _height, false)},
             {"depth", std::make_shared<Image>(_gpu, ImageFormat::DEPTH, _width, _height, false)}}),
@@ -122,8 +124,44 @@ void Canvas::light(const Camera& camera, const Light& light, const std::tuple<Ve
 {
     wait_completion();
     _record_commands();
-    Shader* shader = gpu->_shaders.at("Demo");
+    Shader* shader = gpu->_shaders.at("Light");
     _bind_shader(shader);
+
+    // bind descriptor sets
+    std::vector<VkWriteDescriptorSet> descriptors;
+    std::vector<VkDescriptorBufferInfo> buffers;
+    std::vector<VkDescriptorImageInfo> samplers;
+    buffers.reserve(shader->_descriptor_sets.back().size());
+    samplers.reserve(shader->_descriptor_sets.back().size());
+    for (const std::pair<std::string, VkDescriptorSetLayoutBinding>& descriptor : shader->_descriptor_sets.back())
+    {
+        VkWriteDescriptorSet descriptor_set_binding{};
+        descriptor_set_binding.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_set_binding.dstSet = VK_NULL_HANDLE;
+        descriptor_set_binding.dstBinding = descriptors.size();
+        descriptor_set_binding.descriptorType = descriptor.second.descriptorType;
+        descriptor_set_binding.descriptorCount = descriptor.second.descriptorCount;
+        descriptor_set_binding.pBufferInfo = nullptr;
+        descriptor_set_binding.pImageInfo = nullptr;
+        if (descriptor.second.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+        {
+            Image* image = images.at(descriptor.first).get();
+            samplers.push_back({image->_vk_sampler, image->_vk_image_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
+            descriptor_set_binding.pImageInfo = &samplers[samplers.size() - 1];
+        }
+        // else if (descriptor.second.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+        // {
+        //     buffers.push_back({_camera_view->_vk_buffer, 0, VK_WHOLE_SIZE});
+        //     descriptor_set_binding.pBufferInfo = &buffers[buffers.size() - 1];
+        // }
+        else
+        {
+            THROW_ERROR("Unexpected descriptor type code : descriptor.second.descriptorType");
+        }
+        descriptors.push_back(descriptor_set_binding);
+    }
+    vkCmdPushDescriptorSet(_vk_command_buffer, shader->_vk_pipeline_bind_point, shader->_vk_pipeline_layout, 0, descriptors.size(), descriptors.data());
+
     // // set mesh scale/position/rotation
     // VkPushConstantRange mesh_range = shader->_push_constants.at("params");
     // MeshDrawParameters mesh_parameters = {std::get<0>(light_coordinates_in_camera).to_vec4(),
@@ -131,13 +169,14 @@ void Canvas::light(const Camera& camera, const Light& light, const std::tuple<Ve
     //                                       vec4({camera.horizontal_length, camera.horizontal_length*static_cast<float>(height)/width, camera.near_plane_distance, camera.far_plane_distance}),
     //                                       static_cast<float>(std::get<2>(light_coordinates_in_camera))};
     // vkCmdPushConstants(_vk_command_buffer, shader->_vk_pipeline_layout, mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &mesh_parameters);
+    
     // send a command to command buffer
-    vkCmdDraw(_vk_command_buffer, 3, 1, 0, 0);
-    // register layout transitions
-    for (std::pair<std::string, VkImageLayout> layout : shader->_final_layouts)
-    {
-        images.at(layout.first)->_current_layout = layout.second;
-    }
+    vkCmdDraw(_vk_command_buffer, 6, 1, 0, 0);
+    // // register layout transitions
+    // for (std::pair<std::string, VkImageLayout> layout : shader->_final_layouts)
+    // {
+    //     images.at(layout.first)->_current_layout = layout.second;
+    // }
 }
 
 
@@ -207,7 +246,10 @@ VkFramebuffer Canvas::_allocate_frame_buffer(const Shader* shader)
     {
         attachments.push_back(images.at(image.first)->_vk_image_view);
     }
-    attachments.push_back(images.at("depth")->_vk_image_view);
+    if (shader->_depth_test)
+    {
+        attachments.push_back(images.at("depth")->_vk_image_view);
+    }
     VkFramebufferCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     info.renderPass = shader->_vk_render_pass;
@@ -343,6 +385,20 @@ void Canvas::_bind_shader(const Shader* shader)
         for (const std::pair<std::string, VkFormat>& image : shader->_output_attachments)
         {
             layout_transitions[image.first] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        }
+        for (const std::map<std::string, VkDescriptorSetLayoutBinding>& set : shader->_descriptor_sets)
+        {
+            for (const std::pair<std::string, VkDescriptorSetLayoutBinding>& descriptor : set)
+            {
+                if (descriptor.second.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+                {
+                    std::map<std::string, std::shared_ptr<Image>>::const_iterator img = images.find(descriptor.first);
+                    if (img != images.end())
+                    {
+                        layout_transitions[img->first] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    }
+                }
+            }
         }
         if (shader->_vk_pipeline_bind_point == VK_PIPELINE_BIND_POINT_GRAPHICS)
         {

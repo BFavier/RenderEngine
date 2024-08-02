@@ -27,7 +27,8 @@ layout(set=0, binding=0, std430) uniform CameraParameters
 
 layout(location = 0) out vec4 frag_color;
 layout(location = 1) out vec3 frag_normal;
-layout(location = 2) out vec3 frag_material;
+layout(location = 2) out vec2 frag_uv;
+layout(location = 3) out vec3 frag_material;
 
 void main()
 {
@@ -36,9 +37,6 @@ void main()
     vec3 normal = params.mesh_rotation * vertex_normal;
 
     // output in clip coords: normalised device coordinates = (x_clip, y_clip, z_clip) / w_clip
-    /*
-    float field_of_view = params.camera_parameters.x;
-    */
     float near_plane_width = params.camera_parameters.x;
     float near_plane_height = params.camera_parameters.y;
     float near_plane_distance = params.camera_parameters.z;

@@ -111,6 +111,8 @@ def _get_variables(code: dict) -> list[dict]:
                  "blending": "Blending::ALPHA"}
     for extension, data in code.items():
         stage = STAGES[extension]
+        if stage == "VK_SHADER_STAGE_COMPUTE_BIT":
+            variables["depth_test"] = "false"
         src = data["source"]
         for key, value in SETTINGS_REGEX.findall(src):
             variables[key] = value

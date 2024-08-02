@@ -17,6 +17,7 @@ Shader::Shader(const GPU* gpu,
     _push_constants = push_constants;
     _input_attachments = input_attachments;
     _output_attachments = output_attachments;
+    _descriptor_sets = descriptor_sets;
     std::tie(_vk_render_pass, _final_layouts) = _create_render_pass(*gpu, input_attachments, output_attachments, depth_test);
     _descriptor_set_layouts = _create_descriptor_set_layouts(*gpu, descriptor_sets);
     _modules = _create_modules(*gpu, shader_stages_bytecode);
@@ -171,7 +172,7 @@ std::vector<VkDescriptorSetLayout> Shader::_create_descriptor_set_layouts(const 
         }
         VkDescriptorSetLayoutCreateInfo desc_set_info{};
         desc_set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        desc_set_info.flags = (i == 0) ? VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR : 0;
+        desc_set_info.flags = (i == descriptors_sets.size()-1) ? VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR : 0;
         desc_set_info.bindingCount = bindings_desc.size();
         desc_set_info.pBindings = bindings_desc.data();
         if (vkCreateDescriptorSetLayout(gpu._logical_device, &desc_set_info, nullptr, &descriptor_set_layouts[i]) != VK_SUCCESS)

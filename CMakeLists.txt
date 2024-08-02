@@ -22,6 +22,7 @@ add_executable(${PROJECT_NAME}
     src/RenderEngine/graphics/shaders/Shader.cpp
     src/RenderEngine/graphics/shaders/Shader3D.cpp
     src/RenderEngine/graphics/shaders/ShaderDemo.cpp
+    src/RenderEngine/graphics/shaders/ShaderLight.cpp
     src/RenderEngine/graphics/shaders/ShaderShadow.cpp
     src/RenderEngine/graphics/model/UV.cpp
     src/RenderEngine/graphics/model/Material.cpp
