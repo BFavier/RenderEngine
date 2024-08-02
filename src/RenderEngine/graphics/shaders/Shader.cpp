@@ -335,7 +335,7 @@ VkPipeline Shader::_create_graphics_pipeline(const GPU& gpu,
             color_blending_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
             color_blending_attachment.colorBlendOp = VK_BLEND_OP_ADD;
             color_blending_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-            color_blending_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            color_blending_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
             color_blending_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
             color_blending_attachments.push_back(color_blending_attachment);
         }

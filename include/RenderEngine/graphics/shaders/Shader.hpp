@@ -23,9 +23,9 @@ namespace RenderEngine
         ~Shader();
     protected:
         Shader(const GPU* gpu,
-               const std::vector<std::pair<std::string, VkVertexInputAttributeDescription>>& vertex_buffers,
-               const std::vector<std::pair<std::string, VkFormat>>& input_attachments,
-               const std::vector<std::pair<std::string, VkFormat>>& output_attachments,
+               const std::vector<std::pair<std::string, VkVertexInputAttributeDescription>>& vertex_buffers, // description of all the data passed through vertex buffer 
+               const std::vector<std::pair<std::string, VkFormat>>& input_attachments, // subpass input attachments
+               const std::vector<std::pair<std::string, VkFormat>>& output_attachments, // output attachments (images drawn to)
                const std::vector<std::map<std::string, VkDescriptorSetLayoutBinding>>& descriptor_sets, // for each layout set, descriptor of all bindings (textures, Uniform Buffer Objects, ...)
                const std::map<std::string, VkPushConstantRange>& push_constants, // definition of all push constants.
                const std::map<VkShaderStageFlagBits, std::vector<uint8_t>> shader_stages_bytecode, // the bytecode of the compiled spirv file

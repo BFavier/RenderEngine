@@ -8,6 +8,6 @@ namespace RenderEnginer
     {
     public:
         // Returns a string containing the typename of the drawable (most specialized type in case of inheritance)
-        virtual std::string type_name() const {return typeid(*this).name();};
+        std::string type_name() const {return typeid(*this).name();};
     };
 }

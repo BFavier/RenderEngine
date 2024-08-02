@@ -30,7 +30,7 @@ void Mesh::upload(const std::vector<Face>& faces)
         vertices[i*3+1] = {face.points[1].to_vec3(), face.normals[1].to_vec3(), face.color.to_vec4(), face.UVs[1].to_vec(), face.material.to_vec()};
         vertices[i*3+2] = {face.points[2].to_vec3(), face.normals[2].to_vec3(), face.color.to_vec4(), face.UVs[2].to_vec(), face.material.to_vec()};
     }
-    _buffer->upload(reinterpret_cast<uint8_t*>(vertices.data()), faces.size()*sizeof(Vertex)*3, _offset);
+    _buffer->upload(vertices.data(), faces.size()*sizeof(Vertex)*3, _offset);
 }
 
 std::size_t Mesh::bytes_size() const

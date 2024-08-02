@@ -26,9 +26,10 @@ int main()
         Model floor(meshes["quad"], Vector(0., 0., 0.), Quaternion(), 5.0);
         Referential yaw(Vector(0., -1.0, -1.), Quaternion(), 1.0);  // yaw only rotates around the global Y axis
         Referential pitch(Vector(), Quaternion(), 1.0, &yaw);  // pitch only rotates around the yaw's X axis
-        PerspectiveCamera camera(PI/2, 0.1, 1000., Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
-        OrthographicCamera ortho_camera(5.0, 1000., Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
-        DirectionalLight light(Color(1.0, 1.0, 1.0, 1.0), 1.0, 10.0, 10.0, Vector(), Quaternion(), 1.0, &pitch);
+        PerspectiveCamera camera(PI/2, 0.1, 1000., 1.0, Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
+        OrthographicCamera ortho_camera(5.0, 1000., 1.0, Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
+        DiffuseLight diffuse(Color(1.0, 1.0, 1.0), 0.1);
+        DirectionalLight light(Color(1.0, 1.0, 1.0, 1.0), 0.9, 1000.0, 0.1, Vector(), Quaternion(), 1.0, &pitch);
         while(!window.closing())
         {
             double dt = timer.dt();
@@ -91,8 +92,8 @@ int main()
                 frame->clear(Color(0.1f, 0.0f, 0.3f, 1.0f));
                 frame->draw(camera, cube.mesh, cube.coordinates_in(camera), true);
                 frame->draw(camera, floor.mesh, floor.coordinates_in(camera), false);
-                //frame->render();frame->wait_completion();frame->images.at("normal")->save_to_disk("normal.png");
                 frame->light(camera, light, light.coordinates_in(camera));
+                frame->light(camera, diffuse, {});
             }
             window.update();
         }

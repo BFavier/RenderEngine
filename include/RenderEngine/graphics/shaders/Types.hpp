@@ -78,13 +78,13 @@ namespace RenderEngine
         float mesh_scale;
     };
 
-    struct CameraParameters
+    struct LightParameters
     {
-        vec4 camera_position;
-        mat3 world_to_camera;
-        vec2 camera_aperture_size;
-        float focal_length;
-        float camera_scale;
+        vec4 light_position;
+        mat3 light_rotation;
+        vec4 light_color_intensity;
+        uint32_t light_type;
+        float camera_sensitivity;
     };
 
     #pragma pack(pop)

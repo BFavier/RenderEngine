@@ -21,12 +21,12 @@ namespace RenderEngine
         const std::shared_ptr<GPU>& gpu;
     public:
         std::size_t bytes_size() const;
-        void upload(const uint8_t* data, std::size_t bytes_size, std::size_t offset) const;
-        void download(uint8_t* data, std::size_t bytes_size, std::size_t offset) const;
+        void upload(const void* data, std::size_t bytes_size, std::size_t offset) const;
+        void download(void* data, std::size_t bytes_size, std::size_t offset) const;
     protected:
         VkBuffer _vk_buffer = VK_NULL_HANDLE;
         VkDeviceMemory _vk_memory = VK_NULL_HANDLE;
-        uint8_t* _data = nullptr;
+        void* _data = nullptr;
         std::size_t _bytes_size = 0;
         VkMemoryPropertyFlags _memory_properties = 0;
     protected:

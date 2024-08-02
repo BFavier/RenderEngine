@@ -126,57 +126,23 @@ void Canvas::light(const Camera& camera, const Light& light, const std::tuple<Ve
     _record_commands();
     Shader* shader = gpu->_shaders.at("Light");
     _bind_shader(shader);
-
     // bind descriptor sets
-    std::vector<VkWriteDescriptorSet> descriptors;
-    std::vector<VkDescriptorBufferInfo> buffers;
-    std::vector<VkDescriptorImageInfo> samplers;
-    buffers.reserve(shader->_descriptor_sets.back().size());
-    samplers.reserve(shader->_descriptor_sets.back().size());
-    for (const std::pair<std::string, VkDescriptorSetLayoutBinding>& descriptor : shader->_descriptor_sets.back())
-    {
-        VkWriteDescriptorSet descriptor_set_binding{};
-        descriptor_set_binding.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptor_set_binding.dstSet = VK_NULL_HANDLE;
-        descriptor_set_binding.dstBinding = descriptor.second.binding;
-        descriptor_set_binding.descriptorType = descriptor.second.descriptorType;
-        descriptor_set_binding.descriptorCount = descriptor.second.descriptorCount;
-        descriptor_set_binding.pBufferInfo = nullptr;
-        descriptor_set_binding.pImageInfo = nullptr;
-        if (descriptor.second.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-        {
-            Image* image = images.at(descriptor.first).get();
-            samplers.push_back({image->_vk_sampler, image->_vk_image_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
-            descriptor_set_binding.pImageInfo = &samplers[samplers.size() - 1];
-        }
-        // else if (descriptor.second.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-        // {
-        //     buffers.push_back({_camera_view->_vk_buffer, 0, VK_WHOLE_SIZE});
-        //     descriptor_set_binding.pBufferInfo = &buffers[buffers.size() - 1];
-        // }
-        else
-        {
-            THROW_ERROR("Unexpected descriptor type code : descriptor.second.descriptorType");
-        }
-        descriptors.push_back(descriptor_set_binding);
-    }
-    vkCmdPushDescriptorSet(_vk_command_buffer, shader->_vk_pipeline_bind_point, shader->_vk_pipeline_layout, 0, descriptors.size(), descriptors.data());
-
-    // // set mesh scale/position/rotation
-    // VkPushConstantRange mesh_range = shader->_push_constants.at("params");
-    // MeshDrawParameters mesh_parameters = {std::get<0>(light_coordinates_in_camera).to_vec4(),
-    //                                       Matrix(std::get<1>(light_coordinates_in_camera).inverse()).to_mat3(),
-    //                                       vec4({camera.horizontal_length, camera.horizontal_length*static_cast<float>(height)/width, camera.near_plane_distance, camera.far_plane_distance}),
-    //                                       static_cast<float>(std::get<2>(light_coordinates_in_camera))};
-    // vkCmdPushConstants(_vk_command_buffer, shader->_vk_pipeline_layout, mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &mesh_parameters);
-    
+    _bind_descriptor_set(shader, 0, images, {});
+    // set mesh scale/position/rotation
+    VkPushConstantRange push_range = shader->_push_constants.at("params");
+    LightParameters light_parameters = {std::get<0>(light_coordinates_in_camera).to_vec4(),
+                                        Matrix(std::get<1>(light_coordinates_in_camera).inverse()).to_mat3(),
+                                        vec4({light.color.r, light.color.g, light.color.b, static_cast<float>(light.luminance)}),
+                                        light.type_code(),
+                                        static_cast<float>(camera.sensitivity)};
+    vkCmdPushConstants(_vk_command_buffer, shader->_vk_pipeline_layout, push_range.stageFlags, push_range.offset, push_range.size, &light_parameters);
     // send a command to command buffer
     vkCmdDraw(_vk_command_buffer, 6, 1, 0, 0);
-    // // register layout transitions
-    // for (std::pair<std::string, VkImageLayout> layout : shader->_final_layouts)
-    // {
-    //     images.at(layout.first)->_current_layout = layout.second;
-    // }
+    // register layout transitions
+    for (std::pair<std::string, VkImageLayout> layout : shader->_final_layouts)
+    {
+        images.at(layout.first)->_current_layout = layout.second;
+    }
 }
 
 
@@ -431,6 +397,48 @@ void Canvas::_bind_shader(const Shader* shader)
     }
     // set new shader pointer
     _current_shader = shader;
+}
+
+
+void Canvas::_bind_descriptor_set(const Shader* shader,
+    int descriptor_set_index,
+    const std::map<std::string, std::shared_ptr<Image>>& images_pool,
+    const std::map<std::string, std::shared_ptr<Buffer>>& buffers_pool)
+{
+    std::vector<VkWriteDescriptorSet> descriptors;
+    std::vector<VkDescriptorBufferInfo> buffers;
+    std::vector<VkDescriptorImageInfo> samplers;
+    buffers.reserve(shader->_descriptor_sets.back().size());
+    samplers.reserve(shader->_descriptor_sets.back().size());
+    for (const std::pair<std::string, VkDescriptorSetLayoutBinding>& descriptor : shader->_descriptor_sets[descriptor_set_index])
+    {
+        VkWriteDescriptorSet descriptor_set_binding{};
+        descriptor_set_binding.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_set_binding.dstSet = VK_NULL_HANDLE;
+        descriptor_set_binding.dstBinding = descriptor.second.binding;
+        descriptor_set_binding.descriptorType = descriptor.second.descriptorType;
+        descriptor_set_binding.descriptorCount = descriptor.second.descriptorCount;
+        descriptor_set_binding.pBufferInfo = nullptr;
+        descriptor_set_binding.pImageInfo = nullptr;
+        if (descriptor.second.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+        {
+            std::shared_ptr<Image> image = images_pool.at(descriptor.first);
+            samplers.push_back({image->_vk_sampler, image->_vk_image_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
+            descriptor_set_binding.pImageInfo = &samplers.back();
+        }
+        else if (descriptor.second.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+        {
+            std::shared_ptr<Buffer> buffer = buffers_pool.at(descriptor.first);
+            buffers.push_back({buffer->_vk_buffer, 0, VK_WHOLE_SIZE});
+            descriptor_set_binding.pBufferInfo = &buffers.back();
+        }
+        else
+        {
+            THROW_ERROR("Unexpected descriptor type code : " + std::to_string(descriptor.second.descriptorType));
+        }
+        descriptors.push_back(descriptor_set_binding);
+    }
+    vkCmdPushDescriptorSet(_vk_command_buffer, shader->_vk_pipeline_bind_point, shader->_vk_pipeline_layout, 0, descriptors.size(), descriptors.data());
 }
 
 

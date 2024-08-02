@@ -2,12 +2,6 @@
 #extension GL_EXT_scalar_block_layout : enable  // for std430 uniform buffer object layouts
 //#extension GL_EXT_debug_printf : enable
 
-layout(location = 0) in vec3 vertex_position;
-layout(location = 1) in vec3 vertex_normal;
-layout(location = 2) in vec4 vertex_color;
-layout(location = 3) in vec2 vertex_uv;
-layout(location = 4) in vec3 vertex_material;
-
 layout(push_constant, std430) uniform MeshDrawParameters
 {
     vec4 mesh_position;
@@ -16,14 +10,11 @@ layout(push_constant, std430) uniform MeshDrawParameters
     float mesh_scale;
 } params;
 
-layout(set=0, binding=0, std430) uniform CameraParameters
-{
-    vec4 camera_position;
-    mat3 world_to_camera;
-    vec2 camera_aperture_size;
-    float focal_length;
-    float camera_scale;
-} cp;
+layout(location = 0) in vec3 vertex_position;
+layout(location = 1) in vec3 vertex_normal;
+layout(location = 2) in vec4 vertex_color;
+layout(location = 3) in vec2 vertex_uv;
+layout(location = 4) in vec3 vertex_material;
 
 layout(location = 0) out vec4 frag_color;
 layout(location = 1) out vec3 frag_normal;

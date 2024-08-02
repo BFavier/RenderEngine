@@ -16,7 +16,6 @@ add_executable(${PROJECT_NAME}
     src/RenderEngine/graphics/Color.cpp
     src/RenderEngine/graphics/GPU.cpp
     src/RenderEngine/graphics/Image.cpp
-    src/RenderEngine/graphics/Buffer.cpp
     src/RenderEngine/graphics/Light.cpp
     src/RenderEngine/graphics/SwapChain.cpp
     src/RenderEngine/graphics/shaders/Shader.cpp

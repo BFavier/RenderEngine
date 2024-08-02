@@ -47,7 +47,6 @@ namespace RenderEngine
             std::map<const Shader*, VkFramebuffer> _frame_buffers;
             VkCommandBuffer _vk_command_buffer = VK_NULL_HANDLE;
             VkImageLayout _final_layout = VK_IMAGE_LAYOUT_UNDEFINED;  // The final layout the color image is converted to at the end of the command buffer
-            // Buffer* _camera_view = nullptr;
         public:
             void clear(Color color);  // Clear the color image to the given color. Also clear other images (depth buffer, ...)
             void draw(const Camera& camera, const std::shared_ptr<Mesh>& mesh, const std::tuple<Vector, Quaternion, double>& mesh_coordinates_in_camera, bool cull_back_faces);  // Record objects to draw in the command buffer. Rendering only starts once the 'render' method is called.
@@ -63,6 +62,10 @@ namespace RenderEngine
             void _allocate_semaphore(VkSemaphore& semaphore);
             void _record_commands();
             void _bind_shader(const Shader* shader);
+            void _bind_descriptor_set(const Shader* shader,
+                int descriptor_set_index,
+                const std::map<std::string, std::shared_ptr<Image>>& images_pool,
+                const std::map<std::string, std::shared_ptr<Buffer>>& buffers_pool);
             void _command_barrier(const std::map<std::string, VkImageLayout>& new_image_layouts); // set up a command barrier that ensures next commands will be executed after previous commands are finished, and transition the layout of the given images
     };
 }

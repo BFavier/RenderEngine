@@ -547,7 +547,7 @@ void Image::upload_data(const std::vector<uint8_t>& pixels)
         THROW_ERROR("pixel vector has not the right size.")
     }
     Buffer staging_buffer(_gpu, image_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-    staging_buffer.upload(reinterpret_cast<const uint8_t*>(pixels.data()), staging_buffer.bytes_size(), 0);
+    staging_buffer.upload(pixels.data(), staging_buffer.bytes_size(), 0);
     VkCommandBuffer command_buffer = _begin_single_time_commands();
     // transition image to transfer destination layout
     VkImageLayout new_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
