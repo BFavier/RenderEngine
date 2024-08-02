@@ -16,10 +16,8 @@ void main()
     vec4 fragment_albedo = texture(albedo, vertex_uv);
     vec4 fragment_normal = texture(normal, vertex_uv);
     vec4 fragment_material = texture(material, vertex_uv);
-    //color = vec4(vec3(fragment_material), 1.0);
-    float angle = max(dot(vec3(fragment_normal), vec3(0., 0., -1.)), 0.);
-    color = vec4(angle, angle, angle, 1.0);
-    //color = fragment_albedo * 0.5*(abs(dot(vec3(0., 0., -1.), fragment_normal)) + 1.0);
+    float cos_angle = max(dot(vec3(fragment_normal), vec3(0., 0., -1.)), 0.);
+    color = (0.8 * vec4(cos_angle, cos_angle, cos_angle, 1.0) + 0.2) * fragment_albedo;
 
     /*
     if (vec3(fragment_normal) != vec3(0., 0., 0.))
