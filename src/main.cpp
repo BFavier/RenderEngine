@@ -26,8 +26,10 @@ int main()
         Model floor(meshes["quad"], Vector(0., 0., 0.), Quaternion(), 5.0);
         Referential yaw(Vector(0., -1.0, -1.), Quaternion(), 1.0);  // yaw only rotates around the global Y axis
         Referential pitch(Vector(), Quaternion(), 1.0, &yaw);  // pitch only rotates around the yaw's X axis
-        PerspectiveCamera camera(PI/2, 1.0, 0.1, 1000., Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
-        OrthographicCamera ortho_camera(5.0, 1.0, 1000., Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
+        PerspectiveCamera perspective_camera(PI/2, 1.0, 0.1, 1000., Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
+        OrthographicCamera ortho_camera(10.0, 1.0, 1000., Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
+        SphericalCamera spherical_camera(1.0, 1000.0, Vector(), Quaternion(), 1.0, &pitch);
+        Camera& camera = perspective_camera;
         AmbientLight ambiant(Color(), 1.0);
         DirectionalLight light(Color(), 0.0);
         while(!window.closing())

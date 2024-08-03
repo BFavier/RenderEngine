@@ -75,7 +75,7 @@ namespace RenderEngine
         vec4 mesh_position;
         mat3 mesh_inverse_rotation;
         vec4 camera_parameters;
-        uint32_t camera_type;
+        uint32_t projection_type;
         float mesh_scale;
     };
 
@@ -84,7 +84,7 @@ namespace RenderEngine
         vec4 light_position;
         mat3 light_inverse_rotation;
         vec4 light_color_intensity;
-        uint32_t light_type;
+        uint32_t projection_type;
         float camera_sensitivity;
     };
 
