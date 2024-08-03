@@ -40,8 +40,8 @@ vec4 clip_space_coordinates(vec3 position, vec4 camera_parameters, uint projecti
     {
         return vec4(position.x * focal_length / (0.5 * aperture_width),
                     position.y * focal_length / (0.5 * aperture_height),
-                    (position.z - focal_length) * max_distance / (max_distance - focal_length),
-                    position.z);
+                    position.z * max_distance / (max_distance - focal_length),
+                    position.z + focal_length);
     }
     else if (projection_type == ORTHOGRAPHIC)
     {

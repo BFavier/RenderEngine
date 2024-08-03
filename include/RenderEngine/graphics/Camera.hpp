@@ -31,7 +31,7 @@ namespace RenderEngine
     {
     public:
         PerspectiveCamera() = delete;
-        PerspectiveCamera(float horizontal_field_of_view, float sensitivity=1.0, float focal_length=0.1, float max_distance=1000.0,
+        PerspectiveCamera(float horizontal_field_of_view, float sensitivity=1.0, float focal_length=1.0, float max_distance=1000.0,
                           Vector position = {0., 0., 0.}, Quaternion orientation = {}, double scale=1.0, Referential* parent = nullptr);
         ~PerspectiveCamera();
     };

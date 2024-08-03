@@ -21,17 +21,18 @@ int main()
         std::map<std::string, std::shared_ptr<Mesh>> meshes = Mesh::bulk_allocate_meshes(gpu,
             {{"cube", Face::cube(0.5)},
              {"cone", Face::cone(0.5, 0.1, 20)},
+             {"sphere", Face::sphere(0.25, 2, false)},
              {"quad", Face::quad(Vector(1., 0., 1.), Vector(-1., 0., 1.), Vector(-1., 0., -1.), Vector(1., 0., -1.), Color(1.0, 1.0, 1.0, 1.0))}});
-        Model cube(meshes["cube"], Vector(0., -1., 0.));
+        Model model(meshes["sphere"], Vector(0., -1., 0.));
         Model floor(meshes["quad"], Vector(0., 0., 0.), Quaternion(), 5.0);
         Referential yaw(Vector(0., -1.0, -1.), Quaternion(), 1.0);  // yaw only rotates around the global Y axis
         Referential pitch(Vector(), Quaternion(), 1.0, &yaw);  // pitch only rotates around the yaw's X axis
-        PerspectiveCamera perspective_camera(PI/2, 1.0, 0.1, 1000., Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
+        PerspectiveCamera perspective_camera(PI/2, 1.0, 1.0, 1000., Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
         OrthographicCamera ortho_camera(10.0, 1.0, 1000., Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
         SphericalCamera spherical_camera(1.0, 1000.0, Vector(), Quaternion(), 1.0, &pitch);
         Camera& camera = perspective_camera;
-        AmbientLight ambiant(Color(), 1.0);
-        DirectionalLight light(Color(), 0.0);
+        AmbientLight ambiant_light(Color(), 0.1);
+        DirectionalLight directional_light(Color(), 0.9);
         while(!window.closing())
         {
             double dt = timer.dt();
@@ -92,10 +93,10 @@ int main()
             if (frame != nullptr)
             {
                 frame->clear(Color(0.1f, 0.0f, 0.3f, 1.0f));
-                frame->draw(camera, cube.mesh, cube.coordinates_in(camera), true);
+                frame->draw(camera, model.mesh, model.coordinates_in(camera), true);
                 frame->draw(camera, floor.mesh, floor.coordinates_in(camera), false);
-                // frame->light(camera, light, light.coordinates_in(camera));
-                frame->light(camera, ambiant, {});
+                frame->light(camera, directional_light, directional_light.coordinates_in(camera));
+                frame->light(camera, ambiant_light, {});
             }
             window.update();
         }
