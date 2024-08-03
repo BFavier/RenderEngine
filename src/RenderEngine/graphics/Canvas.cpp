@@ -103,13 +103,14 @@ void Canvas::draw(const Camera& camera, const std::shared_ptr<Mesh>& mesh, const
     std::vector<VkBuffer> vertex_buffers = {mesh->_buffer->_vk_buffer};
     std::vector<VkDeviceSize> offsets(vertex_buffers.size(), mesh->_offset);
     vkCmdBindVertexBuffers(_vk_command_buffer, 0, vertex_buffers.size(), vertex_buffers.data(), offsets.data());
-    // set mesh scale/position/rotation
+    // set shader parameters
     VkPushConstantRange mesh_range = shader->_push_constants.at("params");
-    MeshDrawParameters mesh_parameters = {std::get<0>(mesh_coordinates_in_camera).to_vec4(),
-                                          Matrix(std::get<1>(mesh_coordinates_in_camera).inverse()).to_mat3(),
-                                          vec4({camera.horizontal_length, camera.horizontal_length*static_cast<float>(height)/width, camera.near_plane_distance, camera.far_plane_distance}),
-                                          static_cast<float>(std::get<2>(mesh_coordinates_in_camera))};
-    vkCmdPushConstants(_vk_command_buffer, shader->_vk_pipeline_layout, mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &mesh_parameters);
+    DrawParameters params = {std::get<0>(mesh_coordinates_in_camera).to_vec4(),
+                             Matrix(std::get<1>(mesh_coordinates_in_camera).inverse()).to_mat3(),
+                             vec4({camera.aperture_width, (camera.aperture_width*height)/width, camera.focal_length, camera.max_distance}),
+                             static_cast<uint32_t>(camera.projection_type),
+                             static_cast<float>(std::get<2>(mesh_coordinates_in_camera))};
+    vkCmdPushConstants(_vk_command_buffer, shader->_vk_pipeline_layout, mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &params);
     // send a command to command buffer
     vkCmdDraw(_vk_command_buffer, mesh->bytes_size()/sizeof(Vertex), 1, 0, 0);
     // register layout transitions
@@ -132,9 +133,9 @@ void Canvas::light(const Camera& camera, const Light& light, const std::tuple<Ve
     VkPushConstantRange push_range = shader->_push_constants.at("params");
     LightParameters light_parameters = {std::get<0>(light_coordinates_in_camera).to_vec4(),
                                         Matrix(std::get<1>(light_coordinates_in_camera).inverse()).to_mat3(),
-                                        vec4({light.color.r, light.color.g, light.color.b, static_cast<float>(light.luminance)}),
-                                        light.type_code(),
-                                        static_cast<float>(camera.sensitivity)};
+                                        vec4({light.color.r, light.color.g, light.color.b, light.intensity}),
+                                         static_cast<uint32_t>(light.projection_type),
+                                        camera.sensitivity};
     vkCmdPushConstants(_vk_command_buffer, shader->_vk_pipeline_layout, push_range.stageFlags, push_range.offset, push_range.size, &light_parameters);
     // send a command to command buffer
     vkCmdDraw(_vk_command_buffer, 6, 1, 0, 0);

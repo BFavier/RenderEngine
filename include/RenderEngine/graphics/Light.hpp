@@ -4,54 +4,46 @@
 
 namespace RenderEngine
 {
-    class Light
+    class Light : public Camera
     {
         public:
             Light() = delete;
             ~Light();
         protected:
-            Light(Color _color, double _luminance);
+            Light(Color color, float intensity,
+                  float aperture_width, float focal_length, float max_distance, ProjectionType projection_type,
+                  Vector position, Quaternion orientation, double scale, Referential* parent);
         public:
             Color color;
-            double luminance = 0;
-        public:
-            virtual uint32_t type_code() const {return 0;}
+            float intensity;
     };
 
 
-    class DiffuseLight : public Light
+    class AmbientLight : public Light
     {
         public:
-            DiffuseLight() = delete;
-            DiffuseLight(Color _color, double _luminance) : Light(_color, _luminance) {};
-            ~DiffuseLight(){}
-        public:
-            virtual uint32_t type_code() const {return 0;}
+            AmbientLight() = delete;
+            AmbientLight(Color color, float intensity, Referential* parent = nullptr);
+            ~AmbientLight();
     };
 
 
-    class DirectionalLight : public Light, public OrthographicCamera
+    class DirectionalLight : public Light
     {
         public:
             DirectionalLight() = delete;
-            DirectionalLight(Color color, double luminance,
-                             float horizontal_length, float far_plane_distance,
+            DirectionalLight(Color color, float intensity, float aperture_width = 100.0, float max_distance = 1000.0,
                              Vector position = {0., 0., 0.}, Quaternion orientation = {}, double scale=1.0, Referential* parent = nullptr);
             ~DirectionalLight();
-        public:
-            virtual uint32_t type_code() const {return 1;}
     };
 
 
-    class PointLight : public Light, public PerspectiveCamera
+    class PointLight : public Light
     {
         public:
             PointLight() = delete;
-            PointLight(Color color, double luminance,
-                       float horizontal_field_of_view, float near_plane_distance, float far_plane_distance,
+            PointLight(Color color, float intensity, float constant_intensity_radius = 1.0, float max_shadow_distance = 1000.0,
                        Vector position = {0., 0., 0.}, Quaternion orientation = {}, double scale=1.0, Referential* parent = nullptr);
             ~PointLight();
-        public:
-            virtual uint32_t type_code() const {return 2;}
     };
 }

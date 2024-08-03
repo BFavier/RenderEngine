@@ -3,24 +3,29 @@
 using namespace RenderEngine;
 
 
-Camera::Camera(float _horizontal_length, float _near_plane_distance, float _far_plane_distance, float _sensitivity,
+Camera::Camera(float _sensitivity, float _aperture_width, float _focal_length, float _max_distance, ProjectionType _projection_type,
                Vector position, Quaternion orientation, double scale, Referential* parent) :
     Referential(position, orientation, scale, parent)
 {
-    horizontal_length = _horizontal_length;
-    near_plane_distance = _near_plane_distance;
-    far_plane_distance = _far_plane_distance;
     sensitivity = _sensitivity;
+    aperture_width = _aperture_width;
+    focal_length = _focal_length;
+    max_distance = _max_distance;
+    projection_type = _projection_type;
 }
 
 Camera::~Camera()
 {
 }
 
-PerspectiveCamera::PerspectiveCamera(float horizontal_field_of_view, float near_plane_distance, float far_plane_distance, float _sensitivity,
-                                     Vector position, Quaternion orientation, double scale, Referential* _parent) :
-    Camera(2.0 * std::tan(horizontal_field_of_view / 2.0) * near_plane_distance, near_plane_distance, far_plane_distance, _sensitivity,
-           position, orientation, scale, _parent)
+PerspectiveCamera::PerspectiveCamera(float horizontal_field_of_view, float sensitivity, float focal_length, float max_distance,
+                                     Vector position, Quaternion orientation, double scale, Referential* parent) :
+    Camera(sensitivity,
+           2.0 * std::tan(horizontal_field_of_view / 2.0) * focal_length,
+           focal_length,
+           max_distance,
+           ProjectionType::PERSPECTIVE,
+           position, orientation, scale, parent)
 {
 }
 
@@ -28,13 +33,32 @@ PerspectiveCamera::~PerspectiveCamera()
 {
 }
 
-OrthographicCamera::OrthographicCamera(float horizontal_length, float far_plane_distance, float _sensitivity,
-               Vector position, Quaternion orientation, double scale, Referential* parent) :
-    Camera(horizontal_length, 0.0, far_plane_distance, _sensitivity,
+OrthographicCamera::OrthographicCamera(float aperture_width, float sensitivity, float max_distance,
+                                       Vector position, Quaternion orientation, double scale, Referential* parent) :
+    Camera(sensitivity,
+           aperture_width,
+           0.,
+           max_distance,
+           ProjectionType::ORTHOGRAPHIC,
            position, orientation, scale, parent)
 {
 }
 
 OrthographicCamera::~OrthographicCamera()
+{
+}
+
+SphericalCamera::SphericalCamera(float sensitivity, float max_distance,
+                                 Vector position, Quaternion orientation, double scale, Referential* parent) :
+    Camera(sensitivity,
+           0.,
+           0.,
+           max_distance,
+           ProjectionType::EQUIRECTANGULAR,
+           position, orientation, scale, parent)
+{
+}
+
+SphericalCamera::~SphericalCamera()
 {
 }
