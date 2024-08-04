@@ -14,9 +14,12 @@
 layout(push_constant, std430) uniform LightParameters
 {
     vec4 light_position;
-	mat3 light_inverse_rotation;
+    mat3 light_inverse_rotation;
     vec4 light_color_intensity;
-    uint projection_type;
+    vec4 light_camera_parameters;
+    vec4 camera_parameters;
+    uint light_projection_type;
+    uint camera_projection_type;
     float camera_sensitivity;
 } params;
 
@@ -109,13 +112,16 @@ void main()
     const vec4 fragment_albedo = texture(albedo, vertex_uv);
     const vec4 fragment_normal = texture(normal, vertex_uv);
     const vec4 fragment_material = texture(material, vertex_uv);
-    const float fragment_depth = texture(depth, vertex_uv).z;
+    const float fragment_depth = texture(depth, vertex_uv).x;
 
-    if (params.projection_type == NONE)
+    vec3 fragment_clip = vec3(vertex_uv * 2 - 1.0, fragment_depth);
+    vec3 fragment_position = camera_space_coordinates(fragment_clip, params.camera_parameters, params.camera_projection_type);
+
+    if (params.light_projection_type == NONE)
     {
         color = fragment_albedo * vec4(vec3(params.light_color_intensity) * params.light_color_intensity.a / params.camera_sensitivity, 1.0);
     }
-    else if (params.projection_type == ORTHOGRAPHIC)
+    else if (params.light_projection_type == ORTHOGRAPHIC)
     {
         float cos_angle = max(dot(vec3(fragment_normal), params.light_inverse_rotation * vec3(0., 0., -1.)), 0.);
         color = vec4(cos_angle, cos_angle, cos_angle, 1.0) * fragment_albedo * vec4(vec3(params.light_color_intensity) * params.light_color_intensity.a / params.camera_sensitivity, 1.0);

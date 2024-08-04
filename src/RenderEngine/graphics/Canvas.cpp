@@ -134,7 +134,10 @@ void Canvas::light(const Camera& camera, const Light& light, const std::tuple<Ve
     LightParameters light_parameters = {std::get<0>(light_coordinates_in_camera).to_vec4(),
                                         Matrix(std::get<1>(light_coordinates_in_camera).inverse()).to_mat3(),
                                         vec4({light.color.r, light.color.g, light.color.b, light.intensity}),
-                                         static_cast<uint32_t>(light.projection_type),
+                                        vec4({light.aperture_width, (light.aperture_width*height)/width, light.focal_length, light.max_distance}),
+                                        vec4({camera.aperture_width, (camera.aperture_width*height)/width, camera.focal_length, camera.max_distance}),
+                                        static_cast<uint32_t>(light.projection_type),
+                                        static_cast<uint32_t>(camera.projection_type),
                                         camera.sensitivity};
     vkCmdPushConstants(_vk_command_buffer, shader->_vk_pipeline_layout, push_range.stageFlags, push_range.offset, push_range.size, &light_parameters);
     // send a command to command buffer
