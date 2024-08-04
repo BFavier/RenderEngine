@@ -57,6 +57,7 @@ Canvas::~Canvas()
 }
 
 
+// TODO : replace transfer operations with a shader
 void Canvas::clear(Color _color)
 {
     wait_completion();

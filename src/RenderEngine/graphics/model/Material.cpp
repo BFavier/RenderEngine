@@ -5,11 +5,11 @@ Material::Material()
 {
 }
 
-Material::Material(double _metalness, double _roughness, double _luminance)
+Material::Material(float _metalness, float _roughness, float _ambient_occlusion)
 {
     metalness = _metalness;
     roughness = _roughness;
-    luminance = _luminance;
+    ambient_occlusion = _ambient_occlusion;
 }
 
 Material::~Material()
@@ -18,5 +18,5 @@ Material::~Material()
 
 vec3 Material::to_vec() const
 {
-    return vec3({static_cast<float>(metalness), static_cast<float>(roughness), static_cast<float>(luminance)});
+    return vec3({metalness, roughness, ambient_occlusion});
 }
