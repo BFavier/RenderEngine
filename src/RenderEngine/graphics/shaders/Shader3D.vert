@@ -31,10 +31,10 @@ layout(location = 3) out vec3 frag_material;
 
 vec4 clip_space_coordinates(vec3 position, vec4 camera_parameters, uint projection_type)
 {
-    float aperture_width = camera_parameters.x;
-    float aperture_height = camera_parameters.y;
-    float focal_length = camera_parameters.z;
-    float max_distance = camera_parameters.w;
+    const float aperture_width = camera_parameters.x;
+    const float aperture_height = camera_parameters.y;
+    const float focal_length = camera_parameters.z;
+    const float max_distance = camera_parameters.w;
 
     if (projection_type == PERSPECTIVE)
     {
@@ -52,10 +52,10 @@ vec4 clip_space_coordinates(vec3 position, vec4 camera_parameters, uint projecti
     }
     else if (projection_type == EQUIRECTANGULAR)
     {
-        float r = sqrt(position.x*position.x + position.y*position.y + position.z*position.z);
-        float theta = acos(position.y / (r + 1.0E-8));
-        float phi = sign(position.x) * acos(position.z / sqrt(position.z*position.z + position.x*position.x + 1.0E-8));
-        return vec4(theta/PI, phi/(2*PI), r, 1.0);
+        const float r = sqrt(position.x*position.x + position.y*position.y + position.z*position.z);
+        const float theta = acos(position.y / (r + 1.0E-10));
+        const float phi = sign(position.x) * acos(position.z / sqrt(position.z*position.z + position.x*position.x + 1.0E-10));
+        return vec4(2*theta/PI - 1, phi/PI, r, 1.0);
     }
     else
     {

@@ -21,7 +21,7 @@ int main()
         std::map<std::string, std::shared_ptr<Mesh>> meshes = Mesh::bulk_allocate_meshes(gpu,
             {{"cube", Face::cube(0.5)},
              {"cone", Face::cone(0.5, 0.1, 20)},
-             {"sphere", Face::sphere(0.25, 2, false)},
+             {"sphere", Face::sphere(0.25, 2, true)},
              {"quad", Face::quad(Vector(1., 0., 1.), Vector(-1., 0., 1.), Vector(-1., 0., -1.), Vector(1., 0., -1.), Color(1.0, 1.0, 1.0, 1.0))}});
         Model model(meshes["sphere"], Vector(0., -1., 0.));
         Model floor(meshes["quad"], Vector(0., 0., 0.), Quaternion(), 5.0);
@@ -32,7 +32,7 @@ int main()
         SphericalCamera spherical_camera(1.0, 1000.0, Vector(), Quaternion(), 1.0, &pitch);
         Camera& camera = perspective_camera;
         AmbientLight ambiant_light(Color(), 0.1);
-        DirectionalLight directional_light(Color(), 0.9);
+        DirectionalLight directional_light(Color(), 0.9, 100.0, 1000.0, Vector(0., -1., 0.), Quaternion(-PI/4, Vector(1.0, 0., 0.)), 1.0, nullptr);
         while(!window.closing())
         {
             double dt = timer.dt();

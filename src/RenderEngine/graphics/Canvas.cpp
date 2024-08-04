@@ -367,7 +367,7 @@ void Canvas::_bind_shader(const Shader* shader)
                 }
             }
         }
-        if (shader->_vk_pipeline_bind_point == VK_PIPELINE_BIND_POINT_GRAPHICS)
+        if (shader->_depth_test)
         {
             layout_transitions["depth"] = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         }
