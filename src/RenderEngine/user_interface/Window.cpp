@@ -50,7 +50,10 @@ void Window::update()
     Canvas* frame = get_frame();
     if (frame != nullptr)
     {
-        frame->render();
+        if (frame->is_recording())
+        {
+            THROW_ERROR("Tried presenting swapchain frame to screen, but 'render' has not been called.");
+        }
         _swap_chain->present_frame();
     }
     // polling events (might delete swap chain by window resizing callback function)

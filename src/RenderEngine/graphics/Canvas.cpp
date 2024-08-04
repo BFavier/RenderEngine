@@ -13,7 +13,7 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t _width, uint32_t _heig
             {"normal", std::make_shared<Image>(_gpu, ImageFormat::NORMAL, _width, _height, mip_maped)},
             {"material", std::make_shared<Image>(_gpu, ImageFormat::MATERIAL, _width, _height, mip_maped)},
             {"depth", std::make_shared<Image>(_gpu, ImageFormat::DEPTH, _width, _height, false)}}),
-    width(_width), height(_height), _final_layout(VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL)
+    width(_width), height(_height), _final_layout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 {
     for (std::pair<std::string, Shader*> shader : gpu->_shaders)
     {
