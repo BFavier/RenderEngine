@@ -143,11 +143,13 @@ void Canvas::light(const Camera& camera, const Light& light, const std::tuple<Ve
     // bind descriptor sets
     _bind_descriptor_set(shader, 0, images_pool, {});
     // set mesh scale/position/rotation
+    uint32_t shadow_map_height = (shadow_map == nullptr) ? 1 : shadow_map->height;
+    uint32_t shadow_map_width = (shadow_map == nullptr) ? 1 : shadow_map->width;
     VkPushConstantRange push_range = shader->_push_constants.at("params");
     LightParameters light_parameters = {std::get<0>(light_coordinates_in_camera).to_vec4(),
                                         Matrix(std::get<1>(light_coordinates_in_camera).inverse()).to_mat3(),
                                         vec4({light.color.r, light.color.g, light.color.b, light.intensity}),
-                                        vec4({light.aperture_width, (light.aperture_width*height)/width, light.focal_length, light.max_distance}),
+                                        vec4({light.aperture_width, (light.aperture_width*shadow_map_height)/shadow_map_width, light.focal_length, light.max_distance}),
                                         vec4({camera.aperture_width, (camera.aperture_width*height)/width, camera.focal_length, camera.max_distance}),
                                         static_cast<uint32_t>(light.projection_type),
                                         static_cast<uint32_t>(camera.projection_type),

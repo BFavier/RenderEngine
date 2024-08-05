@@ -27,12 +27,12 @@ int main()
         Model floor(meshes["quad"], Vector(0., 0., 0.), Quaternion(), 5.0);
         Referential yaw(Vector(0., -1.0, -1.), Quaternion(), 1.0);  // yaw only rotates around the global Y axis
         Referential pitch(Vector(), Quaternion(), 1.0, &yaw);  // pitch only rotates around the yaw's X axis
-        PerspectiveCamera perspective_camera(PI/2, 1.0, 1.0, 1000., Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
+        PerspectiveCamera perspective_camera(PI/2, 1.0, 0.1, 1000., Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
         OrthographicCamera ortho_camera(10.0, 1.0, 1000., Vector(), Quaternion(), 1.0, &pitch); // the camera only pitches around yaw's X axis
         SphericalCamera spherical_camera(1.0, 1000.0, Vector(), Quaternion(), 1.0, &pitch);
         Camera& camera = perspective_camera;
         AmbientLight ambiant_light(Color(), 0.1);
-        DirectionalLight directional_light(Color(), 2.0, 100.0, 1000.0, Vector(0., -1., 0.), Quaternion(-PI/4, Vector(1.0, 0., 0.)), 1.0, nullptr);
+        DirectionalLight directional_light(Color(), 2.0, 10.0, 10.0, Vector(0., -2., -2.), Quaternion(-PI/4, Vector(1.0, 0., 0.)), 1.0, nullptr);
         Canvas shadow_map(gpu, 512, 512, false, AntiAliasing::X1);
         while(!window.closing())
         {
@@ -43,7 +43,7 @@ int main()
             }
             if (mouse.wheel_dy() != 0)
             {
-                std::cout << "mouse sheel moved of " << mouse.wheel_dy() << " (" << dt << ") " << std::endl;
+                std::cout << "mouse wheel moved of " << mouse.wheel_dy() << " (" << dt << ") " << std::endl;
             }
             for (std::pair<std::string, const Button&> button : mouse.buttons())
             {
@@ -100,11 +100,12 @@ int main()
                 shadow_map.render();
 
                 //
-                frame->clear(Color(0.1f, 0.0f, 0.3f, 1.0f));
+                frame->clear(Color(0.f, 0.0f, 0.f, 1.0f));
+                //frame->clear(Color(0.1f, 0.0f, 0.3f, 1.0f));
                 frame->draw(camera, model.mesh, model.coordinates_in(camera));
                 frame->draw(camera, floor.mesh, floor.coordinates_in(camera));
                 frame->light(camera, directional_light, directional_light.coordinates_in(camera), &shadow_map);
-                frame->light(camera, ambiant_light, {});
+                //frame->light(camera, ambiant_light, {});
                 frame->render();
             }
             window.update();

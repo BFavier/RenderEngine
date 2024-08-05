@@ -102,7 +102,7 @@ float aligned_microfacets(float roughness, vec3 normal, vec3 halfway)
 float microfacets_obstruction(float roughness, vec3 normal, vec3 incidence)
 {
     const float k = (roughness + 1)*(roughness + 1)/8;
-    const float d = abs(dot(normal, incidence));
+    const float d = max(dot(normal, incidence), 0.);
     return d / (d*(1 - k) + k);
 }
 
@@ -133,7 +133,7 @@ vec4 received_light(vec3 intensity, vec4 albedo, float roughness, float metalnes
     const vec4 Ks = fresnel_schlick(albedo, metalness, halfway, view);  // specular part
     const vec4 Kd = vec4((1.0 - vec3(Ks)) * (1 - metalness), 1.0); // diffuse part
     return (Kd * albedo/PI * abs(dot(normal, light))
-            + Ks * cook_torrance(roughness, normal, halfway, view, light) / (4 * abs(dot(normal, view)) + 1.0E-8)
+            + Ks * cook_torrance(roughness, normal, halfway, view, light) / (4 * max(dot(normal, view), 0.) + 1.0E-8)
             ) * vec4(intensity, 1.0);
 }
 
@@ -172,15 +172,7 @@ void main()
     const vec3 fragment_clip = vec3(vertex_uv * 2 - 1.0, fragment_depth);
     const vec3 fragment_position = camera_space_coordinates(fragment_clip, params.camera_parameters, params.camera_projection_type);
     const vec3 view = normalize(-fragment_position);
-
-    float shadow_light_depth = 1.0;
-    float fragment_light_depth = 0.0;
-    if ((params.flags & FLAG_SHADOW_MAP) != 0)
-    {
-        vec4 fragment_light_clip = clip_space_coordinates(fragment_position, params.light_camera_parameters, params.light_projection_type);
-        shadow_light_depth = texture(shadow_map, vec2(fragment_light_clip)*0.5 + 0.5).x;
-        fragment_light_depth = fragment_light_clip.z;
-    }
+    vec3 light = vec3(0.);
 
     const float metalness = fragment_material.x;
     const float roughness = fragment_material.y;
@@ -192,53 +184,42 @@ void main()
     }
     else if (params.light_projection_type == PROJECTION_ORTHOGRAPHIC)
     {
-        if (shadow_light_depth*1.001 < fragment_light_depth)
-        {
-            color = vec4(0., 0., 0., fragment_albedo.a);
-        }
-        else
-        {
-            const vec3 light = params.light_inverse_rotation * vec3(0., 0., -1.);
-            color = received_light(vec3(params.light_color_intensity) * params.light_color_intensity.a,
-                                fragment_albedo, roughness, metalness, fragment_normal, light, view
-                                ) / params.camera_sensitivity;
-        }
+        light = params.light_inverse_rotation * vec3(0., 0., -1.);
+        color = received_light(vec3(params.light_color_intensity) * params.light_color_intensity.a,
+                            fragment_albedo, roughness, metalness, fragment_normal, light, view
+                            ) / params.camera_sensitivity;
     }
     else if (params.light_projection_type == PROJECTION_EQUIRECTANGULAR)
     {
-        if (shadow_light_depth*1.001 < fragment_light_depth)
-        {
-            color = vec4(0., 0., 0., fragment_albedo.a);
-        }
-        else
-        {
-            const vec3 light = normalize(vec3(params.light_position) - fragment_position);
-            const float d = max(length(fragment_position - vec3(params.light_position)), params.light_camera_parameters.z);
-            color = received_light(vec3(params.light_color_intensity) * params.light_color_intensity.a / (d*d),
-                                fragment_albedo, roughness, metalness, fragment_normal, light, view
-                                ) / params.camera_sensitivity;
-        }
+        light = normalize(vec3(params.light_position) - fragment_position);
+        const float d = max(length(fragment_position - vec3(params.light_position)), params.light_camera_parameters.z);
+        color = received_light(vec3(params.light_color_intensity) * params.light_color_intensity.a / (d*d),
+                            fragment_albedo, roughness, metalness, fragment_normal, light, view
+                            ) / params.camera_sensitivity;
     }
     else
     {
         color = vec4(0., 0., 0., 1.0);
     }
 
-    /*
-    if (params.light_projection_type == NONE)
+    if ((params.flags & FLAG_SHADOW_MAP) != 0)
     {
-        color = fragment_albedo * vec4(vec3(params.light_color_intensity) * params.light_color_intensity.a / params.camera_sensitivity, 1.0);
+        vec3 fragment_light_position = transpose(params.light_inverse_rotation) * (fragment_position - vec3(params.light_position));
+        vec4 fragment_light_clip = clip_space_coordinates(fragment_light_position, params.light_camera_parameters, params.light_projection_type);
+        vec2 fragment_light_uv = vec2(fragment_light_clip)*0.5 + 0.5;
+        float shadow_light_depth = texture(shadow_map, fragment_light_uv).x;
+        if (fragment_light_uv.x < 0.0 || fragment_light_uv.x > 1.0 || fragment_light_uv.y < 0.0 || fragment_light_uv.y > 1.0)
+        {
+            fragment_light_uv = vec2(0., 0.);
+            shadow_light_depth = 1.0;
+        }
+        float fragment_light_depth = fragment_light_clip.z;
+        float epsilon = max(0.01 * (1.0 - abs(dot(fragment_normal, light))), 0.0001);
+        if (shadow_light_depth * (1.0 + epsilon) <= fragment_light_depth)
+        {
+            color = vec4(0., 0., 0., fragment_albedo.a);
+        }
     }
-    else if (params.light_projection_type == ORTHOGRAPHIC)
-    {
-        float cos_angle = max(dot(vec3(fragment_normal), params.light_inverse_rotation * vec3(0., 0., -1.)), 0.);
-        color = vec4(cos_angle, cos_angle, cos_angle, 1.0) * fragment_albedo * vec4(vec3(params.light_color_intensity) * params.light_color_intensity.a / params.camera_sensitivity, 1.0);
-    }
-    else
-    {
-        color = vec4(0., 0., 0., 1.0);
-    }
-    */
 
     // debugPrintfEXT("fragment normal is (x=%f, y=%f, z=%f)\n", fragment_normal.x, fragment_normal.y, fragment_normal.z);
     // debugPrintfEXT("projection type is %d\n", params.projection_type);
