@@ -33,13 +33,12 @@ using namespace RenderEngine;
 
 {shader_name}::{shader_name}(const GPU* gpu) : Shader(gpu,
     {vertex_buffers},
-    {input_attachments},
     {output_attachments},
     {descriptor_sets},
     {push_constants},
-    {shader_stages_bytecode},
     {depth_test},
-    {blending})
+    {blending},
+    {shader_stages_bytecode})
 {{
 }}
 
@@ -195,7 +194,6 @@ def save_shader(shader_prefix: str, code: dict, variables: dict):
     # writing c++ source file
     src = SHADER_SRC.format(shader_name=shader_prefix,
                             vertex_buffers=vertex_buffers,
-                            input_attachments=input_attachments,
                             output_attachments=output_attachments,
                             push_constants=push_constants,
                             descriptor_sets=descriptors,

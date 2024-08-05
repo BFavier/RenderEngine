@@ -226,10 +226,6 @@ VkFramebuffer Canvas::_allocate_frame_buffer(const Shader* shader)
 {
     VkFramebuffer frame_buffer;
     std::vector<VkImageView> attachments;
-    for (const std::pair<const std::string, VkFormat>& image : shader->_input_attachments)
-    {
-        attachments.push_back(images.at(image.first)->_vk_image_view);
-    }
     for (const std::pair<const std::string, VkFormat>& image : shader->_output_attachments)
     {
         attachments.push_back(images.at(image.first)->_vk_image_view);
@@ -354,10 +350,6 @@ void Canvas::_bind_shader(const Shader* shader, const std::map<const std::string
     std::map<std::string, VkImageLayout> layout_transitions;
     if (shader != nullptr)
     {
-        for (const std::pair<std::string, VkFormat>& image : shader->_input_attachments)
-        {
-            layout_transitions[image.first] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        }
         for (const std::pair<std::string, VkFormat>& image : shader->_output_attachments)
         {
             layout_transitions[image.first] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;

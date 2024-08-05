@@ -5,20 +5,18 @@ using namespace RenderEngine;
 
 Shader::Shader(const GPU* gpu,
                const std::vector<std::pair<std::string, VkVertexInputAttributeDescription>>& vertex_buffers,
-               const std::vector<std::pair<std::string, VkFormat>>& input_attachments,
                const std::vector<std::pair<std::string, VkFormat>>& output_attachments,
                const std::vector<std::map<std::string, VkDescriptorSetLayoutBinding>>& descriptor_sets, // for each layout set, descriptor of all bindings (textures, Uniform Buffer Objects, ...)
                const std::map<std::string, VkPushConstantRange>& push_constants, // definition of all push constants.
-               const std::map<VkShaderStageFlagBits, std::vector<uint8_t>> shader_stages_bytecode, // the bytecode of the compiled spirv file
                bool depth_test,
-               Blending blending
+               Blending blending,
+               const std::map<VkShaderStageFlagBits, std::vector<uint8_t>> shader_stages_bytecode // the bytecode of the compiled spirv file
                ) : _gpu(gpu)
 {
     _push_constants = push_constants;
-    _input_attachments = input_attachments;
     _output_attachments = output_attachments;
     _descriptor_sets = descriptor_sets;
-    std::tie(_vk_render_pass, _final_layouts) = _create_render_pass(*gpu, input_attachments, output_attachments, depth_test);
+    std::tie(_vk_render_pass, _final_layouts) = _create_render_pass(*gpu, output_attachments, depth_test);
     _descriptor_set_layouts = _create_descriptor_set_layouts(*gpu, descriptor_sets);
     _modules = _create_modules(*gpu, shader_stages_bytecode);
     _vk_pipeline_layout = _create_pipeline_layout(*gpu, push_constants, _descriptor_set_layouts);
@@ -53,7 +51,6 @@ Shader::~Shader()
 
 
 std::tuple<VkRenderPass, std::map<std::string, VkImageLayout>> Shader::_create_render_pass(const GPU& gpu,
-                                                                                           const std::vector<std::pair<std::string, VkFormat>>& input_attachments,
                                                                                            const std::vector<std::pair<std::string, VkFormat>>& output_attachments,
                                                                                            bool depth_test)
 {
@@ -61,21 +58,6 @@ std::tuple<VkRenderPass, std::map<std::string, VkImageLayout>> Shader::_create_r
     std::map<std::string, VkImageLayout> output_layouts;
     std::vector<VkAttachmentDescription> attachments;
     {
-        // input attachments
-        for (const std::pair<std::string, VkFormat>& att : input_attachments)
-        {
-            VkAttachmentDescription attachment{};
-            attachment.format = static_cast<VkFormat>(att.second);
-            attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-            attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            attachments.push_back(attachment);
-            output_layouts[att.first] = attachment.finalLayout;
-        }
         // output (color) attachments
         for (const std::pair<std::string, VkFormat>& att : output_attachments)
         {
@@ -109,14 +91,8 @@ std::tuple<VkRenderPass, std::map<std::string, VkImageLayout>> Shader::_create_r
     }
     // Creating attachment references
     std::vector<VkAttachmentReference> color_attachment_refs;
-    std::vector<VkAttachmentReference> input_attachment_refs;
     std::optional<VkAttachmentReference> depth_buffer_ref;
     {
-        // Input attachments
-        for (uint32_t i=0; i<input_attachments.size(); i++)
-        {
-            input_attachment_refs.push_back({i, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
-        }
         // Output attachments
         for (uint32_t i=0; i<output_attachments.size(); i++)
         {
@@ -135,8 +111,8 @@ std::tuple<VkRenderPass, std::map<std::string, VkImageLayout>> Shader::_create_r
     subpass.colorAttachmentCount = color_attachment_refs.size();
     subpass.pColorAttachments = color_attachment_refs.data(); // Array of attachments the fragment shader writes to
     subpass.pResolveAttachments = nullptr; // Array of same size as color attachments for multisampling anti-aliasing
-    subpass.inputAttachmentCount = input_attachment_refs.size();
-    subpass.pInputAttachments = input_attachment_refs.data(); // Array of attachments the fragment shader reads from
+    subpass.inputAttachmentCount = 0;
+    subpass.pInputAttachments = nullptr; // Array of attachments the fragment shader reads from
     subpass.preserveAttachmentCount = 0;
     subpass.pPreserveAttachments = nullptr; // Array of reserved attachment positions
     subpass.pDepthStencilAttachment = (depth_buffer_ref.has_value()) ? &depth_buffer_ref.value() : nullptr;
