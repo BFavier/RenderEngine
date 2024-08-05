@@ -132,7 +132,7 @@ vec4 received_light(vec3 intensity, vec4 albedo, float roughness, float metalnes
     const vec3 halfway = normalize(light + view);
     const vec4 Ks = fresnel_schlick(albedo, metalness, halfway, view);  // specular part
     const vec4 Kd = vec4((1.0 - vec3(Ks)) * (1 - metalness), 1.0); // diffuse part
-    return (Kd * albedo/PI * abs(dot(normal, light))
+    return (Kd * albedo/PI * max(dot(normal, light), 0.)
             + Ks * cook_torrance(roughness, normal, halfway, view, light) / (4 * max(dot(normal, view), 0.) + 1.0E-8)
             ) * vec4(intensity, 1.0);
 }

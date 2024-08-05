@@ -32,7 +32,7 @@ int main()
         SphericalCamera spherical_camera(1.0, 1000.0, Vector(), Quaternion(), 1.0, &pitch);
         Camera& camera = perspective_camera;
         AmbientLight ambiant_light(Color(), 0.1);
-        DirectionalLight directional_light(Color(), 2.0, 10.0, 10.0, Vector(0., -2., -2.), Quaternion(-PI/4, Vector(1.0, 0., 0.)), 1.0, nullptr);
+        DirectionalLight directional_light(Color(), 0.9, 10.0, 1000.0, Vector(0., -2., -2.), Quaternion(-PI/4, Vector(1.0, 0., 0.)), 1.0, nullptr);
         Canvas shadow_map(gpu, 512, 512, false, AntiAliasing::X1);
         while(!window.closing())
         {
@@ -93,19 +93,19 @@ int main()
             Canvas* frame = window.get_frame();
             if (frame != nullptr)
             {
-                //
+                // render from point of view of the light to create the shadow map
                 shadow_map.clear(Color());
                 shadow_map.draw(directional_light, model.mesh, model.coordinates_in(directional_light));
                 shadow_map.draw(directional_light, floor.mesh, floor.coordinates_in(directional_light));
                 shadow_map.render();
 
-                //
+                // render and light the scene
                 frame->clear(Color(0.f, 0.0f, 0.f, 1.0f));
                 //frame->clear(Color(0.1f, 0.0f, 0.3f, 1.0f));
                 frame->draw(camera, model.mesh, model.coordinates_in(camera));
                 frame->draw(camera, floor.mesh, floor.coordinates_in(camera));
                 frame->light(camera, directional_light, directional_light.coordinates_in(camera), &shadow_map);
-                //frame->light(camera, ambiant_light, {});
+                frame->light(camera, ambiant_light, {});
                 frame->render();
             }
             window.update();
