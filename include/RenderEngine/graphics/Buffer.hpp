@@ -15,10 +15,10 @@ namespace RenderEngine
         Buffer(const Buffer& other) = delete;
         Buffer& operator=(const Buffer& other) = delete;
     public:
-        Buffer(const std::shared_ptr<GPU>& gpu, size_t bytes_size, VkBufferUsageFlags usage);
+        Buffer(const GPU* gpu, size_t bytes_size, VkBufferUsageFlags usage);
         ~Buffer();
     public:
-        const std::shared_ptr<GPU>& gpu;
+        const GPU* gpu;
     public:
         std::size_t bytes_size() const;
         void upload(const void* data, std::size_t bytes_size, std::size_t offset) const;

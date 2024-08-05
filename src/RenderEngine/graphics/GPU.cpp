@@ -106,6 +106,7 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
 
 GPU::~GPU()
 {
+    _default_textures.clear();
     for (std::pair<std::string, Shader*> shader : _shaders)
     {
         delete shader.second;
@@ -178,6 +179,11 @@ uint64_t GPU::memory() const
     {
         return device_memory;
     }
+}
+
+uint32_t GPU::max_texture_size() const
+{
+    return _device_properties.limits.maxImageDimension2D;
 }
 
 GPU::Type GPU::type() const

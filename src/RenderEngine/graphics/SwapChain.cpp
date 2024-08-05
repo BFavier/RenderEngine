@@ -4,7 +4,7 @@
 #include <RenderEngine/utilities/Macro.hpp>
 using namespace RenderEngine;
 
-SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : gpu(_gpu)
+SwapChain::SwapChain(const GPU* _gpu, const Window& window) : gpu(_gpu)
 {
     if (!gpu->_graphics_queue.has_value() || !gpu->_present_queue.has_value())
     {

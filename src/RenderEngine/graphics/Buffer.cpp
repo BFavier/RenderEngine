@@ -3,7 +3,7 @@
 using namespace RenderEngine;
 
 
-Buffer::Buffer(const std::shared_ptr<GPU>& _gpu, size_t bytes_size, VkBufferUsageFlags usage) : gpu(_gpu), _bytes_size(bytes_size)
+Buffer::Buffer(const GPU* _gpu, size_t bytes_size, VkBufferUsageFlags usage) : gpu(_gpu), _bytes_size(bytes_size)
 {
     _allocate_buffer(usage);
     _allocate_memory(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);

@@ -1,6 +1,7 @@
 #include <RenderEngine/Internal.hpp>
 #include <RenderEngine/utilities/Macro.hpp>
 #include <RenderEngine/graphics/GPU.hpp>
+#include <RenderEngine/graphics/Image.hpp>
 #include <RenderEngine/user_interface/WindowSettings.hpp>
 #include <RenderEngine/user_interface/Window.hpp>
 
@@ -10,7 +11,7 @@ void (*vkCmdPushDescriptorSet)(VkCommandBuffer commandBuffer, VkPipelineBindPoin
 bool Internal::_initialized = false;
 VkInstance Internal::_vk_instance;
 VkDebugUtilsMessengerEXT Internal::_debug_messenger;
-std::vector<std::shared_ptr<GPU>> Internal::GPUs;
+std::vector<std::unique_ptr<GPU>> Internal::GPUs;
 
 void Internal::initialize(const std::vector<std::string>& validation_layers,
                           const std::vector<std::string>& instance_extensions,
@@ -100,6 +101,12 @@ void Internal::initialize(const std::vector<std::string>& validation_layers,
     for(VkPhysicalDevice& device : devices)
     {
         GPUs.emplace_back(new GPU(device, dummy_window, validation_layer_names, device_extensions));
+        GPU* gpu = GPUs.back().get();
+        gpu->_default_textures = Image::bulk_allocate_images(gpu, 1, ImageFormat::RGBA, 2, 2, false);
+        for (std::shared_ptr<Image>& image : gpu->_default_textures)
+        {
+            image->upload_data({0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
+        }
     }
     // Load extension functions
     vkCmdPushDescriptorSet = reinterpret_cast<PFN_vkCmdPushDescriptorSetKHR>(vkGetInstanceProcAddr(_vk_instance, "vkCmdPushDescriptorSetKHR"));
@@ -109,13 +116,18 @@ void Internal::initialize(const std::vector<std::string>& validation_layers,
     }
 }
 
-const std::vector<std::shared_ptr<GPU>>& Internal::get_detected_GPUs()
+std::vector<const GPU*> Internal::get_detected_GPUs()
 {
     Internal::initialize();
-    return GPUs;
+    std::vector<const GPU*> _gpus;
+    for (const std::unique_ptr<GPU>& gpu : GPUs)
+    {
+        _gpus.push_back(gpu.get());
+    }
+    return _gpus;
 }
 
-const std::shared_ptr<GPU> Internal::get_best_GPU()
+const GPU* Internal::get_best_GPU()
 {
     Internal::initialize();
     if (GPUs.size() == 0)
@@ -123,21 +135,21 @@ const std::shared_ptr<GPU> Internal::get_best_GPU()
         THROW_ERROR("No GPU available on current machine.");
     }
     // list the available GPUs and split them by type
-    std::vector<std::shared_ptr<GPU>> discrete_GPUs;
-    std::vector<std::shared_ptr<GPU>> other_GPUs;
-    for (const std::shared_ptr<GPU>& gpu : GPUs)
+    std::vector<const GPU*> discrete_GPUs;
+    std::vector<const GPU*> other_GPUs;
+    for (const std::unique_ptr<GPU>& gpu : GPUs)
     {
         if (gpu->type() == GPU::Type::DISCRETE_GPU)
         {
-            discrete_GPUs.push_back(gpu);
+            discrete_GPUs.push_back(gpu.get());
         }
         else
         {
-            other_GPUs.push_back(gpu);
+            other_GPUs.push_back(gpu.get());
         }
     }
     // chose the best available subset of GPUs
-    std::vector<std::shared_ptr<GPU>> subset;
+    std::vector<const GPU*> subset;
     if (discrete_GPUs.size() > 0)
     {
         subset = discrete_GPUs;
@@ -151,15 +163,15 @@ const std::shared_ptr<GPU> Internal::get_best_GPU()
         THROW_ERROR("No GPU found that match the criteria");
     }
     // select the GPU with most memory
-    unsigned int max_memory = 0;
-    std::shared_ptr<GPU> best = nullptr;
-    for (std::shared_ptr<GPU> gpu : subset)
+    unsigned int max_texture_size = 0;
+    const GPU* best = nullptr;
+    for (const GPU* gpu : subset)
     {
-        unsigned int memory = gpu->memory();
-        if (memory > max_memory)
+        unsigned int texture_size = gpu->memory();
+        if (texture_size > max_texture_size)
         {
             best = gpu;
-            max_memory = memory;
+            max_texture_size = texture_size;
         }
     }
     return best;

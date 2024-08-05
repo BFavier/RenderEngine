@@ -12,7 +12,7 @@ Window::Window(const WindowSettings& settings) : keyboard(*this), mouse(*this)
     _initialize(settings);
 }
 
-Window::Window(const std::shared_ptr<GPU>& _gpu, const std::string& title, unsigned int width, unsigned int height) : gpu(_gpu), keyboard(*this), mouse(*this)
+Window::Window(const GPU* _gpu, const std::string& title, unsigned int width, unsigned int height) : gpu(_gpu), keyboard(*this), mouse(*this)
 {
     WindowSettings settings;
     settings.title = title;
@@ -21,7 +21,7 @@ Window::Window(const std::shared_ptr<GPU>& _gpu, const std::string& title, unsig
     _initialize(settings);
 }
 
-Window::Window(const std::shared_ptr<GPU>& _gpu, const WindowSettings& settings) : gpu(_gpu), keyboard(*this), mouse(*this)
+Window::Window(const GPU* _gpu, const WindowSettings& settings) : gpu(_gpu), keyboard(*this), mouse(*this)
 {
     _initialize(settings);
 }

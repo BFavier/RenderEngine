@@ -2,10 +2,10 @@
 #extension GL_EXT_scalar_block_layout : enable  // for std430 uniform buffer object layouts
 //#extension GL_EXT_debug_printf : enable
 
-#define NONE             0
-#define ORTHOGRAPHIC     1
-#define EQUIRECTANGULAR  2
-#define PERSPECTIVE      3
+#define PROJECTION_NONE             0
+#define PROJECTION_ORTHOGRAPHIC     1
+#define PROJECTION_EQUIRECTANGULAR  2
+#define PROJECTION_PERSPECTIVE      3
 
 #define PI 3.1415926535897932384626433832795
 
@@ -36,21 +36,21 @@ vec4 clip_space_coordinates(vec3 position, vec4 camera_parameters, uint projecti
     const float focal_length = camera_parameters.z;
     const float max_distance = camera_parameters.w;
 
-    if (projection_type == PERSPECTIVE)
+    if (projection_type == PROJECTION_PERSPECTIVE)
     {
         return vec4(position.x * focal_length / (0.5 * aperture_width),
                     position.y * focal_length / (0.5 * aperture_height),
                     position.z * max_distance / (max_distance - focal_length),
                     position.z + focal_length);
     }
-    else if (projection_type == ORTHOGRAPHIC)
+    else if (projection_type == PROJECTION_ORTHOGRAPHIC)
     {
         return vec4(position.x / (aperture_width / 2.0),
                     position.y / (aperture_height / 2.0),
                     position.z / max_distance,
                     1.0);
     }
-    else if (projection_type == EQUIRECTANGULAR)
+    else if (projection_type == PROJECTION_EQUIRECTANGULAR)
     {
         const float r = sqrt(position.x*position.x + position.y*position.y + position.z*position.z);
         const float theta = acos(position.y / (r + 1.0E-10));

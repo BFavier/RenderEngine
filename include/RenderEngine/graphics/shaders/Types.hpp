@@ -89,6 +89,7 @@ namespace RenderEngine
         uint32_t light_projection_type;
         uint32_t camera_projection_type;
         float camera_sensitivity;
+        uint32_t flags;
     };
 
     #pragma pack(pop)

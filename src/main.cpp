@@ -9,7 +9,7 @@ int main()
 {
     Internal::initialize({"VK_LAYER_KHRONOS_validation"});
     {
-        std::shared_ptr<GPU> gpu = Internal::get_best_GPU();
+        const GPU* gpu = Internal::get_best_GPU();
         WindowSettings settings;
         Window window(gpu, settings);
         Mouse& mouse = window.mouse;
@@ -95,15 +95,15 @@ int main()
             {
                 //
                 shadow_map.clear(Color());
-                shadow_map.draw(directional_light, model.mesh, model.coordinates_in(directional_light), true);
-                shadow_map.draw(directional_light, floor.mesh, floor.coordinates_in(directional_light), false);
+                shadow_map.draw(directional_light, model.mesh, model.coordinates_in(directional_light));
+                shadow_map.draw(directional_light, floor.mesh, floor.coordinates_in(directional_light));
                 shadow_map.render();
 
                 //
                 frame->clear(Color(0.1f, 0.0f, 0.3f, 1.0f));
-                frame->draw(camera, model.mesh, model.coordinates_in(camera), true);
-                frame->draw(camera, floor.mesh, floor.coordinates_in(camera), false);
-                frame->light(camera, directional_light, directional_light.coordinates_in(camera));
+                frame->draw(camera, model.mesh, model.coordinates_in(camera));
+                frame->draw(camera, floor.mesh, floor.coordinates_in(camera));
+                frame->light(camera, directional_light, directional_light.coordinates_in(camera), &shadow_map);
                 frame->light(camera, ambiant_light, {});
                 frame->render();
             }

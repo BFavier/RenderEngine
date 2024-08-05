@@ -19,10 +19,10 @@ namespace RenderEngine
         SwapChain(const SwapChain& other) = delete;
         const SwapChain& operator=(const SwapChain& other) = delete;
     public:
-        SwapChain(const std::shared_ptr<GPU>& gpu, const Window& window);
+        SwapChain(const GPU* gpu, const Window& window);
         ~SwapChain();
     public:
-        std::shared_ptr<GPU> gpu;
+        const GPU* gpu;
         std::vector<Canvas*> frames;
     public:
         void present_frame(); // Queue the frame for presentation to screen.

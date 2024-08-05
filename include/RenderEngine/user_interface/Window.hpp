@@ -25,13 +25,14 @@ namespace RenderEngine
         Window(Window&&) = default;
         Window& operator=(Window&&) = default;
     public:
-        Window(const std::shared_ptr<GPU>& gpu, const std::string& title, unsigned int width, unsigned int height);
-        Window(const std::shared_ptr<GPU>& gpu, const WindowSettings& settings);
+        Window(const GPU* gpu, const std::string& title, unsigned int width, unsigned int height);
+        Window(const GPU* gpu, const WindowSettings& settings);
         ~Window();
-    protected: // This constructor allows to create a dummy window without GPU (swapchain creation will fail)
+    protected:
+        // This constructor allows to create a dummy window without GPU and without swapchain. This is required to initialize libraries.
         Window(const WindowSettings& settings);
     public:
-        std::shared_ptr<GPU> gpu;
+        const GPU* gpu;
         Keyboard keyboard;
         Mouse mouse;
     public:
