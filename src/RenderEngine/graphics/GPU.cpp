@@ -3,6 +3,10 @@
 #include <set>
 #include <utility>
 #include <RenderEngine/user_interface/Window.hpp>
+#include <RenderEngine/graphics/shaders/Shader3D.hpp>
+#include <RenderEngine/graphics/shaders/ShaderDemo.hpp>
+#include <RenderEngine/graphics/shaders/ShaderShadow.hpp>
+#include <RenderEngine/graphics/shaders/ShaderLight.hpp>
 
 using namespace RenderEngine;
 
@@ -96,11 +100,13 @@ GPU::GPU(VkPhysicalDevice device, const Window& window, const std::vector<const 
     // initialize shader
     _shaders["3D"] = new Shader3D(this);
     _shaders["Demo"] = new ShaderDemo(this);
+    _shaders["Light"] = new ShaderLight(this);
     _shaders["Shadow"] = new ShaderShadow(this);
 }
 
 GPU::~GPU()
 {
+    _default_textures.clear();
     for (std::pair<std::string, Shader*> shader : _shaders)
     {
         delete shader.second;
@@ -175,6 +181,11 @@ uint64_t GPU::memory() const
     }
 }
 
+uint32_t GPU::max_texture_size() const
+{
+    return _device_properties.limits.maxImageDimension2D;
+}
+
 GPU::Type GPU::type() const
 {
     return static_cast<GPU::Type>(_device_properties.deviceType);
@@ -246,7 +257,7 @@ std::optional<uint32_t> GPU::_select_queue_family(std::vector<VkQueueFamilyPrope
 
 std::pair<VkImageTiling, VkFormat> GPU::depth_format() const
 {
-    std::vector<VkFormat> formats = {VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D32_SFLOAT, VK_FORMAT_D24_UNORM_S8_UINT};
+    std::vector<VkFormat> formats = {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D16_UNORM}; // VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT
     for (VkFormat format : formats)
     {
         VkFormatProperties props;

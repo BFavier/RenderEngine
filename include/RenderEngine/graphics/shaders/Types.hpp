@@ -70,21 +70,26 @@ namespace RenderEngine
         vec3 material; // metallic, roughness
     };
 
-    struct MeshDrawParameters
+    struct DrawParameters
     {
         vec4 mesh_position;
-        mat3 mesh_rotation;
+        mat3 mesh_inverse_rotation;
         vec4 camera_parameters;
+        uint32_t projection_type;
         float mesh_scale;
     };
 
-    struct CameraParameters
+    struct LightParameters
     {
-        vec4 camera_position;
-        mat3 world_to_camera;
-        vec2 camera_aperture_size;
-        float focal_length;
-        float camera_scale;
+        vec4 light_position;
+        mat3 light_inverse_rotation;
+        vec4 light_color_intensity;
+        vec4 light_camera_parameters;
+        vec4 camera_parameters;
+        uint32_t light_projection_type;
+        uint32_t camera_projection_type;
+        float camera_sensitivity;
+        uint32_t flags;
     };
 
     #pragma pack(pop)

@@ -6,13 +6,14 @@
 using namespace RenderEngine;
 
 
-Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t _width, uint32_t _height, bool mip_maped, AntiAliasing sample_count) :
+Canvas::Canvas(const GPU* _gpu, uint32_t _width, uint32_t _height, bool mip_maped, AntiAliasing sample_count) :
     gpu(_gpu),
-    images({{"color", std::make_shared<Image>(_gpu, ImageFormat::RGBA, _width, _height, mip_maped)},
-            {"normal", std::make_shared<Image>(_gpu, ImageFormat::NORMAL, _width, _height, mip_maped)},
-            {"material", std::make_shared<Image>(_gpu, ImageFormat::MATERIAL, _width, _height, mip_maped)},
-            {"depth", std::make_shared<Image>(_gpu, ImageFormat::DEPTH, _width, _height, false)}}),
-    width(_width), height(_height), _final_layout(VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL)
+    images({{"color", new Image(_gpu, ImageFormat::RGBA, _width, _height, mip_maped)},
+            {"albedo", new Image(_gpu, ImageFormat::RGBA, _width, _height, mip_maped)},
+            {"normal", new Image(_gpu, ImageFormat::NORMAL, _width, _height, mip_maped)},
+            {"material", new Image(_gpu, ImageFormat::MATERIAL, _width, _height, mip_maped)},
+            {"depth", new Image(_gpu, ImageFormat::DEPTH, _width, _height, false)}}),
+    width(_width), height(_height), _final_layout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 {
     for (std::pair<std::string, Shader*> shader : gpu->_shaders)
     {
@@ -24,12 +25,13 @@ Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, uint32_t _width, uint32_t _heig
 }
 
 
-Canvas::Canvas(const std::shared_ptr<GPU>& _gpu, const VkImage& vk_image, uint32_t _width, uint32_t _height, AntiAliasing sample_count) :
+Canvas::Canvas(const GPU* _gpu, const VkImage& vk_image, uint32_t _width, uint32_t _height, AntiAliasing sample_count) :
     gpu(_gpu),
-    images({{"color", std::make_shared<Image>(_gpu, vk_image, nullptr, ImageFormat::RGBA, _width, _height, false)},
-            {"normal", std::make_shared<Image>(_gpu, ImageFormat::NORMAL, _width, _height, false)},
-            {"material", std::make_shared<Image>(_gpu, ImageFormat::MATERIAL, _width, _height, false)},
-            {"depth", std::make_shared<Image>(_gpu, ImageFormat::DEPTH, _width, _height, false)}}),
+    images({{"color", new Image(_gpu, vk_image, nullptr, ImageFormat::RGBA, _width, _height, false)},
+            {"albedo", new Image(_gpu, ImageFormat::RGBA, _width, _height, false)},
+            {"normal", new Image(_gpu, ImageFormat::NORMAL, _width, _height, false)},
+            {"material", new Image(_gpu, ImageFormat::MATERIAL, _width, _height, false)},
+            {"depth", new Image(_gpu, ImageFormat::DEPTH, _width, _height, false)}}),
     width(_width), height(_height), _final_layout(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
 {
     for (std::pair<std::string, Shader*> shader : gpu->_shaders)
@@ -48,6 +50,10 @@ Canvas::~Canvas()
     vkDestroySemaphore(gpu->_logical_device, _vk_rendered_semaphore, nullptr);
     vkDestroyFence(gpu->_logical_device, _vk_fence, nullptr);
     vkFreeCommandBuffers(gpu->_logical_device, std::get<2>(gpu->_graphics_queue.value()), 1, &_vk_command_buffer);
+    for (const std::pair<const std::string, Image*>& image : images)
+    {
+        delete image.second;
+    }
     for (std::pair<const Shader*, VkFramebuffer> frame_buffer : _frame_buffers)
     {
         vkDestroyFramebuffer(gpu->_logical_device, frame_buffer.second, nullptr);
@@ -55,19 +61,19 @@ Canvas::~Canvas()
 }
 
 
+// TODO : replace transfer operations with a shader
 void Canvas::clear(Color _color)
 {
-    wait_completion();
     _record_commands();
     // transition layout
     std::map<std::string, VkImageLayout> transitions;
-    for (const std::pair<const std::string, std::shared_ptr<Image>>& image : images)
+    for (const std::pair<const std::string, Image*>& image : images)
     {
         transitions[image.first] = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     }
-    _command_barrier(transitions);
+    _command_barrier(transitions, images);
     // clear images
-    for (const std::pair<const std::string, std::shared_ptr<Image>>& image : images)
+    for (const std::pair<const std::string, Image*>& image : images)
     {
         if (image.first == "depth")
         {
@@ -86,12 +92,11 @@ void Canvas::clear(Color _color)
 }
 
 
-void Canvas::draw(const Camera& camera, const std::shared_ptr<Mesh>& mesh, const std::tuple<Vector, Quaternion, double>& coordinates_in_camera, bool cull_back_faces)
+void Canvas::draw(const Camera& camera, const std::shared_ptr<Mesh>& mesh, const std::tuple<Vector, Quaternion, double>& mesh_coordinates_in_camera, bool cull_back_faces)
 {
-    wait_completion();
     _record_commands();
     Shader* shader = gpu->_shaders.at("3D");
-    _bind_shader(shader);
+    _bind_shader(shader, images);
     // set culling mode
     if (gpu->dynamic_culling_supported())
     {
@@ -101,15 +106,58 @@ void Canvas::draw(const Camera& camera, const std::shared_ptr<Mesh>& mesh, const
     std::vector<VkBuffer> vertex_buffers = {mesh->_buffer->_vk_buffer};
     std::vector<VkDeviceSize> offsets(vertex_buffers.size(), mesh->_offset);
     vkCmdBindVertexBuffers(_vk_command_buffer, 0, vertex_buffers.size(), vertex_buffers.data(), offsets.data());
-    // set mesh scale/position/rotation
+    // set shader parameters
     VkPushConstantRange mesh_range = shader->_push_constants.at("params");
-    MeshDrawParameters mesh_parameters = {std::get<0>(coordinates_in_camera).to_vec4(),
-                                          Matrix(std::get<1>(coordinates_in_camera).inverse()).to_mat3(),
-                                          vec4({camera.horizontal_length, camera.horizontal_length*static_cast<float>(height)/width, camera.near_plane_distance, camera.far_plane_distance}),
-                                          static_cast<float>(std::get<2>(coordinates_in_camera))};
-    vkCmdPushConstants(_vk_command_buffer, shader->_vk_pipeline_layout, mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &mesh_parameters);
+    DrawParameters params = {std::get<0>(mesh_coordinates_in_camera).to_vec4(),
+                             Matrix(std::get<1>(mesh_coordinates_in_camera).inverse()).to_mat3(),
+                             vec4({camera.aperture_width, (camera.aperture_width*height)/width, camera.focal_length, camera.max_distance}),
+                             static_cast<uint32_t>(camera.projection_type),
+                             static_cast<float>(std::get<2>(mesh_coordinates_in_camera))};
+    vkCmdPushConstants(_vk_command_buffer, shader->_vk_pipeline_layout, mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &params);
     // send a command to command buffer
     vkCmdDraw(_vk_command_buffer, mesh->bytes_size()/sizeof(Vertex), 1, 0, 0);
+    // register layout transitions
+    for (std::pair<std::string, VkImageLayout> layout : shader->_final_layouts)
+    {
+        images.at(layout.first)->_current_layout = layout.second;
+    }
+}
+
+
+void Canvas::light(const Camera& camera, const Light& light, const std::tuple<Vector, Quaternion, double>& light_coordinates_in_camera, Canvas* shadow_map)
+{
+    _record_commands();
+    Shader* shader = gpu->_shaders.at("Light");
+    std::map<const std::string, Image*> images_pool(
+        {{"shadow_map", (shadow_map == nullptr) ? gpu->_default_textures[0].get() : shadow_map->images.at("depth")},
+         {"depth", images.at("depth")},
+         {"color", images.at("color")},
+         {"material", images.at("material")},
+         {"normal", images.at("normal")},
+         {"albedo", images.at("albedo")}});
+    _bind_shader(shader, images_pool);
+    if (shadow_map != nullptr)
+    {
+        _dependencies.insert(shadow_map);
+    }
+    // bind descriptor sets
+    _bind_descriptor_set(shader, 0, images_pool, {});
+    // set mesh scale/position/rotation
+    uint32_t shadow_map_height = (shadow_map == nullptr) ? 1 : shadow_map->height;
+    uint32_t shadow_map_width = (shadow_map == nullptr) ? 1 : shadow_map->width;
+    VkPushConstantRange push_range = shader->_push_constants.at("params");
+    LightParameters light_parameters = {std::get<0>(light_coordinates_in_camera).to_vec4(),
+                                        Matrix(std::get<1>(light_coordinates_in_camera).inverse()).to_mat3(),
+                                        vec4({light.color.r, light.color.g, light.color.b, light.intensity}),
+                                        vec4({light.aperture_width, (light.aperture_width*shadow_map_height)/shadow_map_width, light.focal_length, light.max_distance}),
+                                        vec4({camera.aperture_width, (camera.aperture_width*height)/width, camera.focal_length, camera.max_distance}),
+                                        static_cast<uint32_t>(light.projection_type),
+                                        static_cast<uint32_t>(camera.projection_type),
+                                        camera.sensitivity,
+                                        (shadow_map == nullptr) ? 0 : 1};
+    vkCmdPushConstants(_vk_command_buffer, shader->_vk_pipeline_layout, push_range.stageFlags, push_range.offset, push_range.size, &light_parameters);
+    // send a command to command buffer
+    vkCmdDraw(_vk_command_buffer, 6, 1, 0, 0);
     // register layout transitions
     for (std::pair<std::string, VkImageLayout> layout : shader->_final_layouts)
     {
@@ -130,9 +178,9 @@ void Canvas::render()
         return;
     }
     // End render pass
-    _bind_shader(nullptr);
+    _bind_shader(nullptr, images);
     // Transition color to present or transfer dest layout
-    _command_barrier({{"color", _final_layout}});
+    _command_barrier({{"color", _final_layout}}, images);
     // End command buffer
     if (vkEndCommandBuffer(_vk_command_buffer) != VK_SUCCESS)
     {
@@ -140,21 +188,23 @@ void Canvas::render()
     }
     // list semaphores to wait
     std::vector<VkSemaphore> wait_semaphores;
+    std::vector<VkPipelineStageFlags> wait_stages;
     for (const Canvas* canvas : _dependencies)
     {
         wait_semaphores.push_back(canvas->_vk_rendered_semaphore);
+        wait_stages.push_back(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
     }
     for (VkSemaphore semaphore : _wait_semaphores)
     {
         wait_semaphores.push_back(semaphore);
+        wait_stages.push_back(VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
     }
     // submit graphic commands
-    VkPipelineStageFlags wait_stages = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.waitSemaphoreCount = wait_semaphores.size();
     submitInfo.pWaitSemaphores = wait_semaphores.data();
-    submitInfo.pWaitDstStageMask = &wait_stages;
+    submitInfo.pWaitDstStageMask = wait_stages.data();
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &_vk_command_buffer;
     submitInfo.signalSemaphoreCount = 1;
@@ -184,7 +234,10 @@ VkFramebuffer Canvas::_allocate_frame_buffer(const Shader* shader)
     {
         attachments.push_back(images.at(image.first)->_vk_image_view);
     }
-    attachments.push_back(images.at("depth")->_vk_image_view);
+    if (shader->_depth_test)
+    {
+        attachments.push_back(images.at("depth")->_vk_image_view);
+    }
     VkFramebufferCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     info.renderPass = shader->_vk_render_pass;
@@ -263,6 +316,7 @@ bool Canvas::is_rendering() const
 
 void Canvas::_record_commands()
 {
+    wait_completion();
     if (!_recording)
     {
         // reset command buffer
@@ -294,25 +348,12 @@ void Canvas::_record_commands()
 }
 
 
-void Canvas::_bind_shader(const Shader* shader)
+void Canvas::_bind_shader(const Shader* shader, const std::map<const std::string, Image*>& images_pool)
 {
-    if (shader == _current_shader)
-    {
-        return;
-    }
-    // end previous render pass
-    if (_current_shader != nullptr)
-    {
-        if (_current_shader->_vk_render_pass != VK_NULL_HANDLE)
-        {
-            vkCmdEndRenderPass(_vk_command_buffer);
-        }
-    }
-    // transition image layouts for new shader, set a command barrier, and bind the new shader
+    // read layout transitions that have to be performed
+    std::map<std::string, VkImageLayout> layout_transitions;
     if (shader != nullptr)
     {
-        // apply command barrier
-        std::map<std::string, VkImageLayout> layout_transitions;
         for (const std::pair<std::string, VkFormat>& image : shader->_input_attachments)
         {
             layout_transitions[image.first] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -321,11 +362,47 @@ void Canvas::_bind_shader(const Shader* shader)
         {
             layout_transitions[image.first] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         }
-        if (shader->_vk_pipeline_bind_point == VK_PIPELINE_BIND_POINT_GRAPHICS)
+        for (const std::map<std::string, VkDescriptorSetLayoutBinding>& set : shader->_descriptor_sets)
+        {
+            for (const std::pair<std::string, VkDescriptorSetLayoutBinding>& descriptor : set)
+            {
+                if (descriptor.second.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+                {
+                    std::map<std::string, Image*>::const_iterator img = images_pool.find(descriptor.first);
+                    if (img != images_pool.end())
+                    {
+                        layout_transitions[img->first] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                    }
+                }
+            }
+        }
+        if (shader->_depth_test)
         {
             layout_transitions["depth"] = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         }
-        _command_barrier(layout_transitions);
+    }
+    // end previous render pass
+    bool ended_render_pass = false;
+    if (shader != _current_shader || layout_transitions.size() > 0)
+    {
+        if (_current_shader != nullptr)
+        {
+            if (_current_shader->_vk_render_pass != VK_NULL_HANDLE)
+            {
+                vkCmdEndRenderPass(_vk_command_buffer);
+                ended_render_pass = true;
+            }
+        }
+    }
+    // set a command barrier to transition image layouts
+    if (layout_transitions.size() > 0)
+    {
+        // apply command barrier
+        _command_barrier(layout_transitions, images_pool);
+    }
+    // start new shader's render pass
+    if ((_current_shader == nullptr || ended_render_pass) && shader != nullptr)
+    {
         // bind new shader pipeline
         vkCmdBindPipeline(_vk_command_buffer, shader->_vk_pipeline_bind_point, shader->_vk_pipeline);
         if (shader->_vk_render_pass != VK_NULL_HANDLE)
@@ -335,16 +412,16 @@ void Canvas::_bind_shader(const Shader* shader)
             for (unsigned int i = 0; i < shader->_output_attachments.size() + 1; i++)  // +1 is for the depth buffer attachment
             {
                 VkClearValue clear_value = {};
-                clear_value.color = {{0.0f, 0.0f, 0.0f, 0.0f}};
-                clear_value.depthStencil = {1.0f, 0};
+                clear_value.color = { {0.0f, 0.0f, 0.0f, 0.0f} };
+                clear_value.depthStencil = { 1.0f, 0 };
                 clear_values.push_back(clear_value);
             }
             VkRenderPassBeginInfo renderPassInfo{};
             renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             renderPassInfo.renderPass = shader->_vk_render_pass;
             renderPassInfo.framebuffer = _frame_buffers.at(shader);
-            renderPassInfo.renderArea.offset = {0, 0};
-            renderPassInfo.renderArea.extent = {width, height};
+            renderPassInfo.renderArea.offset = { 0, 0 };
+            renderPassInfo.renderArea.extent = { width, height };
             renderPassInfo.clearValueCount = clear_values.size();
             renderPassInfo.pClearValues = clear_values.data();
             vkCmdBeginRenderPass(_vk_command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -355,14 +432,54 @@ void Canvas::_bind_shader(const Shader* shader)
 }
 
 
-void Canvas::_command_barrier(const std::map<std::string, VkImageLayout>& new_image_layouts)
+void Canvas::_bind_descriptor_set(const Shader* shader,
+    unsigned int descriptor_set_index,
+    const std::map<const std::string, Image*>& images_pool,
+    const std::map<const std::string, Buffer*>& buffers_pool)
+{
+    std::vector<VkWriteDescriptorSet> descriptors;
+    std::deque<VkDescriptorBufferInfo> buffers;
+    std::deque<VkDescriptorImageInfo> samplers;
+    for (const std::pair<std::string, VkDescriptorSetLayoutBinding>& descriptor : shader->_descriptor_sets[descriptor_set_index])
+    {
+        VkWriteDescriptorSet descriptor_set_binding{};
+        descriptor_set_binding.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptor_set_binding.dstSet = VK_NULL_HANDLE;
+        descriptor_set_binding.dstBinding = descriptor.second.binding;
+        descriptor_set_binding.descriptorType = descriptor.second.descriptorType;
+        descriptor_set_binding.descriptorCount = descriptor.second.descriptorCount;
+        descriptor_set_binding.pBufferInfo = nullptr;
+        descriptor_set_binding.pImageInfo = nullptr;
+        if (descriptor.second.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+        {
+            Image* image = images_pool.at(descriptor.first);
+            samplers.push_back({image->_vk_sampler, image->_vk_image_view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
+            descriptor_set_binding.pImageInfo = &samplers.back();
+        }
+        else if (descriptor.second.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+        {
+            Buffer* buffer = buffers_pool.at(descriptor.first);
+            buffers.push_back({buffer->_vk_buffer, 0, VK_WHOLE_SIZE});
+            descriptor_set_binding.pBufferInfo = &buffers.back();
+        }
+        else
+        {
+            THROW_ERROR("Unexpected descriptor type code : " + std::to_string(descriptor.second.descriptorType));
+        }
+        descriptors.push_back(descriptor_set_binding);
+    }
+    vkCmdPushDescriptorSet(_vk_command_buffer, shader->_vk_pipeline_bind_point, shader->_vk_pipeline_layout, 0, descriptors.size(), descriptors.data());
+}
+
+
+void Canvas::_command_barrier(const std::map<std::string, VkImageLayout>& new_image_layouts, const std::map<const std::string, Image*>& images_pool)
 {
     std::vector<VkImageMemoryBarrier> layout_transitions;
     VkPipelineStageFlags source_stage = 0;
     VkPipelineStageFlags destination_stage = 0;
     for (const std::pair<std::string, VkImageLayout>& new_image_layout : new_image_layouts)
     {
-        Image* image = images.at(new_image_layout.first).get();
+        Image* image = images_pool.at(new_image_layout.first);
         if (image->_current_layout != new_image_layout.second)
         {
             VkPipelineStageFlagBits source_stage_bits;
@@ -388,6 +505,11 @@ void Canvas::_command_barrier(const std::map<std::string, VkImageLayout>& new_im
             layout_transitions.push_back(transition);
             image->_current_layout = new_image_layout.second;
         }
+    }
+    if (source_stage == 0 && destination_stage == 0)
+    {
+        source_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        destination_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     }
     vkCmdPipelineBarrier(
         _vk_command_buffer,

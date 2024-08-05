@@ -3,7 +3,7 @@
 using namespace RenderEngine;
 
 
-Buffer::Buffer(const std::shared_ptr<GPU>& _gpu, size_t bytes_size, VkBufferUsageFlags usage) : gpu(_gpu), _bytes_size(bytes_size)
+Buffer::Buffer(const GPU* _gpu, size_t bytes_size, VkBufferUsageFlags usage) : gpu(_gpu), _bytes_size(bytes_size)
 {
     _allocate_buffer(usage);
     _allocate_memory(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -24,9 +24,9 @@ size_t Buffer::bytes_size() const
     return _bytes_size;
 }
 
-void Buffer::upload(const uint8_t* data, std::size_t bytes_size, std::size_t offset) const
+void Buffer::upload(const void* data, std::size_t bytes_size, std::size_t offset) const
 {
-    memcpy(_data+offset, data, bytes_size);
+    memcpy(reinterpret_cast<uint8_t*>(_data)+offset, data, bytes_size);
     if (!(_memory_properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
     {
         VkMappedMemoryRange  mem_range{};
@@ -37,9 +37,9 @@ void Buffer::upload(const uint8_t* data, std::size_t bytes_size, std::size_t off
     }
 }
 
-void Buffer::download(uint8_t* data, std::size_t bytes_size, std::size_t offset) const
+void Buffer::download(void* data, std::size_t bytes_size, std::size_t offset) const
 {
-    memcpy(data, _data+offset, bytes_size);
+    memcpy(data, reinterpret_cast<uint8_t*>(_data)+offset, bytes_size);
     if (!(_memory_properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
     {
         VkMappedMemoryRange  mem_range{};

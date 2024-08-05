@@ -12,7 +12,7 @@ Window::Window(const WindowSettings& settings) : keyboard(*this), mouse(*this)
     _initialize(settings);
 }
 
-Window::Window(const std::shared_ptr<GPU>& _gpu, const std::string& title, unsigned int width, unsigned int height) : gpu(_gpu), keyboard(*this), mouse(*this)
+Window::Window(const GPU* _gpu, const std::string& title, unsigned int width, unsigned int height) : gpu(_gpu), keyboard(*this), mouse(*this)
 {
     WindowSettings settings;
     settings.title = title;
@@ -21,7 +21,7 @@ Window::Window(const std::shared_ptr<GPU>& _gpu, const std::string& title, unsig
     _initialize(settings);
 }
 
-Window::Window(const std::shared_ptr<GPU>& _gpu, const WindowSettings& settings) : gpu(_gpu), keyboard(*this), mouse(*this)
+Window::Window(const GPU* _gpu, const WindowSettings& settings) : gpu(_gpu), keyboard(*this), mouse(*this)
 {
     _initialize(settings);
 }
@@ -50,7 +50,10 @@ void Window::update()
     Canvas* frame = get_frame();
     if (frame != nullptr)
     {
-        frame->render();
+        if (frame->is_recording())
+        {
+            THROW_ERROR("Tried presenting swapchain frame to screen, but 'render' has not been called.");
+        }
         _swap_chain->present_frame();
     }
     // polling events (might delete swap chain by window resizing callback function)

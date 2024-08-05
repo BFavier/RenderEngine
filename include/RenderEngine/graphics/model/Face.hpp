@@ -26,7 +26,7 @@ namespace RenderEngine
     public:
         static std::vector<Face> quad(const Vector& p1, const Vector& p2, const Vector& p3, const Vector& p4, const Color& color, const Material& material={});
         static std::vector<Face> cube(double length, const std::optional<Color>& color=std::nullopt, const Material& material={});  // Creates a cube with side length 'length'
-        static std::vector<Face> sphere(double radius, uint32_t divides=2, bool smooth_normals=true, const std::optional<Color>& color=std::nullopt, const Material& material={});  // Create a sphere by dividing 'divides' times the sides of the triangular faces of an icosahedron.
+        static std::vector<Face> sphere(double radius, uint32_t divides=4, bool smooth_normals=true, const std::optional<Color>& color=std::nullopt, const Material& material={});  // Create a sphere by dividing 'divides' times the sides of the triangular faces of an icosahedron.
         static std::vector<Face> cylinder(double length, double radius, uint32_t divides=10, bool smooth_normals=true, const std::optional<Color>& color=std::nullopt, const Material& material={});
         static std::vector<Face> cone(double length, double radius, uint32_t divides=10, bool smooth_normals=true, const std::optional<Color>& color=std::nullopt, const Material& material={});
     protected:

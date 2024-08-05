@@ -21,6 +21,7 @@ DESCRIPTOR_TYPE = {
 IMAGE_FORMATS={"SRGB": "VK_FORMAT_R8G8B8A8_SRGB",
                "SNORM": "VK_FORMAT_R8G8B8A8_SNORM",
                "UNORM": "VK_FORMAT_R8G8B8A8_UNORM"}
+SETTINGS_REGEX = re.compile(r"RenderEngine.(\w+) ?= ?(\S+)")
 LAYOUT_REGEX = re.compile(r"layout *\((?:(push_constant)|(?:input_attachment_index *= *(\d+))|(?:set *= *(\d+))|(?:binding *= *(\d+))|(?:offset *= *(\d+))|(?:location *= *(\d+))|(?:std\d+)|(?:, *))+\) +(in|out|uniform|buffer) +(?:(readonly|writeonly) )?(\w+)(?:\s*{[^}]+})? +(\w+)?(?:\[(\d*)\])?;")
 
 
@@ -36,7 +37,9 @@ using namespace RenderEngine;
     {output_attachments},
     {descriptor_sets},
     {push_constants},
-    {shader_stages_bytecode})
+    {shader_stages_bytecode},
+    {depth_test},
+    {blending})
 {{
 }}
 
@@ -103,12 +106,17 @@ def _get_variables(code: dict) -> list[dict]:
                  "descriptor_sets": {},
                  "input_attachments": [],
                  "output_attachments": [],
-                 "vertex_inputs": []}
+                 "vertex_inputs": [],
+                 "depth_test": "true",
+                 "blending": "Blending::ALPHA"}
     for extension, data in code.items():
         stage = STAGES[extension]
+        if stage == "VK_SHADER_STAGE_COMPUTE_BIT":
+            variables["depth_test"] = "false"
         src = data["source"]
-        matches = LAYOUT_REGEX.findall(src)
-        for (push_constant, input_index, _set, binding, offset, location, storage, memory_access, _type, name, count) in matches:
+        for key, value in SETTINGS_REGEX.findall(src):
+            variables[key] = value
+        for (push_constant, input_index, _set, binding, offset, location, storage, memory_access, _type, name, count) in LAYOUT_REGEX.findall(src):
             if push_constant != "":
                 variables["push_constants"].append({"type": _type, "stage": stage, "offset": offset or "0", "name": name})
             elif binding != "" and storage in ("uniform", "buffer"):
@@ -191,7 +199,10 @@ def save_shader(shader_prefix: str, code: dict, variables: dict):
                             output_attachments=output_attachments,
                             push_constants=push_constants,
                             descriptor_sets=descriptors,
-                            shader_stages_bytecode=shader_stages_bytecode)
+                            shader_stages_bytecode=shader_stages_bytecode,
+                            depth_test=variables["depth_test"],
+                            blending=variables["blending"],
+                            )
     src_path = (PATH / shader_prefix).with_suffix(".cpp")
     with open(src_path, "w", encoding="utf-8") as f:
         f.write(src)

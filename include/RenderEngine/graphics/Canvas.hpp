@@ -7,6 +7,7 @@
 #include <RenderEngine/geometry/Vector.hpp>
 #include <RenderEngine/geometry/Matrix.hpp>
 #include <RenderEngine/graphics/Camera.hpp>
+#include <RenderEngine/graphics/Light.hpp>
 #include <RenderEngine/graphics/Color.hpp>
 #include <memory>
 
@@ -25,14 +26,14 @@ namespace RenderEngine
             Canvas(const Canvas& other) = delete;
             Canvas& operator=(const Canvas& other) = delete;
         public:
-            Canvas(const std::shared_ptr<GPU>& gpu,  uint32_t width, uint32_t height,
+            Canvas(const GPU* gpu,  uint32_t width, uint32_t height,
                    bool mip_maped = false, AntiAliasing sample_count = AntiAliasing::X1);
-            Canvas(const std::shared_ptr<GPU>& gpu, const VkImage& vk_image, uint32_t width, uint32_t height,
+            Canvas(const GPU* gpu, const VkImage& vk_image, uint32_t width, uint32_t height,
                    AntiAliasing sample_count = AntiAliasing::X1);
             ~Canvas();
         public:
-            std::shared_ptr<GPU> gpu;
-            const std::map<std::string, std::shared_ptr<Image>> images;
+            const GPU* gpu;
+            const std::map<const std::string, Image*> images;
             const uint32_t width;
             const uint32_t height;
         protected:
@@ -46,10 +47,11 @@ namespace RenderEngine
             std::map<const Shader*, VkFramebuffer> _frame_buffers;
             VkCommandBuffer _vk_command_buffer = VK_NULL_HANDLE;
             VkImageLayout _final_layout = VK_IMAGE_LAYOUT_UNDEFINED;  // The final layout the color image is converted to at the end of the command buffer
-            // Buffer* _camera_view = nullptr;
         public:
             void clear(Color color);  // Clear the color image to the given color. Also clear other images (depth buffer, ...)
-            void draw(const Camera& camera, const std::shared_ptr<Mesh>& mesh, const std::tuple<Vector, Quaternion, double>& coordinates_in_camera, bool cull_back_faces);  // Record objects to draw in the command buffer. Rendering only starts once the 'render' method is called.
+            void draw(const Camera& camera, const std::shared_ptr<Mesh>& mesh, const std::tuple<Vector, Quaternion, double>& mesh_coordinates_in_camera, bool cull_back_faces=true);  // Record objects to draw in the command buffer. Rendering only starts once the 'render' method is called.
+            void light(const Camera& camera, const Light& light, const std::tuple<Vector, Quaternion, double>& light_coordinates_in_camera,
+                       Canvas* shadow_map = nullptr);  // light the scene
             void render();  // Send the command buffers to GPU. Does nothing if the canvas is not in recording state, or already in rendering state. This command is asynchrone, and completion is garanteed only once 'wait_completion' is called.
             void wait_completion();  // blocks on CPU side until the rendering on GPU is complete
             bool is_recording() const;  // returns whether the render function was called already
@@ -60,7 +62,11 @@ namespace RenderEngine
             void _allocate_fence(VkFence& fence);
             void _allocate_semaphore(VkSemaphore& semaphore);
             void _record_commands();
-            void _bind_shader(const Shader* shader);
-            void _command_barrier(const std::map<std::string, VkImageLayout>& new_image_layouts); // set up a command barrier that ensures next commands will be executed after previous commands are finished, and transition the layout of the given images
+            void _bind_shader(const Shader* shader, const std::map<const std::string, Image*>& images_pool);
+            void _bind_descriptor_set(const Shader* shader,
+                unsigned int descriptor_set_index,
+                const std::map<const std::string, Image*>& images_pool,
+                const std::map<const std::string, Buffer*>& buffers_pool);
+            void _command_barrier(const std::map<std::string, VkImageLayout>& new_image_layouts, const std::map<const std::string, Image*>& images_pool); // set up a command barrier that ensures next commands will be executed after previous commands are finished, and transition the layout of the given images
     };
 }

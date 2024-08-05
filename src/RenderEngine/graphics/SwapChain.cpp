@@ -4,7 +4,7 @@
 #include <RenderEngine/utilities/Macro.hpp>
 using namespace RenderEngine;
 
-SwapChain::SwapChain(const std::shared_ptr<GPU>& _gpu, const Window& window) : gpu(_gpu)
+SwapChain::SwapChain(const GPU* _gpu, const Window& window) : gpu(_gpu)
 {
     if (!gpu->_graphics_queue.has_value() || !gpu->_present_queue.has_value())
     {
@@ -168,13 +168,17 @@ SwapChain::~SwapChain()
 
 void SwapChain::present_frame()
 {
-    Canvas& next_frame = get_frame();
-    uint32_t i = static_cast<uint32_t>(_frame_index_next);
+    Canvas& frame = get_frame();
+    if (frame.is_recording())
+    {
+        THROW_ERROR("Tried presenting swapchain frame to screen, but 'render' has not been called.");
+    }
+    uint32_t i = static_cast<uint32_t>(_frame_index);
     VkResult result = VK_INCOMPLETE;
     VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.waitSemaphoreCount = next_frame.is_rendering() ? 1 : 0;
-    presentInfo.pWaitSemaphores = next_frame.is_rendering() ? &next_frame._vk_rendered_semaphore : nullptr;
+    presentInfo.waitSemaphoreCount = frame.is_rendering() ? 1 : 0;
+    presentInfo.pWaitSemaphores = frame.is_rendering() ? &frame._vk_rendered_semaphore : nullptr;
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &_vk_swap_chain;
     presentInfo.pImageIndices = &i;
@@ -184,13 +188,13 @@ void SwapChain::present_frame()
     {
         THROW_ERROR("Failed to present swapchaoin image to screen with VkResult code : " + std::to_string(result));
     }
-    _frame_index_next = -1; // a new frame must be queried by get_next_frame
+    _frame_index = -1; // a new frame must be queried by get_frame
 }
 
 
 Canvas& SwapChain::get_frame()
 {
-    if (_frame_index_next < 0)
+    if (_frame_index < 0)
     {
         uint32_t i = std::numeric_limits<uint32_t>::max();
         int i_waited_frame;
@@ -204,7 +208,7 @@ Canvas& SwapChain::get_frame()
         frames[i]->_wait_semaphores.insert(semaphore);
         _frame_available_semaphores.pop();
         _frame_available_semaphores.push(std::make_pair(semaphore, static_cast<int>(i)));
-        _frame_index_next = static_cast<int>(i);
+        _frame_index = static_cast<int>(i);
     }
-    return *frames[_frame_index_next];
+    return *frames[_frame_index];
 }

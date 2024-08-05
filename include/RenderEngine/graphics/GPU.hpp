@@ -3,11 +3,9 @@
 #include <map>
 #include <set>
 #include <string>
+#include <memory>
 #include <optional>
 #include <RenderEngine/utilities/External.hpp>
-#include <RenderEngine/graphics/shaders/Shader3D.hpp>
-#include <RenderEngine/graphics/shaders/ShaderDemo.hpp>
-#include <RenderEngine/graphics/shaders/ShaderShadow.hpp>
 
 namespace RenderEngine
 {
@@ -17,6 +15,7 @@ namespace RenderEngine
     {
     // A GPU is a piece of hardware to perform rendering calculations onto. There can be several GPUs on a single computer.
 
+    friend class Internal;
     friend class Window;
     friend class Image;
     friend class SwapChain;
@@ -48,6 +47,8 @@ namespace RenderEngine
         std::string constructor_name() const;
         // Device total local memory in bytes
         uint64_t memory() const;
+        // returns the maximum width and maximum height of texture that can be hosted on this gpu
+        uint32_t max_texture_size() const;
         // Returns the type of the device
         Type type() const;
         // Return the best supported depth format
@@ -65,6 +66,7 @@ namespace RenderEngine
         std::set<std::string> _enabled_extensions;
         VkDevice _logical_device = VK_NULL_HANDLE;
         std::map<std::string, Shader*> _shaders;
+        std::vector<std::shared_ptr<Image>> _default_textures;
     protected:
         // returns the index of the queue family selected for 'queue_type' purpose. Modifies the 'selected_families_count'.
         std::optional<uint32_t> _select_queue_family(std::vector<VkQueueFamilyProperties>& queue_families,  // all available queue families

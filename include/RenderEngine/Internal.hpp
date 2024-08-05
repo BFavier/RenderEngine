@@ -25,8 +25,8 @@ namespace RenderEngine
         static std::vector<std::string> get_available_validation_layers();
         static std::vector<std::string> get_available_vulkan_extensions();
         static VkInstance get_vulkan_instance();
-        static const std::vector<std::shared_ptr<GPU>>& get_detected_GPUs();
-        static const std::shared_ptr<GPU> get_best_GPU();
+        static std::vector<const GPU*> get_detected_GPUs();
+        static const GPU* get_best_GPU();
     protected:
         static VKAPI_ATTR VkBool32 VKAPI_CALL _debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                                                               VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -39,6 +39,6 @@ namespace RenderEngine
         static bool _initialized;
         static VkInstance _vk_instance;
         static VkDebugUtilsMessengerEXT _debug_messenger;
-        static std::vector<std::shared_ptr<GPU>> GPUs;
+        static std::vector<std::unique_ptr<GPU>> GPUs;
     };
 }

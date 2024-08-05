@@ -7,12 +7,12 @@ namespace RenderEngine
     {
     public:
         Material();
-        Material(double _rougness, double _metalness, double _luminance);
+        Material(float _rougness, float _metalness, float _ambient_occlusion);
         ~Material();
     public:
-        double metalness = 0.;
-        double roughness = 0.;
-        double luminance = 0.;
+        float metalness = 0.0;
+        float roughness = 0.2;
+        float ambient_occlusion = 1.0;
     public:
         vec3 to_vec() const;
     };

@@ -1,7 +1,7 @@
 #include <RenderEngine/graphics/model/Mesh.hpp>
 using namespace RenderEngine;
 
-Mesh::Mesh(const std::shared_ptr<GPU>& _gpu, const std::vector<Face>& faces)
+Mesh::Mesh(const GPU* _gpu, const std::vector<Face>& faces)
 {
     _buffer.reset(new Buffer(_gpu, faces.size() * 3 * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT));
     _offset = 0;
@@ -30,7 +30,7 @@ void Mesh::upload(const std::vector<Face>& faces)
         vertices[i*3+1] = {face.points[1].to_vec3(), face.normals[1].to_vec3(), face.color.to_vec4(), face.UVs[1].to_vec(), face.material.to_vec()};
         vertices[i*3+2] = {face.points[2].to_vec3(), face.normals[2].to_vec3(), face.color.to_vec4(), face.UVs[2].to_vec(), face.material.to_vec()};
     }
-    _buffer->upload(reinterpret_cast<uint8_t*>(vertices.data()), faces.size()*sizeof(Vertex)*3, _offset);
+    _buffer->upload(vertices.data(), faces.size()*sizeof(Vertex)*3, _offset);
 }
 
 std::size_t Mesh::bytes_size() const
@@ -38,7 +38,7 @@ std::size_t Mesh::bytes_size() const
     return _bytes_size;
 }
 
-std::vector<std::shared_ptr<Mesh>> Mesh::bulk_allocate_meshes(const std::shared_ptr<GPU>& gpu, const std::vector<std::vector<Face>>& faces)
+std::vector<std::shared_ptr<Mesh>> Mesh::bulk_allocate_meshes(const GPU* gpu, const std::vector<std::vector<Face>>& faces)
 {
     std::size_t bytes_size = 0;
     std::vector<std::size_t> offsets;
@@ -58,7 +58,7 @@ std::vector<std::shared_ptr<Mesh>> Mesh::bulk_allocate_meshes(const std::shared_
 }
 
 
-std::map<std::string, std::shared_ptr<Mesh>> Mesh::bulk_allocate_meshes(const std::shared_ptr<GPU>& gpu, const std::map<std::string, std::vector<Face>>& faces)
+std::map<std::string, std::shared_ptr<Mesh>> Mesh::bulk_allocate_meshes(const GPU* gpu, const std::map<std::string, std::vector<Face>>& faces)
 {
     std::vector<std::string> names;
     std::vector<std::vector<Face>> faces_vector;

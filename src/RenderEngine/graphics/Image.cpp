@@ -7,7 +7,7 @@
 
 using namespace RenderEngine;
 
-Image::Image(const std::shared_ptr<GPU>& gpu, const std::string& file_path, ImageFormat format,
+Image::Image(const GPU* gpu, const std::string& file_path, ImageFormat format,
              const std::optional<uint32_t>& resized_width, const std::optional<uint32_t>& resized_height) : _gpu(gpu)
 {
     std::vector<uint8_t> pixels;
@@ -44,7 +44,7 @@ Image::Image(const std::shared_ptr<GPU>& gpu, const std::string& file_path, Imag
     upload_data(pixels);
 }
 
-Image::Image(const std::shared_ptr<GPU>& gpu, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped, AntiAliasing sample_count) : _gpu(gpu)
+Image::Image(const GPU* gpu, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped, AntiAliasing sample_count) : _gpu(gpu)
 {
     _width = width;
     _height = height;
@@ -57,7 +57,7 @@ Image::Image(const std::shared_ptr<GPU>& gpu, ImageFormat format, uint32_t width
     _create_vk_sampler();
 }
 
-Image::Image(const std::shared_ptr<GPU>& gpu, const VkImage& vk_image, const std::shared_ptr<VkDeviceMemory>& vk_device_memory,
+Image::Image(const GPU* gpu, const VkImage& vk_image, const std::shared_ptr<VkDeviceMemory>& vk_device_memory,
              ImageFormat format, uint32_t width, uint32_t height, bool mipmaped) : _gpu(gpu)
 {
     _vk_image = vk_image;
@@ -102,17 +102,17 @@ uint32_t Image::mip_levels_count() const
     return _mip_levels;
 }
 
-VkImage Image::_create_vk_image(const std::shared_ptr<GPU>& gpu, uint32_t width, uint32_t height, ImageFormat format, uint32_t mip_levels, AntiAliasing sample_count)
+VkImage Image::_create_vk_image(const GPU* gpu, uint32_t width, uint32_t height, ImageFormat format, uint32_t mip_levels, AntiAliasing sample_count)
 {
     VkImage vk_image = VK_NULL_HANDLE;
-    VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
     if (format == ImageFormat::DEPTH)
     {
         usage = usage | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     }
     else
     {
-        usage = usage | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;// | VK_IMAGE_USAGE_STORAGE_BIT
+        usage = usage | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;// | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT
     }
     VkImageCreateInfo info{};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -136,7 +136,7 @@ VkImage Image::_create_vk_image(const std::shared_ptr<GPU>& gpu, uint32_t width,
     return vk_image;
 }
 
-std::tuple<std::shared_ptr<VkDeviceMemory>, std::size_t> Image::_allocate_vk_device_memory(const std::shared_ptr<GPU>& gpu, const VkImage& vk_image, uint32_t n_images)
+std::tuple<std::shared_ptr<VkDeviceMemory>, std::size_t> Image::_allocate_vk_device_memory(const GPU* gpu, const VkImage& vk_image, uint32_t n_images)
 {
     // query required memory properties
     VkMemoryRequirements mem_requirements;
@@ -176,7 +176,7 @@ std::tuple<std::shared_ptr<VkDeviceMemory>, std::size_t> Image::_allocate_vk_dev
     return std::make_pair(vk_device_memory, required_memory_bytes);
 }
 
-void Image::_bind_image_to_memory(const std::shared_ptr<GPU>& gpu, const VkImage& vk_image, const std::shared_ptr<VkDeviceMemory>& vk_device_memory, std::size_t offset)
+void Image::_bind_image_to_memory(const GPU* gpu, const VkImage& vk_image, const std::shared_ptr<VkDeviceMemory>& vk_device_memory, std::size_t offset)
 {
     vkBindImageMemory(gpu->_logical_device, vk_image, *vk_device_memory.get(), offset);
 }
@@ -233,7 +233,7 @@ void Image::_create_vk_image_view()
     }
 }
 
-std::vector<std::shared_ptr<Image>> Image::bulk_allocate_images(const std::shared_ptr<GPU>& gpu, uint32_t n_images, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped)
+std::vector<std::shared_ptr<Image>> Image::bulk_allocate_images(const GPU* gpu, uint32_t n_images, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped)
 {
     std::vector<std::shared_ptr<Image>> images;
     if (n_images == 0)
@@ -260,7 +260,7 @@ std::vector<std::shared_ptr<Image>> Image::bulk_allocate_images(const std::share
     return images;
 }
 
-std::vector<std::shared_ptr<Image>> Image::bulk_load_images(const std::shared_ptr<GPU>& gpu, const std::vector<std::string>& file_paths, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped)
+std::vector<std::shared_ptr<Image>> Image::bulk_load_images(const GPU* gpu, const std::vector<std::string>& file_paths, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped)
 {
     std::vector<std::shared_ptr<Image>> images = bulk_allocate_images(gpu, file_paths.size(), format, width, height, mipmaped);
     for (std::size_t i=0; i<file_paths.size(); i++)
@@ -277,7 +277,7 @@ std::vector<std::shared_ptr<Image>> Image::bulk_load_images(const std::shared_pt
     return images;
 }
 
-std::map<std::string, std::shared_ptr<Image>> Image::bulk_load_images(const std::shared_ptr<GPU>& gpu, const std::map<std::string, std::string>& resource_paths, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped)
+std::map<std::string, std::shared_ptr<Image>> Image::bulk_load_images(const GPU* gpu, const std::map<std::string, std::string>& resource_paths, ImageFormat format, uint32_t width, uint32_t height, bool mipmaped)
 {
     std::vector<std::string> keys;
     std::vector<std::string> file_paths;
@@ -403,7 +403,7 @@ std::tuple<VkAccessFlagBits, VkPipelineStageFlagBits> Image::_source_layout_attr
     else if(layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
     {
         // we wait to have finished reading in the last stage of the graphic pipeline before layout transition
-        return std::make_tuple(VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        return std::make_tuple(VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     }
     else if (layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
     {
@@ -487,7 +487,7 @@ VkImageAspectFlags Image::_get_aspect_mask() const
         VkFormat depth_format = _gpu->depth_format().second;
         if (depth_format == VK_FORMAT_D32_SFLOAT_S8_UINT || depth_format == VK_FORMAT_D24_UNORM_S8_UINT)
         {
-            aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+            aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;// | VK_IMAGE_ASPECT_STENCIL_BIT;
         }
         else
         {
@@ -541,13 +541,13 @@ void Image::save_to_disk(const std::string& file_path)
 
 void Image::upload_data(const std::vector<uint8_t>& pixels)
 {
-    size_t image_size = width()*height()*4;
+    uint32_t image_size = width()*height()*4;
     if (pixels.size() != image_size)
     {
         THROW_ERROR("pixel vector has not the right size.")
     }
     Buffer staging_buffer(_gpu, image_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-    staging_buffer.upload(reinterpret_cast<const uint8_t*>(pixels.data()), staging_buffer.bytes_size(), 0);
+    staging_buffer.upload(pixels.data(), staging_buffer.bytes_size(), 0);
     VkCommandBuffer command_buffer = _begin_single_time_commands();
     // transition image to transfer destination layout
     VkImageLayout new_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
