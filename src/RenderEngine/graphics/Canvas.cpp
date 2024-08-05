@@ -348,23 +348,10 @@ void Canvas::_record_commands()
 
 void Canvas::_bind_shader(const Shader* shader, const std::map<const std::string, Image*>& images_pool)
 {
-    if (shader == _current_shader)
-    {
-        return;
-    }
-    // end previous render pass
-    if (_current_shader != nullptr)
-    {
-        if (_current_shader->_vk_render_pass != VK_NULL_HANDLE)
-        {
-            vkCmdEndRenderPass(_vk_command_buffer);
-        }
-    }
-    // transition image layouts for new shader, set a command barrier, and bind the new shader
+    // read layout transitions that have to be performed
+    std::map<std::string, VkImageLayout> layout_transitions;
     if (shader != nullptr)
     {
-        // apply command barrier
-        std::map<std::string, VkImageLayout> layout_transitions;
         for (const std::pair<std::string, VkFormat>& image : shader->_input_attachments)
         {
             layout_transitions[image.first] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -391,7 +378,29 @@ void Canvas::_bind_shader(const Shader* shader, const std::map<const std::string
         {
             layout_transitions["depth"] = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         }
+    }
+    // end previous render pass
+    bool ended_render_pass = false;
+    if (shader != _current_shader || layout_transitions.size() > 0)
+    {
+        if (_current_shader != nullptr)
+        {
+            if (_current_shader->_vk_render_pass != VK_NULL_HANDLE)
+            {
+                vkCmdEndRenderPass(_vk_command_buffer);
+                ended_render_pass = true;
+            }
+        }
+    }
+    // set a command barrier to transition image layouts
+    if (layout_transitions.size() > 0)
+    {
+        // apply command barrier
         _command_barrier(layout_transitions, images_pool);
+    }
+    // start new shader's render pass
+    if ((_current_shader == nullptr || ended_render_pass) && shader != nullptr)
+    {
         // bind new shader pipeline
         vkCmdBindPipeline(_vk_command_buffer, shader->_vk_pipeline_bind_point, shader->_vk_pipeline);
         if (shader->_vk_render_pass != VK_NULL_HANDLE)
@@ -401,16 +410,16 @@ void Canvas::_bind_shader(const Shader* shader, const std::map<const std::string
             for (unsigned int i = 0; i < shader->_output_attachments.size() + 1; i++)  // +1 is for the depth buffer attachment
             {
                 VkClearValue clear_value = {};
-                clear_value.color = {{0.0f, 0.0f, 0.0f, 0.0f}};
-                clear_value.depthStencil = {1.0f, 0};
+                clear_value.color = { {0.0f, 0.0f, 0.0f, 0.0f} };
+                clear_value.depthStencil = { 1.0f, 0 };
                 clear_values.push_back(clear_value);
             }
             VkRenderPassBeginInfo renderPassInfo{};
             renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             renderPassInfo.renderPass = shader->_vk_render_pass;
             renderPassInfo.framebuffer = _frame_buffers.at(shader);
-            renderPassInfo.renderArea.offset = {0, 0};
-            renderPassInfo.renderArea.extent = {width, height};
+            renderPassInfo.renderArea.offset = { 0, 0 };
+            renderPassInfo.renderArea.extent = { width, height };
             renderPassInfo.clearValueCount = clear_values.size();
             renderPassInfo.pClearValues = clear_values.data();
             vkCmdBeginRenderPass(_vk_command_buffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
