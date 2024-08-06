@@ -33,13 +33,13 @@ using namespace RenderEngine;
 
 {shader_name}::{shader_name}(const GPU* gpu) : Shader(gpu,
     {vertex_buffers},
-    {input_attachments},
     {output_attachments},
     {descriptor_sets},
     {push_constants},
-    {shader_stages_bytecode},
     {depth_test},
-    {blending})
+    {blending},
+    {clear_on_load},
+    {shader_stages_bytecode})
 {{
 }}
 
@@ -108,7 +108,8 @@ def _get_variables(code: dict) -> list[dict]:
                  "output_attachments": [],
                  "vertex_inputs": [],
                  "depth_test": "true",
-                 "blending": "Blending::ALPHA"}
+                 "blending": "Blending::ALPHA",
+                 "clear_on_load": "false"}
     for extension, data in code.items():
         stage = STAGES[extension]
         if stage == "VK_SHADER_STAGE_COMPUTE_BIT":
@@ -195,13 +196,13 @@ def save_shader(shader_prefix: str, code: dict, variables: dict):
     # writing c++ source file
     src = SHADER_SRC.format(shader_name=shader_prefix,
                             vertex_buffers=vertex_buffers,
-                            input_attachments=input_attachments,
                             output_attachments=output_attachments,
                             push_constants=push_constants,
                             descriptor_sets=descriptors,
                             shader_stages_bytecode=shader_stages_bytecode,
                             depth_test=variables["depth_test"],
                             blending=variables["blending"],
+                            clear_on_load=variables["clear_on_load"],
                             )
     src_path = (PATH / shader_prefix).with_suffix(".cpp")
     with open(src_path, "w", encoding="utf-8") as f:

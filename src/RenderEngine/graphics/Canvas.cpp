@@ -61,6 +61,23 @@ Canvas::~Canvas()
 }
 
 
+
+void Canvas::clear()
+{
+    _record_commands();
+    Shader* shader = gpu->_shaders.at("Clear");
+    _bind_shader(shader, images);
+    vkCmdSetCullMode(_vk_command_buffer, VK_CULL_MODE_NONE);
+    vkCmdDraw(_vk_command_buffer, 6, 1, 0, 0);
+    for (std::pair<std::string, VkImageLayout> layout : shader->_final_layouts)
+    {
+        images.at(layout.first)->_current_layout = layout.second;
+    }
+}
+
+
+
+/*
 // TODO : replace transfer operations with a shader
 void Canvas::clear(Color _color)
 {
@@ -90,6 +107,7 @@ void Canvas::clear(Color _color)
         }
     }
 }
+*/
 
 
 void Canvas::draw(const Camera& camera, const std::shared_ptr<Mesh>& mesh, const std::tuple<Vector, Quaternion, double>& mesh_coordinates_in_camera, bool cull_back_faces)
@@ -154,7 +172,7 @@ void Canvas::light(const Camera& camera, const Light& light, const std::tuple<Ve
                                         static_cast<uint32_t>(light.projection_type),
                                         static_cast<uint32_t>(camera.projection_type),
                                         camera.sensitivity,
-                                        (shadow_map == nullptr) ? 0 : 1};
+                                        static_cast<uint32_t>((shadow_map == nullptr) ? 0 : 1)};
     vkCmdPushConstants(_vk_command_buffer, shader->_vk_pipeline_layout, push_range.stageFlags, push_range.offset, push_range.size, &light_parameters);
     // send a command to command buffer
     vkCmdDraw(_vk_command_buffer, 6, 1, 0, 0);
@@ -226,10 +244,6 @@ VkFramebuffer Canvas::_allocate_frame_buffer(const Shader* shader)
 {
     VkFramebuffer frame_buffer;
     std::vector<VkImageView> attachments;
-    for (const std::pair<const std::string, VkFormat>& image : shader->_input_attachments)
-    {
-        attachments.push_back(images.at(image.first)->_vk_image_view);
-    }
     for (const std::pair<const std::string, VkFormat>& image : shader->_output_attachments)
     {
         attachments.push_back(images.at(image.first)->_vk_image_view);
@@ -354,10 +368,6 @@ void Canvas::_bind_shader(const Shader* shader, const std::map<const std::string
     std::map<std::string, VkImageLayout> layout_transitions;
     if (shader != nullptr)
     {
-        for (const std::pair<std::string, VkFormat>& image : shader->_input_attachments)
-        {
-            layout_transitions[image.first] = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        }
         for (const std::pair<std::string, VkFormat>& image : shader->_output_attachments)
         {
             layout_transitions[image.first] = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;

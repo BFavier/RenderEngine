@@ -94,14 +94,13 @@ int main()
             if (frame != nullptr)
             {
                 // render from point of view of the light to create the shadow map
-                shadow_map.clear(Color());
+                shadow_map.clear();
                 shadow_map.draw(directional_light, model.mesh, model.coordinates_in(directional_light));
                 shadow_map.draw(directional_light, floor.mesh, floor.coordinates_in(directional_light));
                 shadow_map.render();
 
                 // render and light the scene
-                frame->clear(Color(0.f, 0.0f, 0.f, 1.0f));
-                //frame->clear(Color(0.1f, 0.0f, 0.3f, 1.0f));
+                frame->clear();
                 frame->draw(camera, model.mesh, model.coordinates_in(camera));
                 frame->draw(camera, floor.mesh, floor.coordinates_in(camera));
                 frame->light(camera, directional_light, directional_light.coordinates_in(camera), &shadow_map);

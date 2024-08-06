@@ -1,5 +1,7 @@
 # RenderEngine
 
+![banner](images/banner.png)
+
 ## Compiling from source
 
 * Install [CMake](https://cmake.org/download/) if it is not installed already
