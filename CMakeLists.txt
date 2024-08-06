@@ -16,7 +16,6 @@ add_executable(${PROJECT_NAME}
     src/RenderEngine/graphics/Color.cpp
     src/RenderEngine/graphics/GPU.cpp
     src/RenderEngine/graphics/Image.cpp
-    src/RenderEngine/graphics/Light.cpp
     src/RenderEngine/graphics/SwapChain.cpp
     src/RenderEngine/graphics/shaders/Shader.cpp
     src/RenderEngine/graphics/shaders/Shader3D.cpp
@@ -24,16 +23,18 @@ add_executable(${PROJECT_NAME}
     src/RenderEngine/graphics/shaders/ShaderDemo.cpp
     src/RenderEngine/graphics/shaders/ShaderLight.cpp
     src/RenderEngine/graphics/shaders/ShaderShadow.cpp
-    src/RenderEngine/graphics/model/UV.cpp
-    src/RenderEngine/graphics/model/Material.cpp
-    src/RenderEngine/graphics/model/Face.cpp
-    src/RenderEngine/graphics/model/Mesh.cpp
-    src/RenderEngine/graphics/model/Model.cpp
-    src/RenderEngine/graphics/Camera.cpp
+    src/RenderEngine/scene/Light.cpp
+    src/RenderEngine/scene/Referential.cpp
+    src/RenderEngine/scene/Camera.cpp
+    src/RenderEngine/scene/Scene.cpp
+    src/RenderEngine/scene/model/UV.cpp
+    src/RenderEngine/scene/model/Material.cpp
+    src/RenderEngine/scene/model/Face.cpp
+    src/RenderEngine/scene/model/Mesh.cpp
+    src/RenderEngine/scene/model/Model.cpp
     src/RenderEngine/geometry/Matrix.cpp
     src/RenderEngine/geometry/Quaternion.cpp
     src/RenderEngine/geometry/Vector.cpp
-    src/RenderEngine/geometry/Referential.cpp
     src/RenderEngine/user_interface/Window.cpp
     src/RenderEngine/user_interface/Keyboard.cpp
     src/RenderEngine/user_interface/Mouse.cpp
@@ -45,7 +46,8 @@ add_executable(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} PRIVATE include/)
 target_link_libraries(${PROJECT_NAME}
     "C:/glfw-3.3.9.bin.WIN64/lib-vc2022/glfw3.lib"
-    "C:/VulkanSDK/1.3.275.0/Lib/vulkan-1.lib")
+    "C:/VulkanSDK/1.3.275.0/Lib/vulkan-1.lib"
+    "C:/Program Files/Assimp/lib/x64/assimp-vc143-mt.lib")
 
 # add_executable(test src/main.cpp)
 # target_link_libraries(test ${PROJECT_NAME})

@@ -1,6 +1,6 @@
 #include <RenderEngine/render_engine.hpp>
 #include <RenderEngine/graphics/Canvas.hpp>
-#include <RenderEngine/graphics/model/Mesh.hpp>
+#include <RenderEngine/scene/model/Mesh.hpp>
 #include <RenderEngine/graphics/shaders/Types.hpp>
 #include <RenderEngine/utilities/Macro.hpp>
 using namespace RenderEngine;

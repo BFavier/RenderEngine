@@ -6,8 +6,8 @@
 #include <RenderEngine/geometry/Quaternion.hpp>
 #include <RenderEngine/geometry/Vector.hpp>
 #include <RenderEngine/geometry/Matrix.hpp>
-#include <RenderEngine/graphics/Camera.hpp>
-#include <RenderEngine/graphics/Light.hpp>
+#include <RenderEngine/scene/Camera.hpp>
+#include <RenderEngine/scene/Light.hpp>
 #include <RenderEngine/graphics/Color.hpp>
 #include <memory>
 
