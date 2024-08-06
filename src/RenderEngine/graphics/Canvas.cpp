@@ -62,16 +62,12 @@ Canvas::~Canvas()
 
 
 
-void Canvas::clear(Color _color)
+void Canvas::clear()
 {
     _record_commands();
     Shader* shader = gpu->_shaders.at("Clear");
     _bind_shader(shader, images);
     vkCmdSetCullMode(_vk_command_buffer, VK_CULL_MODE_NONE);
-    // set shader parameters
-    VkPushConstantRange mesh_range = shader->_push_constants.at("params");
-    ClearParameters params = {_color.to_vec4()};
-    vkCmdPushConstants(_vk_command_buffer, shader->_vk_pipeline_layout, mesh_range.stageFlags, mesh_range.offset, mesh_range.size, &params);
     vkCmdDraw(_vk_command_buffer, 6, 1, 0, 0);
     for (std::pair<std::string, VkImageLayout> layout : shader->_final_layouts)
     {
