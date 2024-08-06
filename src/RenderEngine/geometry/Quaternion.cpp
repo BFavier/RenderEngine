@@ -1,4 +1,5 @@
 #include <RenderEngine/geometry/Quaternion.hpp>
+#include <RenderEngine/geometry/Matrix.hpp>
 #include <RenderEngine/geometry/Vector.hpp>
 #include <RenderEngine/utilities/Macro.hpp>
 
@@ -14,6 +15,43 @@ Quaternion::Quaternion(const Quaternion& other)
     x = other.x;
     y = other.y;
     z = other.z;
+}
+
+Quaternion::Quaternion(const Matrix& m)
+{
+    double tr = m.scalars[0][0] + m.scalars[1][1] + m.scalars[2][2];
+    if (tr > 0)
+    {
+        double S = sqrt(tr+1.0) * 2; // S=4*qw
+        w = 0.25 * S;
+        x = (m.scalars[2][1] - m.scalars[1][2]) / S;
+        y = (m.scalars[0][2] - m.scalars[2][0]) / S; 
+        z = (m.scalars[1][0] - m.scalars[0][1]) / S; 
+    }
+    else if ((m.scalars[0][0] > m.scalars[1][1])&(m.scalars[0][0] > m.scalars[2][2]))
+    { 
+        double S = sqrt(1.0 + m.scalars[0][0] - m.scalars[1][1] - m.scalars[2][2]) * 2; // S=4*qx
+        w = (m.scalars[2][1] - m.scalars[1][2]) / S;
+        x = 0.25 * S;
+        y = (m.scalars[0][1] + m.scalars[1][0]) / S; 
+        z = (m.scalars[0][2] + m.scalars[2][0]) / S; 
+    }
+    else if (m.scalars[1][1] > m.scalars[2][2])
+    { 
+        double S = sqrt(1.0 + m.scalars[1][1] - m.scalars[0][0] - m.scalars[2][2]) * 2; // S=4*qy
+        w = (m.scalars[0][2] - m.scalars[2][0]) / S;
+        x = (m.scalars[0][1] + m.scalars[1][0]) / S; 
+        y = 0.25 * S;
+        z = (m.scalars[1][2] + m.scalars[2][1]) / S; 
+    }
+    else
+    { 
+        double S = sqrt(1.0 + m.scalars[2][2] - m.scalars[0][0] - m.scalars[1][1]) * 2; // S=4*qz
+        w = (m.scalars[1][0] - m.scalars[0][1]) / S;
+        x = (m.scalars[0][2] + m.scalars[2][0]) / S;
+        y = (m.scalars[1][2] + m.scalars[2][1]) / S;
+        z = 0.25 * S;
+    }
 }
 
 Quaternion::Quaternion(double W, double X, double Y, double Z)

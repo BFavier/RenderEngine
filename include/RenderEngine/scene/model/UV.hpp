@@ -8,11 +8,11 @@ namespace RenderEngine
     {
     public:
         UV();
-        UV(double _u, double _v);
+        UV(float _u, float _v);
         ~UV();
     public:
-        double u = 0.;
-        double v = 0.;
+        float u = 0.;
+        float v = 0.;
     public:
         vec2 to_vec() const;
     };

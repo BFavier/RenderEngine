@@ -12,5 +12,9 @@ namespace RenderEngine
         ~Model();
     public:
         std::shared_ptr<Mesh> mesh = nullptr;
+        bool two_sided = false;
+        std::optional<std::shared_ptr<Image>> texture;
+        std::optional<std::shared_ptr<Image>> normal_maping;
+        std::optional<std::shared_ptr<Image>> ambient_occlusion_maping;
     };
 }

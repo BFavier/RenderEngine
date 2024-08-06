@@ -12,6 +12,7 @@ namespace RenderEngine
     public:
         Quaternion();
         Quaternion(const Quaternion& other);
+        Quaternion(const Matrix& matrix);
         Quaternion(double w, double x, double y, double z);
         Quaternion(double radians, const Vector& axis);
         Quaternion(const Vector& from, const Vector& to);

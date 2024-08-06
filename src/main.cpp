@@ -34,6 +34,7 @@ int main()
         AmbientLight ambiant_light(Color(), 0.1);
         DirectionalLight directional_light(Color(), 0.9, 10.0, 1000.0, Vector(0., -2., -2.), Quaternion(-PI/4, Vector(1.0, 0., 0.)), 1.0, nullptr);
         Canvas shadow_map(gpu, 512, 512, false, AntiAliasing::X1);
+        Scene scene(gpu, "./models/viking_room.obj");
         while(!window.closing())
         {
             double dt = timer.dt();
