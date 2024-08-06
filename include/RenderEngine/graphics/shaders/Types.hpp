@@ -70,6 +70,11 @@ namespace RenderEngine
         vec3 material; // metallic, roughness
     };
 
+    struct ClearParameters
+    {
+        vec4 clear_color;
+    };
+
     struct DrawParameters
     {
         vec4 mesh_position;

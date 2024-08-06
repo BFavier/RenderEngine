@@ -20,6 +20,7 @@ add_executable(${PROJECT_NAME}
     src/RenderEngine/graphics/SwapChain.cpp
     src/RenderEngine/graphics/shaders/Shader.cpp
     src/RenderEngine/graphics/shaders/Shader3D.cpp
+    src/RenderEngine/graphics/shaders/ShaderClear.cpp
     src/RenderEngine/graphics/shaders/ShaderDemo.cpp
     src/RenderEngine/graphics/shaders/ShaderLight.cpp
     src/RenderEngine/graphics/shaders/ShaderShadow.cpp

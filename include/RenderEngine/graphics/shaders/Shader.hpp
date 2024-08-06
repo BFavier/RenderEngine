@@ -29,6 +29,7 @@ namespace RenderEngine
                const std::map<std::string, VkPushConstantRange>& push_constants, // definition of all push constants.
                bool depth_test,
                Blending blending,
+               bool clear_on_load,
                const std::map<VkShaderStageFlagBits, std::vector<uint8_t>> shader_stages_bytecode // the bytecode of the compiled spirv file
                );
     protected:
@@ -48,7 +49,8 @@ namespace RenderEngine
     protected:
         static std::tuple<VkRenderPass, std::map<std::string, VkImageLayout>> _create_render_pass(const GPU& gpu,
                                                                                                   const std::vector<std::pair<std::string, VkFormat>>& output_attachments,
-                                                                                                  bool depth_test);
+                                                                                                  bool depth_test,
+                                                                                                  bool clear_on_load);
         static std::vector<VkDescriptorSetLayout> _create_descriptor_set_layouts(const GPU& gpu,
                                                                                  const std::vector<std::map<std::string, VkDescriptorSetLayoutBinding>>& descriptors_sets);
         static VkPipelineLayout _create_pipeline_layout(const GPU& gpu,
