@@ -5,6 +5,7 @@
 namespace RenderEngine
 {
     class Vector;
+    class Matrix;
     class Referential;
 
     class Quaternion

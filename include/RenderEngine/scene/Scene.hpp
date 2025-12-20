@@ -10,6 +10,9 @@
 
 namespace RenderEngine
 {
+    struct aiNode;
+    struct aiScene;
+
     class Scene : public Referential
     {
     public:

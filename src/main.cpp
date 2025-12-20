@@ -21,7 +21,7 @@ int main()
         std::map<std::string, std::shared_ptr<Mesh>> meshes = Mesh::bulk_allocate_meshes(gpu,
             {{"cube", Face::cube(0.5)},
              {"cone", Face::cone(0.5, 0.1, 20)},
-             {"sphere", Face::sphere(0.25, 4, true)},
+             {"sphere", Face::sphere(0.25, 4, false)},
              {"quad", Face::quad(Vector(1., 0., 1.), Vector(-1., 0., 1.), Vector(-1., 0., -1.), Vector(1., 0., -1.), Color(1.0, 1.0, 1.0, 1.0))}});
         Model model(meshes["sphere"], Vector(0., -1., 0.));
         Model floor(meshes["quad"], Vector(0., 0., 0.), Quaternion(), 5.0);
